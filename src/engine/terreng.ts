@@ -24,14 +24,16 @@ function horisontI(hor: number[], az: number): number {
 }
 
 /** Faktor på solvarmen (1 = flatt og åpent) og om direkte sol er blokkert av terrenget. */
-export function terrengFaktor(t: Terreng | undefined, ts: number, lat: number, lon: number): { faktor: number; skygge: boolean } {
+/** `ignorerSkygge`: skyggen meldes fortsatt (skygge: true), men solvarmen regnes som om horisonten var åpen. */
+export function terrengFaktor(t: Terreng | undefined, ts: number, lat: number, lon: number, ignorerSkygge = false): { faktor: number; skygge: boolean } {
   if (!t) return { faktor: 1, skygge: false };
   const h = solHøyde(ts, lat, lon);
   if (h <= 0) return { faktor: 1, skygge: false };
   const az = solAzimut(ts, lat, lon);
-  if (h < horisontI(t[3], az)) return { faktor: 1 - DIREKTE, skygge: true };
+  const blokkert = h < horisontI(t[3], az);
+  if (blokkert && !ignorerSkygge) return { faktor: 1 - DIREKTE, skygge: true };
   const rad = Math.PI / 180;
   const cosInn = Math.sin(t[2] * rad) * Math.cos(h * rad) * Math.cos((az - t[1]) * rad) + Math.cos(t[2] * rad) * Math.sin(h * rad);
   const direkte = Math.min(MAKS_FAKTOR, Math.max(0, cosInn / Math.sin(h * rad)));
-  return { faktor: 1 - DIREKTE + DIREKTE * direkte, skygge: false };
+  return { faktor: 1 - DIREKTE + DIREKTE * direkte, skygge: blokkert };
 }

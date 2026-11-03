@@ -111,3 +111,5 @@ Kontrollen feiler bygget på Netlify hvis en regel brytes. Kjør lokalt med `npm
 
 ### Korte og lange partier i skygge/sol [Bruker]
 Løypa deles i biter på 250 m med egen snøtemperatur. Kaldeste og varmeste temperatur langs løypa (`tMin`, `tMaks`) er **5. og 95. persentil etter lengde** (`vektetPersentil` i `engine/tur.ts`), ikke enkeltbiter. Et kort parti i skygge eller sol (under ca. 5 % av løypa) avgjør dermed ikke isklister, klisterføre eller «skiftende». Langt strekk teller. Ellers brukes 10./50./80. persentil for voks (`stabel.ts`) og snitt for glider. Appen viser andelen av løypa i terrengskygge (%) og km. Fra 10 % vises kaldeste/varmeste verdi og en oppfordring til å vurdere selv om en vil smøre for sola eller skyggen. Absolutt ytterpunkt ligger i `tMinRå`/`tMaksRå`.
+
+**Skygge under 10 % av løypa teller ikke** [Bruker]: dekker terrengskyggen mindre enn 10 % av løypa (`SKYGGE_MIN_ANDEL` i `engine/tur.ts`), regnes sola som uhindret i alle bitene (`skyggeIgnorert`). Fra 10 % brukes skyggen i temperaturene, og kaldeste/varmeste holdes innenfor 5./95. persentil. Appen sier fra i begge tilfeller.

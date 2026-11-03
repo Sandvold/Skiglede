@@ -60,6 +60,8 @@ export type Tur = {
   tMaksRå: number;
   /** Andel av løypa (0–1) som ligger i terrengskygge når den gås. */
   skyggeAndel: number;
+  /** true når skyggen var under 10 % av løypa og derfor ikke er regnet med i temperaturene. */
+  skyggeIgnorert: boolean;
   /** Største temperaturutslag i lufta fra 3 t før til 3 t etter turen (°C). Stort = skiftende vær. */
   variasjon: number;
   /** Laveste lufttemperatur fra 3 t før til 3 t etter turen (°C). */

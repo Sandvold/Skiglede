@@ -1,6 +1,7 @@
 // Kjøres med: npx --yes tsx scripts/test-lager-skipark.ts  (feiler med exit 1 hvis en sjekk ikke stemmer)
 import trails from '../src/data/trails.json';
 import { vektetPersentil } from '../src/engine/tur';
+import { terrengFaktor } from '../src/engine/terreng';
 import { analyserSnø, byggAlternativer, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
 
 let feil = 0;
@@ -97,6 +98,13 @@ sjekk('persentil: 1 av 20 biter i skygge (5 %) påvirker ikke 5. persentil', vek
 sjekk('persentil: 4 av 20 biter (20 %) påvirker 5. persentil', vektetPersentil([...Array(16).fill(0), ...Array(4).fill(-6)], lik, 0.05), -6);
 sjekk('persentil: 1 av 20 varme biter (5 %) påvirker ikke 95. persentil', -vektetPersentil([...Array(19).fill(0), 6].map((x) => -x), lik, 0.05), 0);
 sjekk('persentil: lange biter veier mer', vektetPersentil([0, -6], [250, 1000], 0.05), -6);
+
+// Skygge teller bare ved minst 10 % av løypa
+const TERR = (hor: number) => [[0, 180, 0, Array(16).fill(hor)]] as any;
+const høyTid = Date.parse('2026-03-10T11:00:00Z');
+const blokk = terrengFaktor(TERR(80)[0], høyTid, 59.57, 7.37);
+sjekk('terreng: blokkert horisont gir skygge og lav solfaktor', [Math.round(blokk.faktor * 100), blokk.skygge], [30, true]);
+sjekk('terreng: ignorerSkygge gir full solfaktor men melder skygge', terrengFaktor(TERR(80)[0], høyTid, 59.57, 7.37, true).faktor > 0.3, true);
 
 // Forenklet: bare base og dagens smøring
 const full = stabel('hardvoks', [['Binder', 'VG35'], ['Base (kaldere)', 'VP40'], ['Dagens voks', 'VP45'], ['Dekke 1', 'VP40']]);

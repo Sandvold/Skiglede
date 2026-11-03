@@ -9,6 +9,8 @@ export function skogDemping(solH: number): number {
   const f = Math.min(1, Math.max(0, (solH - SKOG_DEMP.hLav) / (SKOG_DEMP.hHøy - SKOG_DEMP.hLav)));
   return SKOG_DEMP.lav + f * (SKOG_DEMP.høy - SKOG_DEMP.lav);
 }
+/** Skygge må dekke minst så stor andel av løypa for å telle i temperaturene [Bruker]. */
+export const SKYGGE_MIN_ANDEL = 0.1;
 export const SOL_GRAD_PER_500W = 2.0; // °C ekstra «snøtemperatur» ved 500 W/m² uten skygge [Forslag]
 
 /** Lengdevektet persentil (p 0–1): lange strekk teller mer enn korte. */
@@ -77,20 +79,26 @@ export function planTur(args: {
 }): Tur {
   const { seksjoner, timer, startTs, tempoKmt, refH, terreng, sted = HOVDEN } = args;
   const ms = (m: number) => (m / 1000 / tempoKmt) * 3600_000;
-  const ut: SeksjonVær[] = seksjoner.map((s) => {
-    const tid = startTs + ms((s.startM + s.endM) / 2);
-    const v = værVed(timer, tid);
-    const tLuft = v.temp + (refH - s.hMid) * LAPSE;
-    const sw = Math.max(0, v.sw) / 3600; // J/m² per time -> W/m²
-    // Skog demper sola. Terrenget gir skygge (horisonten) og retning (sør-vendt får mer, nord-vendt mindre).
-    const tf = terrengFaktor(terrengVed(terreng, (s.startM + s.endM) / 2), tid, sted.lat, sted.lon);
-    const sol = (1 - skogDemping(solHøyde(tid, sted.lat, sted.lon)) * s.skog) * tf.faktor;
-    return { seq: s.seq, tid, tLuft, sw, sol, skygge: tf.skygge, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
-  });
-  const t = ut.map((x) => x.tEff);
   const lengder = seksjoner.map((x) => x.endM - x.startM);
   const totalM = lengder.reduce((a, b) => a + b, 0);
-  const skyggeM = lengder.reduce((a, l, i) => a + (ut[i].skygge ? l : 0), 0);
+  const lagUt = (ignorerSkygge: boolean): SeksjonVær[] =>
+    seksjoner.map((s) => {
+      const tid = startTs + ms((s.startM + s.endM) / 2);
+      const v = værVed(timer, tid);
+      const tLuft = v.temp + (refH - s.hMid) * LAPSE;
+      const sw = Math.max(0, v.sw) / 3600; // J/m² per time -> W/m²
+      // Skog demper sola. Terrenget gir skygge (horisonten) og retning (sør-vendt får mer, nord-vendt mindre).
+      const tf = terrengFaktor(terrengVed(terreng, (s.startM + s.endM) / 2), tid, sted.lat, sted.lon, ignorerSkygge);
+      const sol = (1 - skogDemping(solHøyde(tid, sted.lat, sted.lon)) * s.skog) * tf.faktor;
+      return { seq: s.seq, tid, tLuft, sw, sol, skygge: tf.skygge, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
+    });
+  const skyggeAndelAv = (u: SeksjonVær[]) => (totalM ? lengder.reduce((a, l, i) => a + (u[i].skygge ? l : 0), 0) / totalM : 0);
+  // Skygge teller bare med når den dekker minst 10 % av løypa [Bruker]; ellers regnes sola som uhindret.
+  let ut = lagUt(false);
+  const skyggeAndel = skyggeAndelAv(ut);
+  const skyggeIgnorert = skyggeAndel > 0 && skyggeAndel < SKYGGE_MIN_ANDEL;
+  if (skyggeIgnorert) ut = lagUt(true);
+  const t = ut.map((x) => x.tEff);
   const sluttTs = startTs + ms(seksjoner[seksjoner.length - 1].endM);
   const vindu = timer.filter((x) => x.ts >= startTs - 3 * 3600_000 && x.ts <= sluttTs + 3 * 3600_000);
   const lufttemp = vindu.map((x) => x.temp);
@@ -105,7 +113,8 @@ export function planTur(args: {
     tMaks: -vektetPersentil(t.map((x) => -x), lengder, 0.05), // speilet, så 5 % i hver ende behandles likt
     tMinRå: Math.min(...t),
     tMaksRå: Math.max(...t),
-    skyggeAndel: totalM ? skyggeM / totalM : 0,
+    skyggeAndel,
+    skyggeIgnorert,
     variasjon,
     luftMin: lufttemp.length ? Math.min(...lufttemp) : Math.min(...t),
     sludd,

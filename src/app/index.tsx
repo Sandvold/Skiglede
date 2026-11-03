@@ -188,7 +188,7 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
         </View>
         <ThemedText type="small" themeColor="textSecondary">
           {Math.round(r.tur.skyggeAndel * 100)} % av løypa ({(r.tur.skyggeAndel * km).toFixed(1)} km) ligger i terrengskygge når du går den.
-          {r.tur.skyggeAndel >= 0.1 ? ' Skyggen er stor nok til å merkes: kaldeste del er ' + r.tur.tMin.toFixed(1) + ' °C og varmeste ' + r.tur.tMaks.toFixed(1) + ' °C (5./95. persentil). Vurder selv om du vil smøre for sola eller skyggen.' : ' Så lite at den ikke avgjør smøringen.'}
+          {r.tur.skyggeIgnorert ? ' Under 10 % av løypa, så skyggen er ikke regnet med i smøringen.' : r.tur.skyggeAndel >= 0.1 ? ' Skyggen er regnet med: kaldeste del er ' + r.tur.tMin.toFixed(1) + ' °C og varmeste ' + r.tur.tMaks.toFixed(1) + ' °C (5./95. persentil). Vurder selv om du vil smøre for sola eller skyggen.' : ''}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {varsel
