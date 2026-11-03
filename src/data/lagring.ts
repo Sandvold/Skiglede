@@ -51,6 +51,7 @@ export const NØKKEL_VALGTE = 'skiglede.valgte';
 export const NØKKEL_SKIPARK = 'skiglede.skipark';
 export const TOM_LISTE: never[] = [];
 export const NØKKEL_MERKE = 'skiglede.merke';
+export const NØKKEL_BRUK_LAGER = 'skiglede.brukLager';
 
 /** Valgt smøremerke (Swix er standard). Ugyldig lagret verdi gir Swix. */
 export function useMerke(): [Smøresystem, (id: MerkeId) => void] {

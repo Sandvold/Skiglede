@@ -157,3 +157,5 @@ sjekk('Ski Go −15 glider: blå', gF(-15, SYSTEMER.skigo).navn, 'Skigo XC glide
 sjekk('klisterFor gir gyldig produkt for alle merker', MERKE_IDER.every((id) => !!SYSTEMER[id].klister[kF(1, SYSTEMER[id])]), true);
 sjekk('lager prefererer samme merke', alternativFraLager('Toko Rød', ['Rode P40', 'Toko Gul'])?.navn, 'Toko Gul');
 console.log('Merketester ferdig');
+sjekk('bland merker: nærmeste på tvers av merker', alternativFraLager('Toko Rød', ['Rode P40', 'Toko Gul'], true)?.navn, 'Rode P40');
+sjekk('baseklister erstatter ikke dagens klister', alternativFraLager('K22', ['Rode K90'], true), undefined);

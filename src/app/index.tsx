@@ -14,7 +14,7 @@ import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, type Varsel } from '@/data/varsel';
-import { useMerke, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
+import { useMerke, NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
 import { analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
@@ -83,6 +83,9 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const [nå] = useState(() => Date.now());
   const [lager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
   const [sys] = useMerke();
+  const [brukLager, setBrukLager] = useLagret<boolean>(NØKKEL_BRUK_LAGER, false);
+  // Uten avkrysning: ren anbefaling fra valgt merke (Swix som standard). Med avkrysning: tilpasset smørelageret, på tvers av merker.
+  const lagerBruk = brukLager ? lager : TOM_LISTE;
   const [visning, setVisning] = useLagret<'full' | 'enkel'>(NØKKEL_VISNING, 'full');
   const [skipark, setSkipark] = useLagret<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const [varsel, setVarsel] = useState<Varsel | null>(null);
@@ -100,7 +103,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
     const snø = analyserSnø(alle, startTs);
     const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[modus], refH: område.vær.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
-    const perStil = Object.fromEntries((['klassisk', 'skoyting', 'felle', 'rubb'] as Stil[]).map((st) => [st, tilpassTilLager(byggSmøring(st, tur, snø, seksjoner, modus === 'Trening', sys), lager)])) as Record<Stil, Stabel>;
+    const perStil = Object.fromEntries((['klassisk', 'skoyting', 'felle', 'rubb'] as Stil[]).map((st) => [st, tilpassTilLager(byggSmøring(st, tur, snø, seksjoner, modus === 'Trening', sys), lagerBruk, true)])) as Record<Stil, Stabel>;
     const stabel = perStil[stil];
     const farger = tur.seksjoner.map((s) => tempFarge(s.tEff));
     const segmenter = seksjoner.map((s, i) => ({
@@ -114,10 +117,10 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
     const hs = løype.punkter.map((p) => p[2]);
     const opp = løype.punkter.slice(1).reduce((s, p, i) => s + Math.max(0, p[2] - løype.punkter[i][2]), 0);
     const alternativer = stil === 'klassisk'
-      ? byggAlternativer(skipark.map((x) => x.stil), tur, snø, seksjoner, stabel, modus === 'Trening', sys).map((a) => ({ ...a, stabel: tilpassTilLager(a.stabel, lager) }))
+      ? byggAlternativer(skipark.map((x) => x.stil), tur, snø, seksjoner, stabel, modus === 'Trening', sys).map((a) => ({ ...a, stabel: tilpassTilLager(a.stabel, lagerBruk, true) }))
       : [];
     return { seksjoner, snø, tur, stabel, perStil, alternativer, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
-  }, [løype, modus, startTime, dagIdx, varsel, stil, lager, skipark, område, TIMER, sys]);
+  }, [løype, modus, startTime, dagIdx, varsel, stil, lagerBruk, skipark, område, TIMER, sys]);
   const vis = r.stabel;
   const sammeDag = (ts: number) => new Date(ts).toDateString() === new Date(nå).toDateString();
   const lagLik = (a: { rolle: string; produkt: string }[], b: Stabel) => JSON.stringify(a) === JSON.stringify(b.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
@@ -273,6 +276,15 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
               <Text style={{ color: theme.accent, fontWeight: '700' }}>{TYPE_NAVN[vis.type]}</Text>
             </View>
           </View>
+          <Pressable onPress={() => setBrukLager(!brukLager)} style={styles.rad} accessibilityRole="checkbox" accessibilityState={{ checked: brukLager }}>
+            <View style={{ width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: theme.border, backgroundColor: brukLager ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+              {brukLager ? <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✓</Text> : null}
+            </View>
+            <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>Bruk min smøring</Text>
+            <ThemedText type="small" themeColor="textSecondary" style={{ flexShrink: 1 }}>
+              {brukLager ? (lager.length ? `Tilpasset smørelageret ditt (${lager.length} produkter, alle merker).` : 'Smørelageret er tomt: kryss av det du har under Smørelager.') : `Anbefaling fra ${sys.navn}. Kryss av for å bruke det du har i lageret.`}
+            </ThemedText>
+          </Pressable>
           <View style={styles.rad}>
             <Chip aktiv={!enkel} onPress={() => setVisning('full')}>Full</Chip>
             <Chip aktiv={enkel} onPress={() => setVisning('enkel')}>Enkel</Chip>
@@ -399,9 +411,6 @@ function Oversikt({ område, onVelg }: { område: Område; onVelg: (id: string) 
         <Oversiktskart key={område.id} løyper={LØYPER} visning={område.visning} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
         <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0) og © OpenStreetMap-bidragsytere (ODbL).</ThemedText>
-        <Pressable accessibilityRole="link" onPress={() => router.push('/rutevelger')}>
-          <ThemedText type="small" themeColor="textSecondary" style={{ textDecorationLine: 'underline' }}>Verktøy: velg løyper fra Turrutebasen eller OpenStreetMap (Rutevelger)</ThemedText>
-        </Pressable>
       </View>
     </ScrollView>
   );

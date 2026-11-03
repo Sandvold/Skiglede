@@ -6,14 +6,12 @@ import { tekstPå } from '@/components/ski/oversikt';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { NØKKEL_LAGER, TOM_LISTE, useLagret } from '@/data/lagring';
-import { useMerke } from '@/data/lagring';
-import { type Produkt } from '@/engine';
+import { MERKE_IDER, SYSTEMER, type Produkt } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function Lager() {
   const theme = useTheme();
-  const [sys] = useMerke();
-  const GRUPPER = sys.oversikt;
+  const GRUPPER = MERKE_IDER.flatMap((id) => SYSTEMER[id].oversikt.map((g) => ({ tittel: `${SYSTEMER[id].navn}: ${g.tittel}`, liste: g.liste })));
   const [lager, setLager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
   const har = (n: string) => lager.includes(n);
   const bytt = (n: string) => setLager(har(n) ? lager.filter((x) => x !== n) : [...lager, n]);
@@ -25,10 +23,10 @@ export default function Lager() {
       <View style={styles.innhold}>
         <Text style={[styles.h1, { color: theme.text }]}>Smørelager</Text>
         <ThemedText themeColor="textSecondary">
-          Kryss av det du har for valgt merke (bytt merke øverst). Når lageret er fylt ut, foreslår Skiglede bare det du eier, og bytter det som mangler mot nærmeste du har. Tomt lager betyr at alt foreslås.
+          Kryss av det du har, fra alle merker. Når du huker av «Bruk min smøring» under smøretipsene, foreslår Skiglede bare det du eier, og bytter det som mangler mot nærmeste du har, på tvers av merker.
         </ThemedText>
         <View style={styles.rad}>
-          <Chip aktiv={false} onPress={() => setLager([...new Set([...lager, ...GRUPPER.flatMap((g) => g.liste.map((p) => p.navn))])])}>{`Velg alle ${sys.navn}`}</Chip>
+          <Chip aktiv={false} onPress={() => setLager([...new Set(GRUPPER.flatMap((g) => g.liste.map((p) => p.navn)))])}>Velg alle</Chip>
           <Chip aktiv={false} onPress={() => setLager([])}>Tøm alt</Chip>
           <ThemedText type="smallBold" themeColor="textSecondary">{lager.length} produkter totalt</ThemedText>
         </View>
@@ -54,7 +52,7 @@ export default function Lager() {
             ))}
           </Kort>
         ))}
-        <ThemedText type="small" themeColor="textSecondary">{sys.kilde} Lageret lagres på denne enheten. Innlogging og synk mellom enheter kommer senere.</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">Toko, Rode og Ski Go: temperaturområdene er hentet fra nettsider og bør sjekkes mot etiketten. Lageret lagres på denne enheten. Innlogging og synk mellom enheter kommer senere.</ThemedText>
       </View>
     </ScrollView>
   );
