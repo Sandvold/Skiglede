@@ -267,6 +267,8 @@ def sett_sammen(kjede_navn, nett, gml_segs, type_, start_fra):
             if not r:
                 raise SystemExit(f"{kjede_navn}: finner ikke vei fra {start_fra}")
             stikk, J = r[2], nett.noder[r[1]]
+            if lengde(stikk) > 1000:
+                print(f"  ADVARSEL {kjede_navn}: stikk fra startpunktet er {lengde(stikk):.0f} m via nettet. Sjekk om en annen startløype eller rett kobling er mer fornuftig")
     else:
         stikk, J = [], ende[0]
     i = min(range(len(sl)), key=lambda k: math.dist(sl[k], J))
@@ -331,7 +333,10 @@ def main():
         eks = [e for e in eks if e["id"] != t["id"]] + [t]
         hs = [p[2] for p in t["punkter"]]
         ende = math.dist(t["punkter"][0][:2], t["punkter"][-1][:2])
-        print(f"{n}: {t['type']}, {t['lengde_m'] / 1000:.1f} km, {min(hs):.0f}-{max(hs):.0f} m, start={t['punkter'][0][2]:.0f} m, avstand start-slutt {ende * 111000:.0f} m")
+        pp = t["punkter"]
+        dobbelt = sum(1 for i, a_ in enumerate(pp) if any(abs(a_[3] - b_[3]) > 300 and math.dist((a_[0] * 62900, a_[1] * 111000), (b_[0] * 62900, b_[1] * 111000)) < 25 for b_ in pp))
+        t["overlapp_pct"] = round(100 * dobbelt / len(pp))
+        print(f"{n}: {t['type']}, {t['lengde_m'] / 1000:.1f} km, {min(hs):.0f}-{max(hs):.0f} m, start={t['punkter'][0][2]:.0f} m, avstand start-slutt {ende * 111000:.0f} m, samme vei to ganger {t['overlapp_pct']} %")
     eks.sort(key=lambda e: e["navn"])
     json.dump(eks, open(a.ut, "w"), ensure_ascii=False, separators=(",", ":"))
     print(f"skrev {len(eks)} løyper til {a.ut}")
