@@ -1,4 +1,4 @@
-import { ALLE_PRODUKTER, kategori, merkeAv, produkt, type Produkt } from './tabeller';
+import { ALLE_PRODUKTER, BASEKLISTER, SWIX, kategori, merkeAv, produkt, glideFor, hardvoksFor, klisterFor, type Produkt, type Smøresystem } from './tabeller';
 import type { Stabel } from './typer';
 
 const senter = (p: Produkt) => (p.omr[0] + p.omr[1]) / 2;
@@ -40,3 +40,47 @@ export function tilpassTilLager(stabel: Stabel, lager: string[], blandMerker = f
 
 /** Navn på alle produkter, for lagerlisten. */
 export const ALLE_NAVN = ALLE_PRODUKTER.map((p) => p.navn);
+
+const nullområde = (p: Produkt) => p.omr[0] === p.omr[1];
+/** Dekker et eid produkt dette produktet? Samme kategori og temperaturområdene overlapper minst halvparten av det nye. Binder/baseklister (uten område): samme navn, eller et hvilket som helst eid binder. */
+function dekkes(nytt: Produkt, eid: Produkt[]): boolean {
+  return eid.some((e) => {
+    if (e.navn === nytt.navn) return true;
+    if (kategori(e) !== kategori(nytt)) return false;
+    if (nullområde(nytt) || nullområde(e)) return kategori(nytt) === 'binder' && kategori(e) === 'binder';
+    const overlapp = Math.min(e.omr[1], nytt.omr[1]) - Math.max(e.omr[0], nytt.omr[0]);
+    return overlapp >= 0.5 * Math.max(nytt.omr[1] - nytt.omr[0], 1);
+  });
+}
+
+export type Innkjøp = { produkt: Produkt; grunn: string };
+
+/**
+ * Forslag til innkjøp: Swix-produkter som dekker snøtemperaturene som er vanlige i området fra desember til april
+ * (`vinter` = [kaldest, varmest] °C). Produkter du allerede har med overlappende område (samme kategori) foreslås ikke.
+ */
+export function innkjøpsforslag(vinter: [number, number], lager: string[], sys: Smøresystem = SWIX): Innkjøp[] {
+  const [lo, hi] = vinter;
+  const eid = lager.map(produkt).filter((x): x is Produkt => !!x);
+  const behov = new Map<string, { p: Produkt; fra: number; til: number }>();
+  const legg = (p: Produkt, t: number) => {
+    const b = behov.get(p.navn);
+    if (b) { b.fra = Math.min(b.fra, t); b.til = Math.max(b.til, t); } else behov.set(p.navn, { p, fra: t, til: t });
+  };
+  for (let t = lo; t <= hi + 1e-9; t += 1) {
+    if (t <= 0.5) legg(sys.hardvoks[hardvoksFor(t, sys)], t); // hardvoks til rundt 0 °C
+    if (t >= -5) legg(sys.klister[klisterFor(t, sys)], t); // klister brukes fra rundt −5 °C
+    legg(glideFor(t, sys), t);
+  }
+  if (sys.binder) { legg(sys.binder.mild, lo); legg(sys.binder.skarp, lo); }
+  if (sys.baseKlister) legg(sys.baseKlister, hi);
+  if (sys.universalVarm) legg(sys.universalVarm, hi);
+  const rekke = (p: Produkt) => ({ hard: 0, binder: 1, klister: 2, glid: 3 })[kategori(p)] * 1000 + (nullområde(p) ? -100 : (p.omr[0] + p.omr[1]) / 2);
+  return [...behov.values()]
+    .filter((b) => !dekkes(b.p, eid))
+    .sort((a, b) => rekke(a.p) - rekke(b.p))
+    .map((b) => ({
+      produkt: b.p,
+      grunn: nullområde(b.p) ? (b.p.merknad ?? 'Grunnlag for smøringen') : b.fra === b.til ? `Dekker ca. ${b.fra} °C` : `Dekker snø fra ca. ${b.fra} til ${b.til} °C`,
+    }));
+}

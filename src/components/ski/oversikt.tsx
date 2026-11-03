@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import type { Produkt, Smøresystem } from '@/engine';
+import { kategori, type Innkjøp, type Produkt, type Smøresystem } from '@/engine';
 
 const MIN = -25;
 const MAX = 15;
@@ -62,8 +62,17 @@ function Gruppe({ tittel, liste, tMin, tMaks, brukt }: { tittel: string; liste: 
   );
 }
 
-export function Temperaturoversikt({ tMin, tMaks, brukt, sys }: { tMin: number; tMaks: number; brukt: string[]; sys: Smøresystem }) {
+export type OversiktVisning = 'alle' | 'mine' | 'kjop';
+const KAT_TITTEL = { hard: 'Hardvoks', binder: 'Binder', klister: 'Klister og baseklister', glid: 'Glidevoks' } as const;
+
+export function Temperaturoversikt({ tMin, tMaks, brukt, sys, visning = 'alle', lager = [], kjøp = [] }: { tMin: number; tMaks: number; brukt: string[]; sys: Smøresystem; visning?: OversiktVisning; lager?: string[]; kjøp?: Innkjøp[] }) {
   const theme = useTheme();
+  let grupper = sys.oversikt;
+  if (visning === 'mine') grupper = sys.oversikt.map((g) => ({ ...g, liste: g.liste.filter((p) => lager.includes(p.navn)) })).filter((g) => g.liste.length);
+  if (visning === 'kjop') {
+    const kat = (['hard', 'binder', 'klister', 'glid'] as const).map((k) => ({ tittel: KAT_TITTEL[k], liste: kjøp.filter((x) => kategori(x.produkt) === k).map((x) => x.produkt) }));
+    grupper = kat.filter((g) => g.liste.length);
+  }
   const ticks = [-25, -20, -15, -10, -5, 0, 5, 10, 15];
   return (
     <View style={{ gap: 6 }}>
@@ -75,9 +84,22 @@ export function Temperaturoversikt({ tMin, tMaks, brukt, sys }: { tMin: number; 
           ))}
         </View>
       </View>
-      {sys.oversikt.map((g) => (
+      {visning === 'mine' && !grupper.length ? (
+        <ThemedText type="small" themeColor="textSecondary">Du har ingen produkter fra {sys.navn} i smørelageret ennå. Kryss av det du har under Smørelager.</ThemedText>
+      ) : null}
+      {visning === 'kjop' && !grupper.length ? (
+        <ThemedText type="small" themeColor="textSecondary">Du har allerede produkter som dekker de vanlige snøtemperaturene fra desember til april. Ingenting å kjøpe.</ThemedText>
+      ) : null}
+      {grupper.map((g) => (
         <Gruppe key={g.tittel} tittel={g.tittel} liste={g.liste} tMin={tMin} tMaks={tMaks} brukt={brukt} />
       ))}
+      {visning === 'kjop' && kjøp.length ? (
+        <View style={{ gap: 2, marginTop: 8 }}>
+          {kjøp.map((x) => (
+            <ThemedText key={x.produkt.navn} type="small" themeColor="textSecondary">{x.produkt.navn}: {x.grunn}</ThemedText>
+          ))}
+        </View>
+      ) : null}
       <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 8 }}>
         Området i °C slik {sys.navn} oppgir det. Det lyseblå feltet er turens snøtemperatur ({tMin.toFixed(1)} til {tMaks.toFixed(1)} °C), og ● markerer produkter i smøringen din. Fargene er tilnærminger til etikettfarger. Binder og baseklister uten temperaturområde vises som en strek ved 0. Kilde: {sys.kilde}
       </ThemedText>

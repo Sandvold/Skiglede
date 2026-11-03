@@ -4,7 +4,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { ThemedText } from '@/components/themed-text';
 import { TrailMap } from '@/components/ski/kart';
 import { Hoydeprofil } from '@/components/ski/profil';
-import { Temperaturoversikt, tekstPå } from '@/components/ski/oversikt';
+import { Temperaturoversikt, tekstPå, type OversiktVisning } from '@/components/ski/oversikt';
 import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
 import { byggRute, tilhørende, type Løype } from '@/data/rute';
@@ -16,7 +16,7 @@ import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, type Varsel } from '@/data/varsel';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
-import { SWIX, analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
+import { SWIX, innkjøpsforslag, analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
 const løyperI = (o: Område) => o.løyper as unknown as Løype[];
 const timerI = (o: Område): Vær[] => o.vær.timer.map((r) => ({
@@ -49,8 +49,8 @@ const TYPE_NAVN = { hardvoks: 'Hardvoks', klister: 'Klister', glider: 'Glider', 
 
 const TEMPO = { Trening: 9, Tur: 5 } as const;
 type Modus = keyof typeof TEMPO;
-// Starttidspunkt hvert kvarter, lokal tid
-const STARTTIDER = Array.from({ length: (18 - 6) * 4 + 1 }, (_, i) => 6 + i / 4);
+// Starttidspunkt hver halvtime fra 06:00 til 23:00, lokal tid
+const STARTTIDER = Array.from({ length: (23 - 6) * 2 + 1 }, (_, i) => 6 + i / 2);
 const klokke = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
 
 const tid = (ts: number) => new Intl.DateTimeFormat('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' }).format(ts);
@@ -87,6 +87,8 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const [valgte, setValgte] = useLagret<string[]>(NØKKEL_VALGTE, TOM_LISTE);
   const [nå] = useState(() => Date.now());
   const [lager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
+  const [oversiktVisning, setOversiktVisning] = useState<OversiktVisning>('alle');
+  const kjøp = useMemo(() => innkjøpsforslag(område.vinter, lager, SWIX), [område, lager]);
   const sys = SWIX; // Anbefalingen tar alltid utgangspunkt i Swix
   const [brukLager, setBrukLager] = useLagret<boolean>(NØKKEL_BRUK_LAGER, false);
   // Uten avkrysning: ren Swix-anbefaling. Med avkrysning: tilpasset smørelageret, på tvers av merker.
@@ -366,8 +368,18 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
         {/* Temperaturoversikt */}
         <Kort>
           <Text style={[styles.h2, { color: theme.text }]}>Voks og klister</Text>
-          <ThemedText type="small" themeColor="textSecondary">Hva hvert produkt fungerer på, med {sys.navn}s fargekoder.</ThemedText>
-          <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={vis.lag.map((l) => l.produkt)} sys={sys} />
+          <ThemedText type="small" themeColor="textSecondary">Hva hvert produkt fungerer på, med fargekodene til {sys.navn}.</ThemedText>
+          <View style={styles.rad}>
+            <Chip aktiv={oversiktVisning === 'alle'} onPress={() => setOversiktVisning('alle')}>Alle produkter</Chip>
+            <Chip aktiv={oversiktVisning === 'mine'} onPress={() => setOversiktVisning('mine')}>Mine produkter</Chip>
+            <Chip aktiv={oversiktVisning === 'kjop'} onPress={() => setOversiktVisning('kjop')}>Forslag til innkjøp</Chip>
+          </View>
+          {oversiktVisning === 'kjop' ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              Swix-produkter for snøtemperaturene som er vanlige i {område.navn} fra desember til april (ca. {område.vinter[0]} til {område.vinter[1]} °C, anslag). Produkter du allerede har med overlappende område er ikke med.
+            </ThemedText>
+          ) : null}
+          <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={vis.lag.map((l) => l.produkt)} sys={sys} visning={oversiktVisning} lager={lager} kjøp={kjøp} />
         </Kort>
 
         {/* Feilsøking */}

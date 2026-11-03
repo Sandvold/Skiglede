@@ -17,15 +17,17 @@ export type Område = {
   visning: { lon: number; lat: number; z: number };
   løyper: unknown[];
   vær: { referansehoyde_m: number; timer: (string | number)[][] };
+  /** Vanlig snøtemperatur (°C) i løypene fra desember til april, til innkjøpsforslag. Anslag [Forslag], ikke målt klimatologi. */
+  vinter: [number, number];
 };
 
 export const OMRÅDER: Record<OmrådeId, Område> = {
   // Visning: Hovden-sentrum med Breive, Vidmyr, Lundane og Hartevatn i bildet [Bruker].
-  hovden: { id: 'hovden', navn: 'Hovden', sted: { lat: 59.5667, lon: 7.3667 }, visning: { lon: 7.3646, lat: 59.5699, z: 12 }, løyper: hovdenLøyper as unknown[], vær: hovdenVær },
+  hovden: { id: 'hovden', navn: 'Hovden', sted: { lat: 59.5667, lon: 7.3667 }, visning: { lon: 7.3646, lat: 59.5699, z: 12 }, løyper: hovdenLøyper as unknown[], vær: hovdenVær, vinter: [-18, 1] },
   // Bærumsmarka: Fossum, Eineåsen og nettet vest for Sørkedalen. Værcelle 1 km ved Østernvann, 228 m.
-  baerumsmarka: { id: 'baerumsmarka', navn: 'Bærumsmarka', sted: { lat: 59.955, lon: 10.52 }, visning: { lon: 10.54, lat: 59.955, z: 11 }, løyper: baerumLøyper as unknown[], vær: baerumVær },
+  baerumsmarka: { id: 'baerumsmarka', navn: 'Bærumsmarka', sted: { lat: 59.955, lon: 10.52 }, visning: { lon: 10.54, lat: 59.955, z: 11 }, løyper: baerumLøyper as unknown[], vær: baerumVær, vinter: [-12, 2] },
   // Nordmarka: Sognsvann, Frognerseteren, Holmenkollen og Kikutstua. Værcelle 1 km ved Nordmarka, 290 m.
-  nordmarka: { id: 'nordmarka', navn: 'Nordmarka', sted: { lat: 59.98, lon: 10.65 }, visning: { lon: 10.66, lat: 59.975, z: 11 }, løyper: nordmarkaLøyper as unknown[], vær: nordmarkaVær },
+  nordmarka: { id: 'nordmarka', navn: 'Nordmarka', sted: { lat: 59.98, lon: 10.65 }, visning: { lon: 10.66, lat: 59.975, z: 11 }, løyper: nordmarkaLøyper as unknown[], vær: nordmarkaVær, vinter: [-12, 2] },
 };
 export const OMRÅDE_IDER = Object.keys(OMRÅDER) as OmrådeId[];
 export const NØKKEL_OMRÅDE = 'skiglede.omrade';

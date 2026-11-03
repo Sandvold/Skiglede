@@ -159,3 +159,13 @@ sjekk('lager prefererer samme merke', alternativFraLager('Toko Rød', ['Rode P40
 console.log('Merketester ferdig');
 sjekk('bland merker: nærmeste på tvers av merker', alternativFraLager('Toko Rød', ['Rode P40', 'Toko Gul'], true)?.navn, 'Rode P40');
 sjekk('baseklister erstatter ikke dagens klister', alternativFraLager('K22', ['Rode K90'], true), undefined);
+import { innkjøpsforslag } from '../src/engine';
+const kjøp0 = innkjøpsforslag([-12, 2], []);
+sjekk('innkjøp: tomt lager foreslår hardvoks, klister, glider og binder', ['hard', 'klister', 'glid', 'binder'].every((k) => kjøp0.some((x) => (k === 'hard' ? x.produkt.linje === 'VP' || x.produkt.linje === 'V' && !x.produkt.rolle : k === 'klister' ? x.produkt.linje === 'K' : k === 'glid' ? x.produkt.linje === 'G' : x.produkt.rolle === 'binder'))), true);
+sjekk('innkjøp: alle er Swix', kjøp0.every((x) => (x.produkt.merke ?? 'swix') === 'swix'), true);
+const eier = kjøp0.map((x) => x.produkt.navn);
+sjekk('innkjøp: eier du alt foreslås ingenting', innkjøpsforslag([-12, 2], eier).length, 0);
+const uten = innkjøpsforslag([-12, 2], eier.filter((n) => n !== kjøp0[0].produkt.navn));
+sjekk('innkjøp: mangler ett produkt foreslås bare det', uten.map((x) => x.produkt.navn), [kjøp0[0].produkt.navn]);
+sjekk('innkjøp: overlappende Toko-voks hindrer forslag', innkjøpsforslag([-12, 2], ['Toko Blå', 'Toko Rød', 'Toko Gul', 'Toko X-Cold']).filter((x) => x.produkt.linje === 'VP').length < kjøp0.filter((x) => x.produkt.linje === 'VP').length, true);
+console.log(kjøp0.map((x) => `${x.produkt.navn} (${x.grunn})`).join('\n'));
