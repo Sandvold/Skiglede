@@ -23,3 +23,7 @@ Verktøy på `/rutevelger` (https://skiglede.netlify.app/rutevelger, lenke neder
 - Sløyfe krever at endene ligger innen 600 m. Ellers: tur-retur eller legg inn koblingen.
 - Turrutebasen-kandidater (`src/data/kandidater-turrutebasen.json`, `scripts/hent_kandidater.py`) brukes både som navnekilde og som alternativ kilde i siden.
 - OSM-data krever kreditering (ODbL, © OpenStreetMap-bidragsytere) i appen når de tas i bruk. Importerte løyper får `kilde: "osm"`.
+
+## Automatiske runder fra OSM (`scripts/bygg_osm_runder.py`)
+Ingen manuell plukking: skriptet bruker OSM-nettet (uten backcountry og Hartevatn, som brøytes lite) og gjør tur-retur-løyper til runder. Veien ut beholdes, veien tilbake er korteste vei i nettet som unngår veien ut. Godtas hvis under 25 % overlapp og ikke urimelig lang. Små biter (under ca. 1,5 km) tas ikke med som egne løyper; de er bare koblinger i nettet.
+Kjør uten `--skriv` for rapport, med `--skriv` for å lagre; deretter `hent_terreng.py` og `npm run kontroller`. Resultat 3. nov: Ny Lysløype Hovden (4,5 km, ekte OSM-vei tilbake til stadion i stedet for rette linjer) og Auversvatn (16,7 km runde). Hovden fjellpark gav en mulig runde på 7,2 km, men med uryddig retur, så den er ikke tatt i bruk.

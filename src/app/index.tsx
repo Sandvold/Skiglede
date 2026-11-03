@@ -385,7 +385,7 @@ function Oversikt({ onVelg }: { onVelg: (id: string) => void }) {
         <ThemedText themeColor="textSecondary">Trykk på en løype i kartet, eller velg fra lista.</ThemedText>
         <Oversiktskart løyper={LØYPER} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
-        <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0).</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0) og © OpenStreetMap-bidragsytere (ODbL).</ThemedText>
         <Pressable accessibilityRole="link" onPress={() => router.push('/rutevelger')}>
           <ThemedText type="small" themeColor="textSecondary" style={{ textDecorationLine: 'underline' }}>Verktøy: velg løyper fra Turrutebasen eller OpenStreetMap (Rutevelger)</ThemedText>
         </Pressable>
