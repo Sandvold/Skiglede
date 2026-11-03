@@ -12,16 +12,14 @@ import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import trailsData from '@/data/trails.json';
-import vaerData from '@/data/vaer-hovden.json';
+import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, type Varsel } from '@/data/varsel';
 import { NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
 import { analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
-const LØYPER = trailsData as unknown as Løype[];
-
-const TIMER: Vær[] = (vaerData.timer as (string | number)[][]).map((r) => ({
+const løyperI = (o: Område) => o.løyper as unknown as Løype[];
+const timerI = (o: Område): Vær[] => o.vær.timer.map((r) => ({
   ts: Date.parse(r[0] as string), temp: r[1] as number, nedbor: r[2] as number, rh: r[3] as number, vind: r[4] as number, sw: r[5] as number,
 }));
 // Reserve hvis Yr-varselet ikke kommer: observert 2. nov.
@@ -66,10 +64,12 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
   );
 }
 
-function Detalj({ løype: valgtLøype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: string) => void; onTilbake: () => void }) {
+function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: Løype; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
   const theme = useTheme();
+  const LØYPER = useMemo(() => løyperI(område), [område]);
+  const TIMER = useMemo(() => timerI(område), [område]);
   const [ekstraIds, setEkstraIds] = useState<string[]>([]);
-  const mulige = useMemo(() => tilhørende(valgtLøype, LØYPER), [valgtLøype]);
+  const mulige = useMemo(() => tilhørende(valgtLøype, LØYPER), [valgtLøype, LØYPER]);
   const løype = useMemo(() => byggRute(valgtLøype, mulige.filter((x) => ekstraIds.includes(x.id))), [valgtLøype, mulige, ekstraIds]);
   const [modus, setModus] = useState<Modus>('Tur');
   const [startTime, setStartTime] = useState(10);
@@ -85,8 +85,8 @@ function Detalj({ løype: valgtLøype, onVelg, onTilbake }: { løype: Løype; on
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [varselFeil, setVarselFeil] = useState(false);
   useEffect(() => {
-    hentVarsel().then(setVarsel).catch(() => setVarselFeil(true));
-  }, []);
+    hentVarsel(område.id).then(setVarsel).catch(() => setVarselFeil(true));
+  }, [område.id]);
 
   const r = useMemo(() => {
     const seksjoner = lagSeksjoner(løype.punkter);
@@ -96,7 +96,7 @@ function Detalj({ løype: valgtLøype, onVelg, onTilbake }: { løype: Løype; on
     const sisteHist = TIMER[TIMER.length - 1].ts;
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
     const snø = analyserSnø(alle, startTs);
-    const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[modus], refH: vaerData.referansehoyde_m, terreng: løype.terreng });
+    const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[modus], refH: område.vær.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
     const perStil = Object.fromEntries((['klassisk', 'skoyting', 'felle', 'rubb'] as Stil[]).map((st) => [st, tilpassTilLager(byggSmøring(st, tur, snø, seksjoner, modus === 'Trening'), lager)])) as Record<Stil, Stabel>;
     const stabel = perStil[stil];
     const farger = tur.seksjoner.map((s) => tempFarge(s.tEff));
@@ -114,7 +114,7 @@ function Detalj({ løype: valgtLøype, onVelg, onTilbake }: { løype: Løype; on
       ? byggAlternativer(skipark.map((x) => x.stil), tur, snø, seksjoner, stabel, modus === 'Trening').map((a) => ({ ...a, stabel: tilpassTilLager(a.stabel, lager) }))
       : [];
     return { seksjoner, snø, tur, stabel, perStil, alternativer, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
-  }, [løype, modus, startTime, dagIdx, varsel, stil, lager, skipark]);
+  }, [løype, modus, startTime, dagIdx, varsel, stil, lager, skipark, område, TIMER]);
   const vis = r.stabel;
   const sammeDag = (ts: number) => new Date(ts).toDateString() === new Date(nå).toDateString();
   const lagLik = (a: { rolle: string; produkt: string }[], b: Stabel) => JSON.stringify(a) === JSON.stringify(b.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
@@ -374,16 +374,17 @@ function Detalj({ løype: valgtLøype, onVelg, onTilbake }: { løype: Løype; on
   );
 }
 
-function Oversikt({ onVelg }: { onVelg: (id: string) => void }) {
+function Oversikt({ område, onVelg }: { område: Område; onVelg: (id: string) => void }) {
   const theme = useTheme();
   const router = useRouter();
+  const LØYPER = løyperI(område);
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
       <Hero />
       <View style={styles.innhold}>
-        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>LØYPER PÅ HOVDEN</ThemedText>
-        <ThemedText themeColor="textSecondary">Trykk på en løype i kartet, eller velg fra lista.</ThemedText>
-        <Oversiktskart løyper={LØYPER} onVelg={onVelg} />
+        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>LØYPER {område.navn.toUpperCase()}</ThemedText>
+        <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
+        <Oversiktskart key={område.id} løyper={LØYPER} visning={område.visning} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
         <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0) og © OpenStreetMap-bidragsytere (ODbL).</ThemedText>
         <Pressable accessibilityRole="link" onPress={() => router.push('/rutevelger')}>
@@ -395,10 +396,11 @@ function Oversikt({ onVelg }: { onVelg: (id: string) => void }) {
 }
 
 export default function Hjem() {
+  const [område] = useOmråde();
   const [valgt, setValgt] = useState<string | null>(null);
-  const løype = LØYPER.find((l) => l.id === valgt);
-  if (!løype) return <Oversikt onVelg={setValgt} />;
-  return <Detalj key={løype.id} løype={løype} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
+  const løype = løyperI(område).find((l) => l.id === valgt);
+  if (!løype) return <Oversikt område={område} onVelg={setValgt} />;
+  return <Detalj key={`${område.id}:${løype.id}`} løype={løype} område={område} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
 }
 
 const styles = StyleSheet.create({

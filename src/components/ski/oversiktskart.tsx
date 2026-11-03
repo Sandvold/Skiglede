@@ -8,11 +8,12 @@ export type OversiktLøype = { id: string; navn: string; punkter: number[][] };
 
 /** Standardvisning: Hovden-sentrum med Breive, Vidmyr, Lundane og Hartevatn i bildet [Bruker]. */
 export const HOVDEN_VISNING = { lon: 7.3646, lat: 59.5699, z: 12 };
+export type Visning = { lon: number; lat: number; z: number };
 
 /** Kart med alle løyper. Trykk på en løype for å gå til den. Dra og zoom for å se nærmere. */
-export function Oversiktskart({ løyper, onVelg, hoyde = 420 }: { løyper: OversiktLøype[]; onVelg: (id: string) => void; hoyde?: number }) {
+export function Oversiktskart({ løyper, onVelg, visning = HOVDEN_VISNING, hoyde = 420 }: { løyper: OversiktLøype[]; visning?: Visning; onVelg: (id: string) => void; hoyde?: number }) {
   return (
-    <ZoomKart punkter={løyper.flatMap((l) => l.punkter)} hoyde={hoyde} startZ={15} fast={HOVDEN_VISNING}>
+    <ZoomKart punkter={løyper.flatMap((l) => l.punkter)} hoyde={hoyde} startZ={15} fast={visning}>
       {({ z, left, top, w, h }) => {
         const xy = (p: number[]) => [mx(p[0], z) - left, my(p[1], z) - top] as const;
         const pts = (l: OversiktLøype) => l.punkter.map((p) => xy(p).map((v) => v.toFixed(1)).join(',')).join(' ');
