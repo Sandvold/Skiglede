@@ -10,7 +10,7 @@ import trailsData from '@/data/trails.json';
 import vaerData from '@/data/vaer-hovden.json';
 import { HARDVOKS, KLISTER, analyserSnø, byggStabel, lagSeksjoner, planTur, type Punkt, type Vær } from '@/engine';
 
-type Løype = { id: string; navn: string; lengde_m: number; punkter: Punkt[] };
+type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[] };
 const LØYPER = trailsData as unknown as Løype[];
 
 const TIMER: Vær[] = (vaerData.timer as (string | number)[][]).map((r) => ({
@@ -120,7 +120,7 @@ export default function Hjem() {
         <Kort>
           <Text style={[styles.h2, { color: theme.text }]}>{løype.navn}</Text>
           <View style={styles.rad}>
-            <Tall verdi={`${km.toFixed(1)} km`} tekst="lengde" />
+            <Tall verdi={`${km.toFixed(1)} km`} tekst={løype.type === 'retur' ? 'tur-retur' : løype.type === 'sloyfe' ? 'sløyfe' : 'lengde'} />
             <Tall verdi={`${Math.round(r.lav)}–${Math.round(r.høy)}`} tekst="moh" />
             <Tall verdi={`${Math.round(r.opp)} m`} tekst="stigning" />
           </View>
