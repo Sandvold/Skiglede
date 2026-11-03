@@ -1,6 +1,6 @@
 import type { Punkt, Terreng } from '@/engine';
 
-export type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[]; terreng?: Terreng[] };
+export type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[]; terreng?: Terreng[]; /** Id til hovedløypa når dette er en variant (f.eks. sløyfe av en tur-retur) */ variantAv?: string };
 
 /** Største avstand (m) mellom startpunktene for at to løyper regnes som «fra samme start». */
 export const MAKS_START_AVSTAND = 300;
@@ -9,7 +9,8 @@ const meter = (a: Punkt, b: Punkt) => Math.hypot((a[0] - b[0]) * Math.cos((a[1] 
 
 /** Løyper som starter ved samme sted og kan legges til turen (Galten og Lundane, Rørvikåsen og Ny Lysløype …). */
 export function tilhørende(løype: Løype, alle: Løype[]): Løype[] {
-  return alle.filter((l) => l.id !== løype.id && meter(l.punkter[0], løype.punkter[0]) <= MAKS_START_AVSTAND);
+  const gruppe = løype.variantAv ?? løype.id;
+  return alle.filter((l) => !l.variantAv && l.id !== gruppe && meter(l.punkter[0], løype.punkter[0]) <= MAKS_START_AVSTAND);
 }
 
 /** Rette punkter mellom a og b (hvert ~50 m), uten endepunktene. Høyde interpoleres. */

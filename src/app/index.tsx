@@ -69,6 +69,8 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const LØYPER = useMemo(() => løyperI(område), [område]);
   const TIMER = useMemo(() => timerI(område), [område]);
   const [ekstraIds, setEkstraIds] = useState<string[]>([]);
+  const gruppe = valgtLøype.variantAv ?? valgtLøype.id;
+  const varianter = useMemo(() => LØYPER.filter((l) => l.id === gruppe || l.variantAv === gruppe), [LØYPER, gruppe]);
   const mulige = useMemo(() => tilhørende(valgtLøype, LØYPER), [valgtLøype, LØYPER]);
   const løype = useMemo(() => byggRute(valgtLøype, mulige.filter((x) => ekstraIds.includes(x.id))), [valgtLøype, mulige, ekstraIds]);
   const [modus, setModus] = useState<Modus>('Tur');
@@ -150,7 +152,16 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
         <Pressable onPress={onTilbake} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
         </Pressable>
-        <Loypevelger løyper={LØYPER} valgt={valgtLøype.id} onVelg={onVelg} />
+        <Loypevelger løyper={LØYPER.filter((l) => !l.variantAv)} valgt={gruppe} onVelg={onVelg} />
+        {varianter.length > 1 && (
+          <View style={styles.rad}>
+            {varianter.map((v) => (
+              <Chip key={v.id} aktiv={v.id === valgtLøype.id} onPress={() => onVelg(v.id)}>
+                {`${v.type === 'retur' ? 'Tur-retur' : 'Sløyfe'} · ${(v.lengde_m / 1000).toFixed(1)} km`}
+              </Chip>
+            ))}
+          </View>
+        )}
 
         {mulige.length > 0 && (
           <View style={{ gap: Spacing.two }}>
@@ -377,7 +388,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
 function Oversikt({ område, onVelg }: { område: Område; onVelg: (id: string) => void }) {
   const theme = useTheme();
   const router = useRouter();
-  const LØYPER = løyperI(område);
+  const LØYPER = løyperI(område).filter((l) => !l.variantAv);
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
       <Hero />
