@@ -14,9 +14,9 @@ import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, type Varsel } from '@/data/varsel';
-import { useMerke, NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
+import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
-import { analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
+import { SWIX, analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
 const løyperI = (o: Område) => o.løyper as unknown as Løype[];
 const timerI = (o: Område): Vær[] => o.vær.timer.map((r) => ({
@@ -82,9 +82,9 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const [valgte, setValgte] = useLagret<string[]>(NØKKEL_VALGTE, TOM_LISTE);
   const [nå] = useState(() => Date.now());
   const [lager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
-  const [sys] = useMerke();
+  const sys = SWIX; // Anbefalingen tar alltid utgangspunkt i Swix
   const [brukLager, setBrukLager] = useLagret<boolean>(NØKKEL_BRUK_LAGER, false);
-  // Uten avkrysning: ren anbefaling fra valgt merke (Swix som standard). Med avkrysning: tilpasset smørelageret, på tvers av merker.
+  // Uten avkrysning: ren Swix-anbefaling. Med avkrysning: tilpasset smørelageret, på tvers av merker.
   const lagerBruk = brukLager ? lager : TOM_LISTE;
   const [visning, setVisning] = useLagret<'full' | 'enkel'>(NØKKEL_VISNING, 'full');
   const [skipark, setSkipark] = useLagret<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
@@ -282,7 +282,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
             </View>
             <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>Bruk min smøring</Text>
             <ThemedText type="small" themeColor="textSecondary" style={{ flexShrink: 1 }}>
-              {brukLager ? (lager.length ? `Tilpasset smørelageret ditt (${lager.length} produkter, alle merker).` : 'Smørelageret er tomt: kryss av det du har under Smørelager.') : `Anbefaling fra ${sys.navn}. Kryss av for å bruke det du har i lageret.`}
+              {brukLager ? (lager.length ? `Tilpasset smørelageret ditt (${lager.length} produkter, alle merker).` : 'Smørelageret er tomt: kryss av det du har under Smørelager.') : 'Anbefaling fra Swix. Kryss av for å bruke det du har i lageret, fra alle merker.'}
             </ThemedText>
           </Pressable>
           <View style={styles.rad}>
