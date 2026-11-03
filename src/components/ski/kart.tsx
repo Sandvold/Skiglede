@@ -6,15 +6,15 @@ import { ThemedText } from '@/components/themed-text';
 
 export type KartSegment = { pts: [number, number][]; farge: string };
 
-const TILE = 256;
-const mx = (lon: number, z: number) => ((lon + 180) / 360) * TILE * 2 ** z;
-const my = (lat: number, z: number) => {
+export const TILE = 256;
+export const mx = (lon: number, z: number) => ((lon + 180) / 360) * TILE * 2 ** z;
+export const my = (lat: number, z: number) => {
   const r = (lat * Math.PI) / 180;
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * TILE * 2 ** z;
 };
 
 // Kartverket Topo (åpne data, CC BY 4.0)
-const tileUrl = (z: number, x: number, y: number) =>
+export const tileUrl = (z: number, x: number, y: number) =>
   `https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/${z}/${y}/${x}.png`;
 
 export function TrailMap({ segmenter, hoyde = 320 }: { segmenter: KartSegment[]; hoyde?: number }) {

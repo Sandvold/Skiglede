@@ -5,6 +5,8 @@ import { ThemedText } from '@/components/themed-text';
 import { TrailMap } from '@/components/ski/kart';
 import { Hoydeprofil } from '@/components/ski/profil';
 import { Temperaturoversikt, tekstPå } from '@/components/ski/oversikt';
+import { Loypevelger } from '@/components/ski/loypevelger';
+import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import trailsData from '@/data/trails.json';
@@ -73,9 +75,8 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
   );
 }
 
-export default function Hjem() {
+function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: string) => void; onTilbake: () => void }) {
   const theme = useTheme();
-  const [løypeId, setLøypeId] = useState(LØYPER.find((l) => l.navn === 'Nedre Badstogdalen')!.id);
   const [modus, setModus] = useState<Modus>('Tur');
   const [startTime, setStartTime] = useState(10);
   const [debug, setDebug] = useState(false);
@@ -86,7 +87,6 @@ export default function Hjem() {
     hentVarsel().then(setVarsel).catch(() => setVarselFeil(true));
   }, []);
 
-  const løype = LØYPER.find((l) => l.id === løypeId)!;
   const r = useMemo(() => {
     const seksjoner = lagSeksjoner(løype.punkter);
     const dato = varsel ? osloDato(dagIdx) : RESERVE_DATO;
@@ -117,27 +117,14 @@ export default function Hjem() {
 
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
-      {/* Hero med snødriver */}
-      <View style={[styles.hero, { backgroundColor: theme.hero }]}>
-        {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
-          <Text key={i} style={[styles.flak, { left: `${8 + i * 14}%`, top: 14 + ((i * 37) % 70), fontSize: 14 + ((i * 5) % 14) }]}>{f}</Text>
-        ))}
-        <View style={styles.heroInnhold}>
-          <Text style={styles.heroTittel}>Skiglede</Text>
-          <Text style={styles.heroUnder}>Smøring for løypa du skal gå. Hovden · Swix</Text>
-        </View>
-        <View style={[styles.drift, { left: -80, width: 420, height: 160, backgroundColor: theme.background, bottom: -100 }]} />
-        <View style={[styles.drift, { right: -120, width: 560, height: 190, backgroundColor: theme.background, bottom: -120 }]} />
-      </View>
+      <Hero />
 
       <View style={styles.innhold}>
-        {/* Løypevelger */}
-        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>LØYPE</ThemedText>
-        <View style={styles.rad}>
-          {LØYPER.map((l) => (
-            <Chip key={l.id} aktiv={l.id === løypeId} onPress={() => setLøypeId(l.id)}>{l.navn}</Chip>
-          ))}
-        </View>
+        {/* Tilbake og bytte av løype */}
+        <Pressable onPress={onTilbake} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+          <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
+        </Pressable>
+        <Loypevelger løyper={LØYPER} valgt={løype.id} onVelg={onVelg} />
 
         {/* Kart og profil */}
         <Kort>
@@ -275,6 +262,46 @@ export default function Hjem() {
       </View>
     </ScrollView>
   );
+}
+
+function Hero() {
+  const theme = useTheme();
+  return (
+      <View style={[styles.hero, { backgroundColor: theme.hero }]}>
+        {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
+          <Text key={i} style={[styles.flak, { left: `${8 + i * 14}%`, top: 14 + ((i * 37) % 70), fontSize: 14 + ((i * 5) % 14) }]}>{f}</Text>
+        ))}
+        <View style={styles.heroInnhold}>
+          <Text style={styles.heroTittel}>Skiglede</Text>
+          <Text style={styles.heroUnder}>Smøring for løypa du skal gå. Hovden · Swix</Text>
+        </View>
+        <View style={[styles.drift, { left: -80, width: 420, height: 160, backgroundColor: theme.background, bottom: -100 }]} />
+        <View style={[styles.drift, { right: -120, width: 560, height: 190, backgroundColor: theme.background, bottom: -120 }]} />
+      </View>
+  );
+}
+
+function Oversikt({ onVelg }: { onVelg: (id: string) => void }) {
+  const theme = useTheme();
+  return (
+    <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
+      <Hero />
+      <View style={styles.innhold}>
+        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>LØYPER PÅ HOVDEN</ThemedText>
+        <ThemedText themeColor="textSecondary">Trykk på en løype i kartet, eller velg fra lista.</ThemedText>
+        <Oversiktskart løyper={LØYPER} onVelg={onVelg} />
+        <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
+        <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0).</ThemedText>
+      </View>
+    </ScrollView>
+  );
+}
+
+export default function Hjem() {
+  const [valgt, setValgt] = useState<string | null>(null);
+  const løype = LØYPER.find((l) => l.id === valgt);
+  if (!løype) return <Oversikt onVelg={setValgt} />;
+  return <Detalj key={løype.id} løype={løype} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
 }
 
 const styles = StyleSheet.create({
