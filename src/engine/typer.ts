@@ -52,8 +52,14 @@ export type Tur = {
   sluttTs: number;
   tempoKmt: number;
   seksjoner: SeksjonVær[];
+  /** Kaldeste/varmeste snøtemperatur langs løypa: 5./95. persentil etter lengde, så korte partier ikke avgjør. */
   tMin: number;
   tMaks: number;
+  /** Absolutt kaldeste/varmeste bit (250 m), kun til visning. */
+  tMinRå: number;
+  tMaksRå: number;
+  /** Andel av løypa (0–1) som ligger i terrengskygge når den gås. */
+  skyggeAndel: number;
   /** Største temperaturutslag i lufta fra 3 t før til 3 t etter turen (°C). Stort = skiftende vær. */
   variasjon: number;
   /** Laveste lufttemperatur fra 3 t før til 3 t etter turen (°C). */

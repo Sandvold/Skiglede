@@ -11,6 +11,18 @@ export function skogDemping(solH: number): number {
 }
 export const SOL_GRAD_PER_500W = 2.0; // °C ekstra «snøtemperatur» ved 500 W/m² uten skygge [Forslag]
 
+/** Lengdevektet persentil (p 0–1): lange strekk teller mer enn korte. */
+export function vektetPersentil(v: number[], vekt: number[], p: number): number {
+  const rad = v.map((x, i) => ({ x, w: vekt[i] })).sort((a, b) => a.x - b.x);
+  const sum = rad.reduce((a, r) => a + r.w, 0);
+  let akk = 0;
+  for (const r of rad) {
+    akk += r.w;
+    if (akk >= p * sum) return r.x;
+  }
+  return rad[rad.length - 1].x;
+}
+
 export function lagSeksjoner(p: Punkt[], lengde = 250): Seksjon[] {
   const ut: Seksjon[] = [];
   let i = 0;
@@ -76,6 +88,9 @@ export function planTur(args: {
     return { seq: s.seq, tid, tLuft, sw, sol, skygge: tf.skygge, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
   });
   const t = ut.map((x) => x.tEff);
+  const lengder = seksjoner.map((x) => x.endM - x.startM);
+  const totalM = lengder.reduce((a, b) => a + b, 0);
+  const skyggeM = lengder.reduce((a, l, i) => a + (ut[i].skygge ? l : 0), 0);
   const sluttTs = startTs + ms(seksjoner[seksjoner.length - 1].endM);
   const vindu = timer.filter((x) => x.ts >= startTs - 3 * 3600_000 && x.ts <= sluttTs + 3 * 3600_000);
   const lufttemp = vindu.map((x) => x.temp);
@@ -86,8 +101,11 @@ export function planTur(args: {
     sluttTs,
     tempoKmt,
     seksjoner: ut,
-    tMin: Math.min(...t),
-    tMaks: Math.max(...t),
+    tMin: vektetPersentil(t, lengder, 0.05), // 5./95. persentil etter lengde: korte partier avgjør ikke [Bruker]
+    tMaks: vektetPersentil(t, lengder, 0.95),
+    tMinRå: Math.min(...t),
+    tMaksRå: Math.max(...t),
+    skyggeAndel: totalM ? skyggeM / totalM : 0,
     variasjon,
     luftMin: lufttemp.length ? Math.min(...lufttemp) : Math.min(...t),
     sludd,

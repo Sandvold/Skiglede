@@ -1,5 +1,6 @@
 // Kjøres med: npx --yes tsx scripts/test-lager-skipark.ts  (feiler med exit 1 hvis en sjekk ikke stemmer)
 import trails from '../src/data/trails.json';
+import { vektetPersentil } from '../src/engine/tur';
 import { analyserSnø, byggAlternativer, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
 
 let feil = 0;
@@ -89,6 +90,12 @@ sjekk('alternativ: tomt skipark gir ingen', alt([], () => ({ temp: 1, nedbor: 0.
 sjekk('alternativ: rubb i parken men tørt føre gir ikke rubb', alt(['rubb'], () => ({ temp: -8 })), []);
 sjekk('alternativ: stabilt kaldt føre gir ikke felle', alt(['felle'], () => ({ temp: -10 })), []);
 sjekk('alternativ: skiftende temperatur gir felle', alt(['felle'], (h) => ({ temp: h >= 6 && h < 18 ? 3 : -4 })), ['felle']);
+
+// Robuste ytterpunkter: ett kort parti avgjør ikke, et langt strekk gjør
+const lik = Array(20).fill(250);
+sjekk('persentil: 1 av 20 biter i skygge (5 %) påvirker ikke 5. persentil', vektetPersentil([...Array(19).fill(0), -6], lik, 0.05), 0);
+sjekk('persentil: 4 av 20 biter (20 %) påvirker 5. persentil', vektetPersentil([...Array(16).fill(0), ...Array(4).fill(-6)], lik, 0.05), -6);
+sjekk('persentil: lange biter veier mer', vektetPersentil([0, -6], [250, 1000], 0.05), -6);
 
 // Forenklet: bare base og dagens smøring
 const full = stabel('hardvoks', [['Binder', 'VG35'], ['Base (kaldere)', 'VP40'], ['Dagens voks', 'VP45'], ['Dekke 1', 'VP40']]);
