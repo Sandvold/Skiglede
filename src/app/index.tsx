@@ -376,6 +376,7 @@ function Detalj({ løype: valgtLøype, onVelg, onTilbake }: { løype: Løype; on
 
 function Oversikt({ onVelg }: { onVelg: (id: string) => void }) {
   const theme = useTheme();
+  const router = useRouter();
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
       <Hero />
@@ -385,6 +386,9 @@ function Oversikt({ onVelg }: { onVelg: (id: string) => void }) {
         <Oversiktskart løyper={LØYPER} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
         <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0).</ThemedText>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/rutevelger')}>
+          <ThemedText type="small" themeColor="textSecondary" style={{ textDecorationLine: 'underline' }}>Verktøy: velg løyper fra Turrutebasen eller OpenStreetMap (Rutevelger)</ThemedText>
+        </Pressable>
       </View>
     </ScrollView>
   );

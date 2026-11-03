@@ -7,7 +7,7 @@ import { ZoomKart } from './zoomkart';
 export type OversiktLøype = { id: string; navn: string; punkter: number[][] };
 
 /** Standardvisning: Hovden-sentrum med Breive, Vidmyr, Lundane og Hartevatn i bildet [Bruker]. */
-const HOVDEN_VISNING = { lon: 7.3646, lat: 59.5699, z: 12 };
+export const HOVDEN_VISNING = { lon: 7.3646, lat: 59.5699, z: 12 };
 
 /** Kart med alle løyper. Trykk på en løype for å gå til den. Dra og zoom for å se nærmere. */
 export function Oversiktskart({ løyper, onVelg, hoyde = 420 }: { løyper: OversiktLøype[]; onVelg: (id: string) => void; hoyde?: number }) {
