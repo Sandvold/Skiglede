@@ -1,5 +1,6 @@
 // Kjøres med: npx --yes tsx scripts/test-lager-skipark.ts  (feiler med exit 1 hvis en sjekk ikke stemmer)
 import trails from '../src/data/trails.json';
+import { byggRute, tilhørende } from '../src/data/rute';
 import { vektetPersentil } from '../src/engine/tur';
 import { terrengFaktor } from '../src/engine/terreng';
 import { analyserSnø, byggAlternativer, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
@@ -105,6 +106,17 @@ const høyTid = Date.parse('2026-03-10T11:00:00Z');
 const blokk = terrengFaktor(TERR(80)[0], høyTid, 59.57, 7.37);
 sjekk('terreng: blokkert horisont gir skygge og lav solfaktor', [Math.round(blokk.faktor * 100), blokk.skygge], [30, true]);
 sjekk('terreng: ignorerSkygge gir full solfaktor men melder skygge', terrengFaktor(TERR(80)[0], høyTid, 59.57, 7.37, true).faktor > 0.3, true);
+
+// Rute: hovedløype + tilhørende fra samme start
+const alleL = trails as any[];
+const lund = alleL.find((x) => x.navn === 'Lundane');
+const tilh = tilhørende(lund, alleL);
+sjekk('rute: Galten hører til Lundane (samme start)', tilh.map((x) => x.navn), ['Galten']);
+const rute = byggRute(lund, tilh);
+sjekk('rute: lengden er summen (±1 %)', Math.abs(rute.lengde_m - (lund.lengde_m + tilh[0].lengde_m)) / rute.lengde_m < 0.01, true);
+sjekk('rute: avstanden øker jevnt', rute.punkter.every((q, i) => i === 0 || q[3] >= rute.punkter[i - 1][3]), true);
+sjekk('rute: ender ved start', [rute.punkter[0][0], rute.punkter[0][1]], [rute.punkter[rute.punkter.length - 1][0], rute.punkter[rute.punkter.length - 1][1]]);
+sjekk('rute: uten ekstra er den uendret', byggRute(lund, []), lund);
 
 // Forenklet: bare base og dagens smøring
 const full = stabel('hardvoks', [['Binder', 'VG35'], ['Base (kaldere)', 'VP40'], ['Dagens voks', 'VP45'], ['Dekke 1', 'VP40']]);

@@ -7,6 +7,7 @@ import { Hoydeprofil } from '@/components/ski/profil';
 import { Temperaturoversikt, tekstPå } from '@/components/ski/oversikt';
 import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
+import { byggRute, tilhørende, type Løype } from '@/data/rute';
 import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
@@ -18,7 +19,6 @@ import { NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LI
 import { useRouter } from 'expo-router';
 import { analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
-type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[]; terreng?: Terreng[] };
 const LØYPER = trailsData as unknown as Løype[];
 
 const TIMER: Vær[] = (vaerData.timer as (string | number)[][]).map((r) => ({
@@ -66,8 +66,11 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
   );
 }
 
-function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: string) => void; onTilbake: () => void }) {
+function Detalj({ løype: valgtLøype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: string) => void; onTilbake: () => void }) {
   const theme = useTheme();
+  const [ekstraIds, setEkstraIds] = useState<string[]>([]);
+  const mulige = useMemo(() => tilhørende(valgtLøype, LØYPER), [valgtLøype]);
+  const løype = useMemo(() => byggRute(valgtLøype, mulige.filter((x) => ekstraIds.includes(x.id))), [valgtLøype, mulige, ekstraIds]);
   const [modus, setModus] = useState<Modus>('Tur');
   const [startTime, setStartTime] = useState(10);
   const [debug, setDebug] = useState(false);
@@ -147,7 +150,21 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
         <Pressable onPress={onTilbake} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
         </Pressable>
-        <Loypevelger løyper={LØYPER} valgt={løype.id} onVelg={onVelg} />
+        <Loypevelger løyper={LØYPER} valgt={valgtLøype.id} onVelg={onVelg} />
+
+        {mulige.length > 0 && (
+          <View style={{ gap: Spacing.two }}>
+            <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>GÅ LENGER: LEGG TIL FRA SAMME START</ThemedText>
+            <View style={styles.rad}>
+              {mulige.map((x) => (
+                <Chip key={x.id} aktiv={ekstraIds.includes(x.id)} onPress={() => setEkstraIds(ekstraIds.includes(x.id) ? ekstraIds.filter((v) => v !== x.id) : [...ekstraIds, x.id])}>
+                  {`${ekstraIds.includes(x.id) ? '✓ ' : '+ '}${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km`}
+                </Chip>
+              ))}
+            </View>
+            {ekstraIds.length > 0 && <ThemedText type="small" themeColor="textSecondary">Turen går først {valgtLøype.navn}, så {ekstraIds.map((i) => LØYPER.find((l) => l.id === i)?.navn).join(', ')}, og tilbake til start. Smøringen regnes for hele turen.</ThemedText>}
+          </View>
+        )}
 
         {/* Kart og profil */}
         <Kort>
