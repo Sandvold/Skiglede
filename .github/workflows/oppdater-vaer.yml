@@ -1,0 +1,28 @@
+name: Oppdater værhistorikk
+
+# Henter siste 14 døgn fra MET Nordic Analysis hver sjette time og committer src/data/vaer-hovden.json.
+# Netlify bygger siden på nytt når filen endres.
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  vaer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy pyproj
+      - run: python3 -I scripts/hent_vaer.py --lat 59.5667 --lon 7.3667 --days 14 --json src/data/vaer-hovden.json
+      - name: Commit hvis endret
+        run: |
+          git config user.name "skiglede-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/data/vaer-hovden.json
+          git diff --cached --quiet || (git commit -m "Oppdater værhistorikk" && git push)

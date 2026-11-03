@@ -69,6 +69,8 @@ def main():
     ap.add_argument("--lon", type=float, required=True)
     ap.add_argument("--days", type=int, default=14)
     ap.add_argument("--sql", help="skriv INSERT-setninger til denne filen")
+    ap.add_argument("--json", help="skriv timesverdier som JSON (formatet src/data/vaer-hovden.json)")
+    ap.add_argument("--ref-hoyde", type=float, default=838, help="høyde (m) for temperaturene, lagres i JSON")
     ap.add_argument("--workers", type=int, default=8)
     a = ap.parse_args()
 
@@ -94,6 +96,18 @@ def main():
     for t, v in res:
         if not v:
             print("mangler", t.isoformat(), file=sys.stderr)
+
+    if a.json:
+        import json
+        if len(ok) < len(hours) * 0.9:
+            sys.exit(f"for få timer ({len(ok)} av {len(hours)}), skriver ikke {a.json}")
+        timer = [[t.strftime("%Y-%m-%dT%H:%M:%SZ"), round(v["air_temperature_2m"] - 273.15, 2), round(v["precipitation_amount"], 3),
+                  round(v["relative_humidity_2m"], 3), round(v["wind_speed_10m"], 2),
+                  round(v["integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"])] for t, v in ok]
+        with open(a.json, "w") as f:
+            json.dump({"celle": [i, j], "referansehoyde_m": a.ref_hoyde,
+                       "kolonner": ["ts", "temp_c", "nedbor_mm", "rh", "vind_ms", "sw_j_m2"], "timer": timer}, f, separators=(",", ":"))
+        print(f"skrev {len(timer)} timer til {a.json}", file=sys.stderr)
 
     if a.sql:
         rows = []
