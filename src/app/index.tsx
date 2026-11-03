@@ -1,98 +1,96 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, View, Pressable } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import løype from '@/data/nedre-badstogdalen.json';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const TEMPO = { Trening: 9, Tur: 5 } as const;
+type Modus = keyof typeof TEMPO;
 
 export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+  const theme = useTheme();
+  const [modus, setModus] = useState<Modus>('Tur');
 
-        <ThemedText type="code" style={styles.code}>
-          get started
+  const pts = løype.punkter as [number, number][];
+  const total = pts[pts.length - 1][0];
+  const hs = pts.map((p) => p[1]);
+  const lav = Math.min(...hs);
+  const høy = Math.max(...hs);
+  const opp = pts.slice(1).reduce((s, p, i) => s + Math.max(0, p[1] - pts[i][1]), 0);
+  const minutter = Math.round((total / 1000 / TEMPO[modus]) * 60);
+
+  return (
+    <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.scroll}>
+      <ThemedView style={styles.container}>
+        <ThemedText type="title">Skiglede</ThemedText>
+        <ThemedText themeColor="textSecondary">
+          Smøring for løypa du skal gå, ikke bare stedet du står. Hovden, kun Swix.
         </ThemedText>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
+        <ThemedView type="backgroundElement" style={styles.card}>
+          <ThemedText type="subtitle">{løype.navn}</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            {(total / 1000).toFixed(1)} km · {Math.round(lav)}–{Math.round(høy)} moh · {Math.round(opp)} m stigning
+          </ThemedText>
+
+          <View style={styles.chart}>
+            {pts.map((p, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.bar,
+                  { height: 8 + ((p[1] - lav) / (høy - lav)) * 112, backgroundColor: theme.text },
+                ]}
+              />
+            ))}
+          </View>
+          <View style={styles.axis}>
+            <ThemedText type="small" themeColor="textSecondary">0 km</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">{(total / 1000).toFixed(1)} km</ThemedText>
+          </View>
         </ThemedView>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <View style={styles.row}>
+          {(Object.keys(TEMPO) as Modus[]).map((m) => (
+            <Pressable
+              key={m}
+              onPress={() => setModus(m)}
+              style={[
+                styles.knapp,
+                { backgroundColor: modus === m ? theme.text : theme.backgroundElement },
+              ]}>
+              <ThemedText style={{ color: modus === m ? theme.background : theme.text }}>
+                {m} · {TEMPO[m]} km/t
+              </ThemedText>
+            </Pressable>
+          ))}
+        </View>
+        <ThemedText themeColor="textSecondary">
+          Estimert tid: ca. {Math.floor(minutter / 60)} t {minutter % 60} min
+        </ThemedText>
+
+        <ThemedView type="backgroundElement" style={styles.card}>
+          <ThemedText type="subtitle">Smøring</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            Kommer. Regelmotoren bygger en komplett stabel fra bindervoks til topplag ut fra 14 dagers
+            vær, prognose og høydeprofil, når reglene er avklart.
+          </ThemedText>
+        </ThemedView>
+      </ThemedView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  scroll: { alignItems: 'center', paddingVertical: Spacing.five, paddingHorizontal: Spacing.three },
+  container: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
+  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  chart: { flexDirection: 'row', alignItems: 'flex-end', height: 128, gap: 1, marginTop: Spacing.two },
+  bar: { flex: 1, borderTopLeftRadius: 1, borderTopRightRadius: 1 },
+  axis: { flexDirection: 'row', justifyContent: 'space-between' },
+  row: { flexDirection: 'row', gap: Spacing.two },
+  knapp: { paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, borderRadius: Spacing.five },
 });
