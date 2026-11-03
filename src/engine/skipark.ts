@@ -25,7 +25,7 @@ export function vurderPåfylling(forrige: Smøring | undefined, ny: Stabel, nå:
 
   const rens = (...grunner: string[]) => ({ handling: 'rens' as const, tittel: 'Rens skia først', grunner });
   if (forrige.type !== ny.type) {
-    const navn = { hardvoks: 'hardvoks', klister: 'klister', glider: 'glider' };
+    const navn: Record<Stabel['type'], string> = { hardvoks: 'hardvoks', klister: 'klister', glider: 'glider', felle: 'felle', rubb: 'rubb' };
     return rens(`Forrige smøring var ${navn[forrige.type]}, nå trengs ${navn[ny.type]}. De må ikke ligge oppå hverandre.`);
   }
   if (forrige.turer >= SKIPARK.maksTurerUtenRens) return rens(`${forrige.turer} turer uten rens: lagene har bygd seg opp og griper eller glir dårligere.`);
@@ -38,11 +38,14 @@ export function vurderPåfylling(forrige: Smøring | undefined, ny: Stabel, nå:
     return rens(`Nå trengs ${b} (kaldere enn ${a} som ligger på). En kaldere voks fester seg dårlig oppå en varmere.`);
   }
   const likt = a === b;
-  const tekst = {
+  const tekster: Record<Stabel['type'], string> = {
+    felle: 'Felleski har ingen smøring å lagre.',
+    rubb: 'Rubbski har ingen smøring å lagre.',
     hardvoks: likt ? 'Samme dagsvoks ligger på: korke og legg 1–2 nye tynne lag.' : `Varmere enn forrige (${a}): legg ${b} og eventuelt dekke rett oppå.`,
     klister: likt ? 'Samme klister ligger på: smør ett nytt tykt lag over.' : `Varmere enn forrige (${a}): ett nytt tykt lag ${b} rett oppå.`,
     glider: likt ? 'Samme glider ligger på: børst og legg ett tynt lag.' : `Varmere enn forrige (${a}): legg ${b} oppå uten å rense.`,
-  }[ny.type];
+  };
+  const tekst = tekster[ny.type];
   return {
     handling: 'topplag',
     tittel: 'Bare topplag trengs',

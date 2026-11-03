@@ -89,6 +89,7 @@ export function planTur(args: {
     tMin: Math.min(...t),
     tMaks: Math.max(...t),
     variasjon,
+    luftMin: lufttemp.length ? Math.min(...lufttemp) : Math.min(...t),
     sludd,
   };
 }

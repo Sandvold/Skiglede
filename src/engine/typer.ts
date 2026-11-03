@@ -56,6 +56,8 @@ export type Tur = {
   tMaks: number;
   /** Største temperaturutslag i lufta fra 3 t før til 3 t etter turen (°C). Stort = skiftende vær. */
   variasjon: number;
+  /** Laveste lufttemperatur fra 3 t før til 3 t etter turen (°C). */
+  luftMin: number;
   /** Nedbør i grenseland (−1…+3,5 °C) rundt turen: sludd eller bløt snø. */
   sludd: boolean;
 };
@@ -63,10 +65,14 @@ export type Tur = {
 export type Lag = { rolle: string; produkt: string; antall: string; merknad?: string };
 
 export type Stabel = {
-  type: 'hardvoks' | 'klister' | 'glider';
+  type: 'hardvoks' | 'klister' | 'glider' | 'felle' | 'rubb';
   lag: Lag[]; // nederst først
   begrunnelse: string[];
   advarsler: string[];
+  /** false når skityper ikke passer føret (rubb). Da ligger anbefalt alternativ i `alternativ`. */
+  egnet?: boolean;
+  alternativ?: Stabel;
 };
 
-export type Stil = 'klassisk' | 'skoyting';
+/** Type ski: klassisk (voks/klister), felleski, rubbski (smørefri med oppbørstet festesone) eller skøyting. */
+export type Stil = 'klassisk' | 'felle' | 'rubb' | 'skoyting';

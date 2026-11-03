@@ -19,10 +19,11 @@ export function alternativFraLager(navn: string, lager: string[]): Produkt | und
  */
 export function tilpassTilLager(stabel: Stabel, lager: string[]): Stabel {
   if (!lager.length) return stabel;
+  if (stabel.alternativ) return { ...stabel, alternativ: tilpassTilLager(stabel.alternativ, lager) };
   const advarsler = [...stabel.advarsler];
   const begrunnelse = [...stabel.begrunnelse];
   const lag = stabel.lag.map((l) => {
-    if (lager.includes(l.produkt)) return l;
+    if (lager.includes(l.produkt) || !produkt(l.produkt)) return l; // «Felle» og «Rubb» er ikke smøreprodukter
     const alt = alternativFraLager(l.produkt, lager);
     if (alt) {
       advarsler.push(`Har ikke ${l.produkt}: bruker ${alt.navn} (${alt.farge}, ${alt.omr[0]} til ${alt.omr[1]} °C) i stedet.`);

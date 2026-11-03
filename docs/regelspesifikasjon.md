@@ -55,6 +55,12 @@ Fargene i appen er tilnærminger til Swix’ etikettfarger, ikke offisielle farg
 ### 8.1 Glidevoks (skøyting) [Bruker + Swix]
 Skøyting er bare glider; temperaturen er hovedsaken. Swix HS (hydrokarbon, uten fluor): HS5 turkis −18…−10, HS6 blå −12…−6, HS7 violett −8…−2, HS8 rød −4…+4, HS10 gul 0…+10 (swixsport.com-produktsidene). Glidere overlapper. Da velges den **kaldeste** som passer («heller hakket kaldt enn varmt»; brukeren gikk mest på violett i fjor). Temperaturen er snittet av snøtemperaturen langs turen. Klassisk glidesone er ikke med.
 
+### 8.1b Felleski og rubbski [Bruker]
+Skityper på turen og i skipark: klassisk (voks/klister), felleski, rubbski, skøyting.
+- **Felleski:** fungerer alltid, men aldri perfekt, og glir alltid. Ingen festevoks eller klister; samme felle uansett føre. Glidesonene foran og bak får en glider valgt etter temperaturen (Forslag, bekreft).
+- **Rubbski** (smørefri, festesonen børstes opp med sandpapir, ingen festesmøring): **bare på sluddføre** (nedbør ≥ 0,3 mm/t mellom −1 og +3,5 °C rundt turen) og **aldri ved fare for ordentlig minus**: frarådes hvis lufta eller snøen rundt turen går under −2 °C (`RUBB.minLuft`, Forslag). Frarådes den, vises vanlig klassisk smøring som alternativ. Kilder: snl.no/rubbski og klikk.no (rubbeski iser i kulde og snøbyger).
+- Felle og rubb har ingen festesmøring å lagre i skiparken.
+
 ### 8.2 Smørelager [Bruker]
 Brukeren krysser av produktene han eier (`/lager`). Når lageret ikke er tomt, byttes anbefalte produkter som mangler mot nærmeste i samme kategori (hardvoks, binder, klister, glider) etter senter av temperaturområdet; ved lik avstand velges det kaldeste. Finnes ingen i kategorien, markeres produktet som mangler. Tomt lager betyr at alt foreslås.
 

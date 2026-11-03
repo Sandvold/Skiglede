@@ -121,7 +121,69 @@ export function byggGlider(tur: Tur): Stabel {
   };
 }
 
-/** Samler klassisk (hardvoks/klister) og skøyting (glider). */
+/** Rubbski: bare sludd, aldri ved fare for ordentlig minus [Bruker; −2 °C er Forslag]. */
+export const RUBB = { minLuft: -2 };
+
+function glidesone(tur: Tur): Lag {
+  const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
+  const g = glideFor(snitt);
+  return { rolle: 'Glidesone (foran og bak)', produkt: g.navn, antall: '1 lag', merknad: `Passer ${g.omr[0]} til ${g.omr[1]} °C. Ikke på festesonen.` };
+}
+
+/** Felleski: fungerer alltid, men aldri perfekt, og glir alltid [Bruker]. Ingen festevoks eller klister. */
+export function byggFelle(tur: Tur): Stabel {
+  return {
+    type: 'felle',
+    lag: [
+      { rolle: 'Festesone', produkt: 'Felle', antall: 'Ingen smøring', merknad: 'Ingen festevoks eller klister. Hold fella ren og tørr' },
+      glidesone(tur),
+    ],
+    begrunnelse: [
+      'Felleski fungerer i alle føre, men gir aldri perfekt feste eller glid: et kompromiss som slår feil smøring, men ikke riktig smøring.',
+      `Snøtemperatur ${tur.tMin.toFixed(1)} til ${tur.tMaks.toFixed(1)} °C: samme felle uansett.`,
+    ],
+    advarsler: [],
+    egnet: true,
+  };
+}
+
+/**
+ * Rubbski: bare på sluddføre, og aldri når det er fare for ordentlig minus (da iser rubben).
+ * Passer det ikke, frarådes den og vanlig klassisk smøring foreslås som alternativ.
+ */
+export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett: boolean): Stabel {
+  const grunner: string[] = [];
+  if (!tur.sludd) grunner.push('Rubb brukes bare på sluddføre (nedbør rundt 0 °C). Det er ikke meldt sludd rundt turen.');
+  const kaldest = Math.min(tur.luftMin, tur.tMin);
+  if (kaldest < RUBB.minLuft) {
+    grunner.push(`Fare for ordentlig minus: ned mot ${kaldest.toFixed(1)} °C rundt turen (grense ${RUBB.minLuft} °C). Rubben iser.`);
+  }
+  if (grunner.length) {
+    return {
+      type: 'rubb',
+      lag: [],
+      begrunnelse: ['Rubbski passer ikke i dag. Vanlig klassisk smøring er foreslått i stedet.'],
+      advarsler: grunner,
+      egnet: false,
+      alternativ: byggStabel(tur, snø, seksjoner, lett),
+    };
+  }
+  return {
+    type: 'rubb',
+    lag: [
+      { rolle: 'Festesone', produkt: 'Rubb', antall: 'Ingen smøring', merknad: 'Børst opp med sandpapir (grovt midt under, finere ytterst). Ingen festevoks eller klister' },
+      glidesone(tur),
+    ],
+    begrunnelse: [`Sluddføre rundt 0 °C uten fare for ordentlig minus (lufta ned til ${tur.luftMin.toFixed(1)} °C): rubb passer.`],
+    advarsler: tur.tMaks > 3 ? ['Over +3 °C og blankt: rubben kan bli for glatt og klister er da bedre.'] : [],
+    egnet: true,
+  };
+}
+
+/** Samler alle skityper. */
 export function byggSmøring(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false): Stabel {
-  return stil === 'skoyting' ? byggGlider(tur) : byggStabel(tur, snø, seksjoner, lett);
+  if (stil === 'skoyting') return byggGlider(tur);
+  if (stil === 'felle') return byggFelle(tur);
+  if (stil === 'rubb') return byggRubb(tur, snø, seksjoner, lett);
+  return byggStabel(tur, snø, seksjoner, lett);
 }

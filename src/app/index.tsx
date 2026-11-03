@@ -43,6 +43,9 @@ const dagNavn = (dato: string, i: number) =>
   i === 0 ? 'I dag' : i === 1 ? 'I morgen' : new Intl.DateTimeFormat('nb-NO', { weekday: 'long', timeZone: 'UTC' }).format(Date.parse(dato + 'T12:00:00Z'));
 const DAGER = [0, 1, 2];
 
+const STIL_NAVN: Record<Stil, string> = { klassisk: 'Klassisk', felle: 'Felleski', rubb: 'Rubbski', skoyting: 'Skøyting' };
+const TYPE_NAVN = { hardvoks: 'Hardvoks', klister: 'Klister', glider: 'Glider', felle: 'Felleski', rubb: 'Rubbski' } as const;
+
 const TEMPO = { Trening: 9, Tur: 5 } as const;
 type Modus = keyof typeof TEMPO;
 const STARTTIDER = [9, 10, 11, 12, 13]; // lokal tid (UTC+1 i november)
@@ -105,12 +108,15 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
     return { seksjoner, snø, tur, stabel, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
   }, [løype, modus, startTime, dagIdx, varsel, stil, lager]);
   const ski = skipark.find((x) => x.id === skiId);
-  const vurdering = ski ? vurderPåfylling(ski.smoring, r.stabel, nå) : null;
-  const lagret = !!ski?.smoring && JSON.stringify(ski.smoring.lag) === JSON.stringify(r.stabel.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
+  const frarådet = r.stabel.egnet === false;
+  const vis = frarådet && r.stabel.alternativ ? r.stabel.alternativ : r.stabel; // rubb som ikke passer: vis vanlig klassisk i stedet
+  const kanLagre = !frarådet && (stil === 'klassisk' || stil === 'skoyting'); // felle og rubb har ingen smøring å lagre
+  const vurdering = ski && kanLagre ? vurderPåfylling(ski.smoring, vis, nå) : null;
+  const lagret = !!ski?.smoring && JSON.stringify(ski.smoring.lag) === JSON.stringify(vis.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
 
   const km = løype.lengde_m / 1000;
   const minutter = Math.round((km / TEMPO[modus]) * 60);
-  const stabelVisning = [...r.stabel.lag].reverse(); // øverste lag først
+  const stabelVisning = [...vis.lag].reverse(); // øverste lag først
 
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
@@ -146,8 +152,8 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
           ))}
         </View>
         <View style={styles.rad}>
-          {(['klassisk', 'skoyting'] as Stil[]).map((x) => (
-            <Chip key={x} aktiv={x === stil} onPress={() => { setStil(x); if (ski && ski.stil !== x) setSkiId(null); }}>{x === 'klassisk' ? 'Klassisk' : 'Skøyting'}</Chip>
+          {(Object.keys(STIL_NAVN) as Stil[]).map((x) => (
+            <Chip key={x} aktiv={x === stil} onPress={() => { setStil(x); if (ski && ski.stil !== x) setSkiId(null); }}>{STIL_NAVN[x]}</Chip>
           ))}
         </View>
         <View style={styles.rad}>
@@ -193,11 +199,17 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
             <View style={styles.rad}>
               <Chip
                 aktiv={lagret}
-                onPress={() => setSkipark(skipark.map((x) => (x.id === ski.id ? { ...x, smoring: lagreSmøring(stil, r.stabel, x.smoring, vurdering, Date.now()) } : x)))}>
+                onPress={() => setSkipark(skipark.map((x) => (x.id === ski.id ? { ...x, smoring: lagreSmøring(stil, vis, x.smoring, vurdering, Date.now()) } : x)))}>
                 {lagret ? '✓ Smøringen er lagret' : 'Lagre smøring på disse skiene'}
               </Chip>
             </View>
           </Kort>
+        )}
+
+        {ski && !kanLagre && (
+          <ThemedText type="small" themeColor="textSecondary">
+            {frarådet ? 'Rubbski frarådes i dag, så det er ingen smøring å lagre på dem.' : `${STIL_NAVN[stil]} har ingen festesmøring å lagre.`}
+          </ThemedText>
         )}
 
         {/* Smøring */}
@@ -205,10 +217,19 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
           <View style={styles.rad}>
             <Text style={[styles.h2, { color: theme.text, flex: 1 }]}>Smøring</Text>
             <View style={[styles.merke, { backgroundColor: theme.accentSoft }]}>
-              <Text style={{ color: theme.accent, fontWeight: '700' }}>{r.stabel.type === 'klister' ? 'Klister' : r.stabel.type === 'glider' ? 'Glider' : 'Hardvoks'}</Text>
+              <Text style={{ color: theme.accent, fontWeight: '700' }}>{TYPE_NAVN[vis.type]}</Text>
             </View>
           </View>
-          <ThemedText type="small" themeColor="textSecondary">Øverst = siste lag. Bygg nedenfra og opp.</ThemedText>
+          {frarådet && (
+            <View style={[styles.advarsel, { borderColor: '#D6403A', backgroundColor: 'rgba(214,64,58,0.08)', gap: 4 }]}>
+              <Text style={[styles.h3, { color: theme.text }]}>Rubbski passer ikke i dag</Text>
+              {r.stabel.advarsler.map((a, i) => (
+                <ThemedText key={i} type="small">• {a}</ThemedText>
+              ))}
+              <ThemedText type="small" themeColor="textSecondary">Bruk heller vanlige klassiske ski, smurt slik:</ThemedText>
+            </View>
+          )}
+          <ThemedText type="small" themeColor="textSecondary">{vis.lag.length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Øverst = siste lag. Bygg nedenfra og opp.' : 'Ingen smøring på festesonen.'}</ThemedText>
           <View style={{ gap: 6 }}>
             {stabelVisning.map((l, i) => (
               <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
@@ -220,7 +241,7 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
               </View>
             ))}
           </View>
-          {r.stabel.advarsler.map((a, i) => (
+          {vis.advarsler.map((a, i) => (
             <View key={i} style={[styles.advarsel, { borderColor: '#E3A64A' }]}>
               <ThemedText type="small">⚠ {a}</ThemedText>
             </View>
@@ -244,7 +265,7 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
         <Kort>
           <Text style={[styles.h2, { color: theme.text }]}>Voks og klister</Text>
           <ThemedText type="small" themeColor="textSecondary">Hva hvert produkt fungerer på, med Swix’ fargekoder.</ThemedText>
-          <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={r.stabel.lag.map((l) => l.produkt)} />
+          <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={vis.lag.map((l) => l.produkt)} />
         </Kort>
 
         {/* Feilsøking */}
@@ -254,7 +275,7 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
         {debug && (
           <Kort style={{ gap: Spacing.two }}>
             <Text style={[styles.h3, { color: theme.text }]}>Hvorfor denne stabelen</Text>
-            {[...r.snø.forklaring, ...r.stabel.begrunnelse].map((t, i) => (
+            {[...r.snø.forklaring, ...r.stabel.begrunnelse, ...(r.stabel.alternativ?.begrunnelse ?? [])].map((t, i) => (
               <ThemedText key={i} type="small">• {t}</ThemedText>
             ))}
             <Text style={[styles.h3, { color: theme.text, marginTop: Spacing.two }]}>Døgn (UTC): mild dag og kald natt</Text>

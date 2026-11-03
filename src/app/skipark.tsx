@@ -10,7 +10,7 @@ import { NØKKEL_SKIPARK, TOM_LISTE, useLagret, type Ski } from '@/data/lagring'
 import { produkt, type Stil } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
 
-const STIL_NAVN: Record<Stil, string> = { klassisk: 'Klassisk', skoyting: 'Skøyting' };
+const STIL_NAVN: Record<Stil, string> = { klassisk: 'Klassisk (voks/klister)', felle: 'Felleski', rubb: 'Rubbski', skoyting: 'Skøyting' };
 const dato = (ts: number) => new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short', timeZone: 'Europe/Oslo' }).format(ts);
 
 export default function Skipark() {
@@ -42,7 +42,7 @@ export default function Skipark() {
             value={navn}
             onChangeText={setNavn}
             onSubmitEditing={legg}
-            placeholder="Navn, f.eks. «Fischer skøyte» eller «Madshus klassisk»"
+            placeholder="Navn, f.eks. «Fischer skøyte» eller «Madshus rubb»"
             placeholderTextColor={theme.textSecondary}
             style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
           />

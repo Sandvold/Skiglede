@@ -1,5 +1,6 @@
 // Kjøres med: npx --yes tsx scripts/test-lager-skipark.ts  (feiler med exit 1 hvis en sjekk ikke stemmer)
-import { glideFor, tilpassTilLager, vurderPåfylling, type Stabel, type Smøring } from '../src/engine';
+import trails from '../src/data/trails.json';
+import { analyserSnø, byggSmøring, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
 
 let feil = 0;
 const sjekk = (navn: string, faktisk: unknown, forventet: unknown) => {
@@ -37,6 +38,37 @@ sjekk('15 dager gammel = rens', vurderPåfylling(smør('hardvoks', [['Dagens vok
 sjekk('klister varmere = topplag', vurderPåfylling(smør('klister', [['Dagens klister', 'KX45N']]), stabel('klister', [['Dagens klister', 'KX65']])).handling, 'topplag');
 sjekk('glider: HS7 -> HS8 (varmere) = topplag', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), stabel('glider', [['Glider', 'HS8']])).handling, 'topplag');
 sjekk('glider: HS8 -> HS7 (kaldere) = rens', vurderPåfylling(smør('glider', [['Glider', 'HS8']]), stabel('glider', [['Glider', 'HS7']])).handling, 'rens');
+
+// Felle og rubb. Syntetisk døgn rundt turen: temp(h) og nedbør(h) for hver time (UTC).
+const lun: any = (trails as any[]).find((t) => t.navn === 'Lundane');
+const sek = lagSeksjoner(lun.punkter as Punkt[]);
+const start = Date.parse('2026-02-10T09:00:00Z');
+const døgn = (f: (h: number) => Partial<Vær>): Vær[] => Array.from({ length: 24 * 15 }, (_, i) => { const ts = start - 14 * 86400_000 + i * 3600_000; return { ts, temp: 0, nedbor: 0, rh: 0.8, vind: 1, sw: 0, ...f(new Date(ts).getUTCHours()) }; });
+const kjør = (stil: 'felle' | 'rubb' | 'klassisk', f: (h: number) => Partial<Vær>) => {
+  const t = døgn(f);
+  const sn = analyserSnø(t, start);
+  const tur = planTur({ seksjoner: sek, timer: t.filter((x) => x.ts >= start - 3 * 3600_000), startTs: start, tempoKmt: 5, refH: 838 });
+  return byggSmøring(stil, tur, sn, sek);
+};
+const sludd = kjør('rubb', () => ({ temp: 1, nedbor: 0.8 }));
+sjekk('rubb: sludd +1 °C er egnet', sludd.egnet, true);
+sjekk('rubb: egnet gir festesone Rubb', sludd.lag[0].produkt, 'Rubb');
+const tørt = kjør('rubb', () => ({ temp: 1, nedbor: 0 }));
+sjekk('rubb: ingen sludd, frarådes', tørt.egnet, false);
+sjekk('rubb: frarådes gir alternativ', !!tørt.alternativ && tørt.alternativ.lag.length > 0, true);
+sjekk('rubb: frarådes har ingen egne lag', tørt.lag.length, 0);
+const minus = kjør('rubb', (h) => ({ temp: h >= 12 || h < 4 ? -4 : 1, nedbor: 0.8 }));
+sjekk('rubb: sludd men ordentlig minus i vinduet, frarådes', minus.egnet, false);
+sjekk('rubb: minus nevnes som grunn', minus.advarsler.some((a) => a.includes('minus')), true);
+const kaldSludd = kjør('rubb', () => ({ temp: -3, nedbor: 0.8 }));
+sjekk('rubb: snø ved −3 °C frarådes', kaldSludd.egnet, false);
+for (const [navn, f] of [['kaldt', () => ({ temp: -12 })], ['sludd', () => ({ temp: 1, nedbor: 1 })], ['mildt', () => ({ temp: 4 })]] as const) {
+  const fl = kjør('felle', f);
+  sjekk(`felle: virker alltid (${navn})`, fl.egnet && fl.lag[0].produkt === 'Felle', true);
+}
+sjekk('felle: ingen advarsler om feil smøring', kjør('felle', () => ({ temp: -12 })).advarsler.length, 0);
+sjekk('lager: «Felle» meldes ikke som manglende produkt (glideren kan det)', tilpassTilLager(kjør('felle', () => ({ temp: -5 })), ['VP40']).advarsler.some((a) => a.includes('Felle')), false);
+sjekk('lager: alternativ tilpasses også', tilpassTilLager(tørt, ['VP40']).alternativ?.advarsler.length, (tilpassTilLager(tørt.alternativ!, ['VP40'])).advarsler.length);
 
 if (feil) { console.error(`${feil} feil`); process.exit(1); }
 console.log('Alle sjekker OK');
