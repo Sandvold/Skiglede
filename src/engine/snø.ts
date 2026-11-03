@@ -10,6 +10,9 @@ export const SNØ = {
   sykluserForFull: 2.5, // vektet sum som gir indeks 100
   vekter: [1, 1, 1, 0.6, 0.6, 0.6, 0.6, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3], // nyeste dag først
   nysnøMm: 5, // snøfall siste 48 t som nullstiller til «ny»
+  vindStille: 3, // under dette (m/s, snitt kl. 08-16 UTC) har vinden ingen effekt på smelting
+  vindIngenSmelting: 5, // ved dette og over er det nesten ingen smelting når det bare er svakt over null
+  vindMaksT: 4, // over denne maks-temperaturen (°C) tiner det uansett, så vinden dempes ikke
   snødekkeVarsel: 3, // snitt-temp siste 7 døgn over dette gir advarsel
 };
 
@@ -33,6 +36,13 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
     let syklus = 0;
     if (nattMin !== null && maks >= SNØ.tineGrense) {
       syklus = clamp(-nattMin / SNØ.frostFull, 0, 1) * (0.7 + 0.3 * clamp(solMaks / 800_000, 0, 1));
+      // Vind ved 1–2 °C gir fordampning og kjøling i stedet for smelting: lite tining og omdanning [Bruker]. Forsvinner ved høyere temperatur.
+      const vind = dagTimer.reduce((a, x) => a + x.vind, 0) / dagTimer.length;
+      const vindDemp = clamp((SNØ.vindIngenSmelting - vind) / (SNØ.vindIngenSmelting - SNØ.vindStille), 0, 1);
+      const tempFri = clamp((maks - (SNØ.vindMaksT - 2)) / 2, 0, 1); // 0 ved ≤2 °C, 1 ved ≥4 °C
+      const f = vindDemp + (1 - vindDemp) * tempFri;
+      if (f < 0.95) forklaring.push(`${new Date(d * DAG).toISOString().slice(0, 10)}: maks ${maks.toFixed(1)} °C med ${vind.toFixed(1)} m/s vind gir lite smelting (×${f.toFixed(2)}).`);
+      syklus *= f;
     }
     sum += syklus * SNØ.vekter[i];
     dager.push({ dato: new Date(d * DAG).toISOString().slice(0, 10), maks, natt: nattMin, syklus });
@@ -42,7 +52,7 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
   const sju = h.filter((x) => x.ts > nå - 7 * DAG);
   const regn7 = sju.filter((x) => x.temp > 0.5).reduce((s, x) => s + x.nedbor, 0);
   const snittTemp7 = sju.reduce((s, x) => s + x.temp, 0) / Math.max(1, sju.length);
-  const milde = sju.filter((x) => x.temp > 1 && x.sw > 200_000).length;
+  const milde = sju.filter((x) => x.temp > 1 && x.sw > 200_000 && (x.vind < SNØ.vindIngenSmelting || x.temp > SNØ.vindMaksT)).length; // vind ved svak plussgrad: ingen smelting
 
   let skarphet = 100 * clamp(sum / SNØ.sykluserForFull, 0, 1);
   let type: SnøAnalyse['type'] = 'ny';
