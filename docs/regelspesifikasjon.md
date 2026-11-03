@@ -63,3 +63,11 @@ Klister (fra produktlister): KX30 −12…0; KX35 +1…−4; KX40S −4…+2; KX
 5. Kontaktinfo til Yr-User-Agent.
 6. Lisens og dekning for DOM og AR5 på Hovden.
 7. Validering mot egne observasjoner («fungerte / fungerte ikke»).
+
+## 11. Implementert i regelmotoren (src/engine), 3. november
+- `snø.ts`: skarphetsindeks 0–100 fra tine/frys-runder siste 14 døgn (mild dag maks ≥ +1 °C, påfølgende natt; full skarphet ved −6 °C; vekter 1/0,6/0,3 etter alder; sol øker). Snøfall ≥ 5 mm siste 48 t nullstiller til nysnø. Advarsel når snittet siste 7 døgn er over +3 °C (forutsetter snødekke).
+- `tur.ts`: seksjoner à ca. 250 m, tid per seksjon fra tempo, temperatur justert 0,6 °C/100 m mot cellehøyden, sol-tillegg opptil +2 °C per 500 W/m² dempet av skog. Hellingsretning og terrengskygge mangler fortsatt.
+- `stabel.ts`: hardvoks (binder → base → dagens voks → dekke) eller klister (baseklister → isklister → mellomlag → dagens klister). Klister når snøen er omdannet og skarphet ≥ 50 eller varmest ≥ +0,5 °C.
+- Turdagen bruker observert vær 2. november som stand-in for prognose til Yr er koblet på.
+
+**[Åpent 8] Dekketrinn:** punkt 7.1 sier at antall trinn avhenger av tiden i *varmere* føre. Kristoffers eksempel (7–8 km kaldt før det blir varmere, da to) tilsier at det er varigheten i det *kalde* partiet. Motoren bruker det siste: under 1 t kaldt = ett trinn, 2 t eller mer = to. Må bekreftes.

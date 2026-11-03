@@ -17,26 +17,51 @@ from pyproj import Transformer
 REST = "https://ws.geonorge.no/hoydedata/v1/punkt"
 
 
-def lengste_segment(gml, navn):
-    best = None
+def kjed(segs, tol=15.0):
+    """Setter sammen biter som møtes i endepunktene (innen tol meter) til lengste kjede."""
+    def lengde(p):
+        return sum(math.dist(a, b) for a, b in zip(p, p[1:]))
+    rest = sorted(segs, key=lengde, reverse=True)
+    kjede = list(rest.pop(0))
+    endret = True
+    while endret and rest:
+        endret = False
+        for i, sgm in enumerate(rest):
+            for cand in (sgm, sgm[::-1]):
+                if math.dist(kjede[-1], cand[0]) <= tol:
+                    kjede += cand[1:]
+                elif math.dist(kjede[0], cand[-1]) <= tol:
+                    kjede = cand[:-1] + kjede
+                else:
+                    continue
+                rest.pop(i)
+                endret = True
+                break
+            if endret:
+                break
+    return kjede
+
+
+def lengste_segment(gml, navn, kjeding=True):
+    segs, ref = [], None
     for fe in (m for m in ET.parse(gml).getroot().iter() if m.tag.endswith("}Skiløype")):
-        nm, pl, ref = None, None, None
+        nm, pl, lid = None, None, None
         for c in fe.iter():
             tag = c.tag.split("}")[1]
             if tag == "rutenavn":
                 nm = c.text
-            elif tag == "lokalId" and ref is None:
-                ref = c.text
+            elif tag == "lokalId" and lid is None:
+                lid = c.text
             elif tag == "posList":
                 pl = c.text
         if nm == navn and pl:
             v = list(map(float, pl.split()))
-            pts = list(zip(v[0::2], v[1::2]))
-            if not best or len(pts) > len(best[0]):
-                best = (pts, ref)
-    if not best:
+            segs.append((list(zip(v[0::2], v[1::2])), lid))
+    if not segs:
         raise SystemExit(f"fant ikke {navn}")
-    return best
+    lengste = max(segs, key=lambda s: len(s[0]))
+    pts = kjed([s[0] for s in segs]) if kjeding else lengste[0]
+    return pts, lengste[1]
 
 
 def resample(pts, step):
@@ -106,7 +131,9 @@ def main():
                  forest=sum(skog[i:j + 1]) / (j - i + 1))
 
     if a.json:
-        json.dump({"navn": a.navn, "punkter": [[*p, h, d] for p, h, d in zip(pr, z, dist)]}, open(a.json, "w"))
+        to4326 = Transformer.from_crs("EPSG:25832", "EPSG:4326", always_xy=True)
+        json.dump({"navn": a.navn, "ref": ref, "lengde_m": total,
+                   "punkter": [[*to4326.transform(*p), h, d, int(k)] for p, h, d, k in zip(pr, z, dist, skog)]}, open(a.json, "w"))
 
     if a.sql:
         to4326 = Transformer.from_crs("EPSG:25832", "EPSG:4326", always_xy=True)

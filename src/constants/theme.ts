@@ -9,20 +9,50 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#0B2540',
+    background: '#EAF3FB',
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#D5E6F6',
+    textSecondary: '#52708F',
+    accent: '#2F7FD1',
+    accentSoft: '#CFE5F9',
+    border: '#C9DDF0',
+    hero: '#12386B',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#EAF4FF',
+    background: '#08182A',
+    backgroundElement: '#102B47',
+    backgroundSelected: '#1A4467',
+    textSecondary: '#9DB9D3',
+    accent: '#6DB3F2',
+    accentSoft: '#1D4A73',
+    border: '#1F4468',
+    hero: '#0B2A52',
   },
 } as const;
+
+/** Snøfarger for temperatur: dyp blå (kaldt) via isblå og hvitt til varm sand ved +5. */
+const TEMP_STOPS: [number, [number, number, number]][] = [
+  [-10, [22, 60, 140]],
+  [-5, [52, 120, 205]],
+  [-2, [100, 175, 235]],
+  [0, [160, 215, 240]],
+  [2, [247, 200, 130]],
+  [5, [235, 140, 70]],
+];
+export function tempFarge(t: number): string {
+  if (t <= TEMP_STOPS[0][0]) return `rgb(${TEMP_STOPS[0][1].join(',')})`;
+  for (let i = 1; i < TEMP_STOPS.length; i++) {
+    const [t1, c1] = TEMP_STOPS[i];
+    if (t <= t1) {
+      const [t0, c0] = TEMP_STOPS[i - 1];
+      const f = (t - t0) / (t1 - t0);
+      return `rgb(${c0.map((v, k) => Math.round(v + f * (c1[k] - v))).join(',')})`;
+    }
+  }
+  return `rgb(${TEMP_STOPS[TEMP_STOPS.length - 1][1].join(',')})`;
+}
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 

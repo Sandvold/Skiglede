@@ -1,0 +1,76 @@
+import type { Punkt, Seksjon, SeksjonVær, Tur, Vær } from './typer';
+
+export const LAPSE = 0.006; // °C per meter (0,6 per 100 m) [Forslag]
+export const SOL_GRAD_PER_500W = 2.0; // °C ekstra «snøtemperatur» ved 500 W/m² uten skygge [Forslag]
+
+export function lagSeksjoner(p: Punkt[], lengde = 250): Seksjon[] {
+  const ut: Seksjon[] = [];
+  let i = 0;
+  while (i < p.length - 1) {
+    let j = i;
+    while (j < p.length - 1 && p[j][3] - p[i][3] < lengde) j++;
+    const L = p[j][3] - p[i][3];
+    if (L < lengde / 3 && ut.length) {
+      const s = ut[ut.length - 1];
+      const pts = p.slice(s.startM === 0 && ut.length === 1 ? 0 : p.findIndex((q) => q[3] >= s.startM), j + 1);
+      s.endM = p[j][3];
+      s.h1 = p[j][2];
+      s.hMid = (s.h0 + s.h1) / 2;
+      s.skog = pts.reduce((a, q) => a + q[4], 0) / pts.length;
+    } else {
+      const pts = p.slice(i, j + 1);
+      ut.push({
+        seq: ut.length,
+        startM: p[i][3],
+        endM: p[j][3],
+        h0: p[i][2],
+        h1: p[j][2],
+        hMid: pts.reduce((a, q) => a + q[2], 0) / pts.length,
+        skog: pts.reduce((a, q) => a + q[4], 0) / pts.length,
+        stigning: (Math.atan2(p[j][2] - p[i][2], L) * 180) / Math.PI,
+      });
+    }
+    i = j;
+  }
+  return ut;
+}
+
+/** Lineær interpolasjon mellom timesverdier. */
+export function værVed(timer: Vær[], ts: number): Vær {
+  const k = timer.findIndex((x) => x.ts >= ts);
+  if (k <= 0) return timer[Math.max(0, k)] ?? timer[timer.length - 1];
+  const a = timer[k - 1];
+  const b = timer[k];
+  const f = (ts - a.ts) / (b.ts - a.ts || 1);
+  const m = (x: number, y: number) => x + f * (y - x);
+  return { ts, temp: m(a.temp, b.temp), nedbor: m(a.nedbor, b.nedbor), rh: m(a.rh, b.rh), vind: m(a.vind, b.vind), sw: m(a.sw, b.sw) };
+}
+
+export function planTur(args: {
+  seksjoner: Seksjon[];
+  timer: Vær[]; // timesverdier for turdagen (observert døgn eller prognose)
+  startTs: number;
+  tempoKmt: number;
+  refH: number;
+}): Tur {
+  const { seksjoner, timer, startTs, tempoKmt, refH } = args;
+  const ms = (m: number) => (m / 1000 / tempoKmt) * 3600_000;
+  const ut: SeksjonVær[] = seksjoner.map((s) => {
+    const tid = startTs + ms((s.startM + s.endM) / 2);
+    const v = værVed(timer, tid);
+    const tLuft = v.temp + (refH - s.hMid) * LAPSE;
+    const sw = Math.max(0, v.sw) / 3600; // J/m² per time -> W/m²
+    // Foreløpig kun skog gir skygge. Hellingsretning og terrengskygge kommer (åpent punkt 5 i spesifikasjonen).
+    const sol = 1 - 0.7 * s.skog;
+    return { seq: s.seq, tid, tLuft, sw, sol, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
+  });
+  const t = ut.map((x) => x.tEff);
+  return {
+    startTs,
+    sluttTs: startTs + ms(seksjoner[seksjoner.length - 1].endM),
+    tempoKmt,
+    seksjoner: ut,
+    tMin: Math.min(...t),
+    tMaks: Math.max(...t),
+  };
+}
