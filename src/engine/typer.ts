@@ -43,7 +43,8 @@ export type SeksjonVær = {
   tLuft: number;
   tEff: number;
   sw: number; // W/m²
-  sol: number; // 0-1 eksponering (foreløpig kun skog)
+  sol: number; // eksponering for sol: 1 = åpent og flatt, lavere med skog/skygge, opptil 2 mot sør
+  skygge: boolean; // direkte sol blokkert av terrenget
 };
 
 export type Tur = {

@@ -1,3 +1,5 @@
+import { HOVDEN } from './sol';
+import { terrengFaktor, terrengVed, type Terreng } from './terreng';
 import type { Punkt, Seksjon, SeksjonVær, Tur, Vær } from './typer';
 
 export const LAPSE = 0.006; // °C per meter (0,6 per 100 m) [Forslag]
@@ -52,17 +54,20 @@ export function planTur(args: {
   startTs: number;
   tempoKmt: number;
   refH: number;
+  terreng?: Terreng[]; // hellingsretning og horisont langs løypa (hent_terreng.py)
+  sted?: { lat: number; lon: number };
 }): Tur {
-  const { seksjoner, timer, startTs, tempoKmt, refH } = args;
+  const { seksjoner, timer, startTs, tempoKmt, refH, terreng, sted = HOVDEN } = args;
   const ms = (m: number) => (m / 1000 / tempoKmt) * 3600_000;
   const ut: SeksjonVær[] = seksjoner.map((s) => {
     const tid = startTs + ms((s.startM + s.endM) / 2);
     const v = værVed(timer, tid);
     const tLuft = v.temp + (refH - s.hMid) * LAPSE;
     const sw = Math.max(0, v.sw) / 3600; // J/m² per time -> W/m²
-    // Foreløpig kun skog gir skygge. Hellingsretning og terrengskygge kommer (åpent punkt 5 i spesifikasjonen).
-    const sol = 1 - 0.7 * s.skog;
-    return { seq: s.seq, tid, tLuft, sw, sol, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
+    // Skog demper sola. Terrenget gir skygge (horisonten) og retning (sør-vendt får mer, nord-vendt mindre).
+    const tf = terrengFaktor(terrengVed(terreng, (s.startM + s.endM) / 2), tid, sted.lat, sted.lon);
+    const sol = (1 - 0.7 * s.skog) * tf.faktor;
+    return { seq: s.seq, tid, tLuft, sw, sol, skygge: tf.skygge, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
   });
   const t = ut.map((x) => x.tEff);
   const sluttTs = startTs + ms(seksjoner[seksjoner.length - 1].endM);

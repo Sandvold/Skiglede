@@ -69,7 +69,9 @@ Fargene i appen er tilnærminger til Swix’ etikettfarger, ikke offisielle farg
 
 ## 11. Implementert i regelmotoren (src/engine), 3. november
 - `snø.ts`: skarphetsindeks 0–100 fra tine/frys-runder siste 14 døgn (mild dag maks ≥ +1 °C, påfølgende natt; full skarphet ved −6 °C; vekter 1/0,6/0,3 etter alder; sol øker). Snøfall ≥ 5 mm siste 48 t nullstiller til nysnø. Advarsel når snittet siste 7 døgn er over +3 °C (forutsetter snødekke).
-- `tur.ts`: seksjoner à ca. 250 m, tid per seksjon fra tempo, temperatur justert 0,6 °C/100 m mot cellehøyden, sol-tillegg opptil +2 °C per 500 W/m² dempet av skog. Hellingsretning og terrengskygge mangler fortsatt.
+- `tur.ts`: seksjoner à ca. 250 m, tid per seksjon fra tempo, temperatur justert 0,6 °C/100 m mot cellehøyden, sol-tillegg opptil +2 °C per 500 W/m² dempet av skog. Terreng (implementert): `scripts/hent_terreng.py` henter hellingsretning, helning og horisont i 16 retninger (ut til 3 km) hvert 125. m fra Kartverkets høydedata (dtm1) og lagrer det som `terreng` i trails.json. `terreng.ts` regner solhøyde og -retning (`sol.ts`); er sola lavere enn horisonten i solretningen, blir direkte sol (70 % av innstrålingen) blokkert; ellers skaleres den med cos(innfallsvinkel)/sin(solhøyde), maks 2. Skog demper i tillegg. Høydedata er terreng uten trær og uten skyer i regnestykket (innstrålingen kommer fra MET, eller anslås fra skydekke).
+- `sol.ts`: solposisjon og innstråling fra skydekke (Haurwitz + Kasten–Czeplak) for Yr-prognosen, som mangler stråling.
+- Værhistorikk oppdateres hvert 6. time av GitHub Actions (`.github/workflows/oppdater-vaer.yml`, `hent_vaer.py --json`).
 - `stabel.ts`: hardvoks (binder → base → dagens voks → dekke) eller klister (baseklister → isklister → mellomlag → dagens klister). Klister når snøen er omdannet og skarphet ≥ 50 eller varmest ≥ +0,5 °C.
 - Turdagen bruker observert vær 2. november som stand-in for prognose til Yr er koblet på.
 

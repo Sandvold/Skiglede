@@ -10,9 +10,9 @@ import { useTheme } from '@/hooks/use-theme';
 import trailsData from '@/data/trails.json';
 import vaerData from '@/data/vaer-hovden.json';
 import { hentVarsel, type Varsel } from '@/data/varsel';
-import { analyserSnø, produkt, byggStabel, lagSeksjoner, planTur, type Punkt, type Vær } from '@/engine';
+import { analyserSnø, produkt, byggStabel, lagSeksjoner, planTur, type Punkt, type Terreng, type Vær } from '@/engine';
 
-type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[] };
+type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[]; terreng?: Terreng[] };
 const LØYPER = trailsData as unknown as Løype[];
 
 const TIMER: Vær[] = (vaerData.timer as (string | number)[][]).map((r) => ({
@@ -95,7 +95,7 @@ export default function Hjem() {
     const sisteHist = TIMER[TIMER.length - 1].ts;
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
     const snø = analyserSnø(alle, startTs);
-    const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[modus], refH: vaerData.referansehoyde_m });
+    const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[modus], refH: vaerData.referansehoyde_m, terreng: løype.terreng });
     const stabel = byggStabel(tur, snø, seksjoner, modus === 'Trening');
     const farger = tur.seksjoner.map((s) => tempFarge(s.tEff));
     const segmenter = seksjoner.map((s, i) => ({
@@ -171,6 +171,9 @@ export default function Hjem() {
             <Chip key={h} aktiv={h === startTime} onPress={() => setStartTime(h)}>{`Start ${String(h).padStart(2, '0')}:00`}</Chip>
           ))}
         </View>
+        <ThemedText type="small" themeColor="textSecondary">
+          {r.tur.seksjoner.filter((x) => x.skygge).length} av {r.tur.seksjoner.length} deler av løypa ligger i terrengskygge når du går dem.
+        </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {varsel
             ? `Prognose: MET Norway / Yr (oppdatert ${tid(Date.parse(varsel.oppdatert))}) · solinnstråling anslått fra skydekke`
