@@ -69,6 +69,16 @@ export default function Rutevelger() {
       return ny;
     });
 
+  const harNavn = (k: Kandidat) => !k.navn.startsWith('(uten navn)');
+  const iApp = (k: Kandidat) => I_APPEN.some((t) => norm(t.navn) === norm(k.navn));
+  const velgFlere = (filter: (k: Kandidat) => boolean) =>
+    setValgt((v) => {
+      const ny = { ...v };
+      for (const k of liste) if (filter(k) && !ny[k.key]) ny[k.key] = { navn: harNavn(k) ? k.navn : '', type: 'retur' };
+      return ny;
+    });
+  const fjernAlle = () => setValgt((v) => Object.fromEntries(Object.entries(v).filter(([key]) => !liste.some((k) => k.key === key))));
+
   const lastFil = () => {
     if (Platform.OS !== 'web') return;
     const inn = document.createElement('input');
@@ -150,6 +160,11 @@ export default function Rutevelger() {
 
         <Kort style={{ gap: Spacing.two }}>
           <Text style={[styles.h2, { color: theme.text }]}>Kandidater</Text>
+          <View style={styles.rad}>
+            <Chip aktiv={false} onPress={() => velgFlere(harNavn)}>Velg alle med navn</Chip>
+            <Chip aktiv={false} onPress={() => velgFlere((k) => harNavn(k) && !iApp(k))}>Velg alle nye (ikke i appen)</Chip>
+            <Chip aktiv={false} onPress={fjernAlle}>Fjern alle</Chip>
+          </View>
           <View style={styles.rad}>
             {liste.map((k) => {
               const iAppen = I_APPEN.some((t) => norm(t.navn) === norm(k.navn));
