@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { createElement, useEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { TrailMap } from '@/components/ski/kart';
@@ -28,14 +28,17 @@ const RESERVE_DATO = '2026-11-02';
 /** Dato (ÅÅÅÅ-MM-DD) i Oslo, `dager` frem i tid. */
 const osloDato = (dager: number) =>
   new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(Date.now() + dager * 86400_000);
-/** UTC-tidspunkt for lokal Oslo-klokketime på en dato (håndterer sommer-/vintertid). */
+/** UTC-tidspunkt for lokal Oslo-klokkeslett (time kan ha desimaler, 10.5 = 10:30) på en dato (håndterer sommer-/vintertid). */
 function osloTs(dato: string, time: number) {
+  const hh = Math.floor(time);
+  const mm = Math.round((time - hh) * 60);
+  const lokalSomUtc = Date.parse(`${dato}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00Z`);
   for (const off of [1, 2]) {
-    const ts = Date.parse(`${dato}T${String(time).padStart(2, '0')}:00:00Z`) - off * 3600_000;
+    const ts = lokalSomUtc - off * 3600_000;
     const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(ts));
-    if (h === time) return ts;
+    if (h === hh) return ts;
   }
-  return Date.parse(`${dato}T${String(time).padStart(2, '0')}:00:00Z`) - 3600_000;
+  return lokalSomUtc - 3600_000;
 }
 const dagNavn = (dato: string, i: number) =>
   i === 0 ? 'I dag' : i === 1 ? 'I morgen' : new Intl.DateTimeFormat('nb-NO', { weekday: 'long', timeZone: 'UTC' }).format(Date.parse(dato + 'T12:00:00Z'));
@@ -46,7 +49,9 @@ const TYPE_NAVN = { hardvoks: 'Hardvoks', klister: 'Klister', glider: 'Glider', 
 
 const TEMPO = { Trening: 9, Tur: 5 } as const;
 type Modus = keyof typeof TEMPO;
-const STARTTIDER = [9, 10, 11, 12, 13]; // lokal tid (UTC+1 i november)
+// Starttidspunkt hvert kvarter, lokal tid
+const STARTTIDER = Array.from({ length: (18 - 6) * 4 + 1 }, (_, i) => 6 + i / 4);
+const klokke = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
 
 const tid = (ts: number) => new Intl.DateTimeFormat('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' }).format(ts);
 
@@ -214,9 +219,21 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
           ))}
         </View>
         <View style={styles.rad}>
-          {STARTTIDER.map((h) => (
-            <Chip key={h} aktiv={h === startTime} onPress={() => setStartTime(h)}>{`Start ${String(h).padStart(2, '0')}:00`}</Chip>
-          ))}
+          <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>Start</Text>
+          {Platform.OS === 'web' ? (
+            createElement(
+              'select',
+              {
+                value: String(startTime),
+                'aria-label': 'Starttidspunkt for turen',
+                onChange: (e: { target: { value: string } }) => setStartTime(Number(e.target.value)),
+                style: { fontSize: 17, fontWeight: 600, padding: '10px 14px', borderRadius: 12, border: `1px solid ${theme.border}`, background: theme.backgroundElement, color: theme.text, minWidth: 130 },
+              },
+              ...STARTTIDER.map((h) => createElement('option', { key: h, value: String(h) }, `🕒 ${klokke(h)}`))
+            )
+          ) : (
+            [9, 10, 11, 12, 13].map((h) => <Chip key={h} aktiv={h === startTime} onPress={() => setStartTime(h)}>{`${klokke(h)}`}</Chip>)
+          )}
         </View>
         <ThemedText type="small" themeColor="textSecondary">
           {Math.round(r.tur.skyggeAndel * 100)} % av løypa ({(r.tur.skyggeAndel * km).toFixed(1)} km) ligger i terrengskygge når du går den.
