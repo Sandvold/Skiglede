@@ -1,8 +1,14 @@
-import { HOVDEN } from './sol';
+import { HOVDEN, solHøyde } from './sol';
 import { terrengFaktor, terrengVed, type Terreng } from './terreng';
 import type { Punkt, Seksjon, SeksjonVær, Tur, Vær } from './typer';
 
 export const LAPSE = 0.006; // °C per meter (0,6 per 100 m) [Forslag]
+/** Hvor mye full skog demper sola, avhengig av solhøyde: lav sol går skrått gjennom kronene, høy sol slipper gjennom [Forslag]. */
+export const SKOG_DEMP = { lav: 0.75, høy: 0.45, hLav: 10, hHøy: 40 };
+export function skogDemping(solH: number): number {
+  const f = Math.min(1, Math.max(0, (solH - SKOG_DEMP.hLav) / (SKOG_DEMP.hHøy - SKOG_DEMP.hLav)));
+  return SKOG_DEMP.lav + f * (SKOG_DEMP.høy - SKOG_DEMP.lav);
+}
 export const SOL_GRAD_PER_500W = 2.0; // °C ekstra «snøtemperatur» ved 500 W/m² uten skygge [Forslag]
 
 export function lagSeksjoner(p: Punkt[], lengde = 250): Seksjon[] {
@@ -66,7 +72,7 @@ export function planTur(args: {
     const sw = Math.max(0, v.sw) / 3600; // J/m² per time -> W/m²
     // Skog demper sola. Terrenget gir skygge (horisonten) og retning (sør-vendt får mer, nord-vendt mindre).
     const tf = terrengFaktor(terrengVed(terreng, (s.startM + s.endM) / 2), tid, sted.lat, sted.lon);
-    const sol = (1 - 0.7 * s.skog) * tf.faktor;
+    const sol = (1 - skogDemping(solHøyde(tid, sted.lat, sted.lon)) * s.skog) * tf.faktor;
     return { seq: s.seq, tid, tLuft, sw, sol, skygge: tf.skygge, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
   });
   const t = ut.map((x) => x.tEff);
