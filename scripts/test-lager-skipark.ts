@@ -1,6 +1,6 @@
 // Kjøres med: npx --yes tsx scripts/test-lager-skipark.ts  (feiler med exit 1 hvis en sjekk ikke stemmer)
 import trails from '../src/data/trails.json';
-import { analyserSnø, byggSmøring, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
+import { analyserSnø, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
 
 let feil = 0;
 const sjekk = (navn: string, faktisk: unknown, forventet: unknown) => {
@@ -69,6 +69,13 @@ for (const [navn, f] of [['kaldt', () => ({ temp: -12 })], ['sludd', () => ({ te
 sjekk('felle: ingen advarsler om feil smøring', kjør('felle', () => ({ temp: -12 })).advarsler.length, 0);
 sjekk('lager: «Felle» meldes ikke som manglende produkt (glideren kan det)', tilpassTilLager(kjør('felle', () => ({ temp: -5 })), ['VP40']).advarsler.some((a) => a.includes('Felle')), false);
 sjekk('lager: alternativ tilpasses også', tilpassTilLager(tørt, ['VP40']).alternativ?.advarsler.length, (tilpassTilLager(tørt.alternativ!, ['VP40'])).advarsler.length);
+
+// Forenklet: bare base og dagens smøring
+const full = stabel('hardvoks', [['Binder', 'VG35'], ['Base (kaldere)', 'VP40'], ['Dagens voks', 'VP45'], ['Dekke 1', 'VP40']]);
+sjekk('forenklet hardvoks: binder + dagens', forenklet(full).lag.map((l) => l.produkt), ['VG35', 'VP45']);
+sjekk('forenklet klister: baseklister + dagens', forenklet(stabel('klister', [['Baseklister', 'KB20C'], ['Isklister', 'KX30'], ['Mellomlag', 'KX45N'], ['Dagens klister', 'KX65']])).lag.map((l) => l.produkt), ['KB20C', 'KX65']);
+sjekk('forenklet glider uendret', forenklet(stabel('glider', [['Glider', 'HS7']])).lag.map((l) => l.produkt), ['HS7']);
+sjekk('forenklet rører ikke originalen', full.lag.length, 4);
 
 if (feil) { console.error(`${feil} feil`); process.exit(1); }
 console.log('Alle sjekker OK');

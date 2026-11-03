@@ -46,5 +46,6 @@ export function useLagret<T>(nøkkel: string, standard: T): [T, (v: T) => void] 
 
 export type Ski = { id: string; navn: string; stil: Stil; smoring?: Smøring };
 export const NØKKEL_LAGER = 'skiglede.lager';
+export const NØKKEL_VISNING = 'skiglede.visning';
 export const NØKKEL_SKIPARK = 'skiglede.skipark';
 export const TOM_LISTE: never[] = [];

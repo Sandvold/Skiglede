@@ -14,9 +14,9 @@ import { useTheme } from '@/hooks/use-theme';
 import trailsData from '@/data/trails.json';
 import vaerData from '@/data/vaer-hovden.json';
 import { hentVarsel, type Varsel } from '@/data/varsel';
-import { NØKKEL_LAGER, NØKKEL_SKIPARK, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
+import { NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
-import { analyserSnø, produkt, byggSmøring, lagSeksjoner, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stil, type Terreng, type Vær } from '@/engine';
+import { analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stil, type Terreng, type Vær } from '@/engine';
 
 type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[]; terreng?: Terreng[] };
 const LØYPER = trailsData as unknown as Løype[];
@@ -77,6 +77,7 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
   const [skiId, setSkiId] = useState<string | null>(null);
   const [nå] = useState(() => Date.now());
   const [lager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
+  const [visning, setVisning] = useLagret<'full' | 'enkel'>(NØKKEL_VISNING, 'full');
   const [skipark, setSkipark] = useLagret<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [varselFeil, setVarselFeil] = useState(false);
@@ -116,7 +117,8 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
 
   const km = løype.lengde_m / 1000;
   const minutter = Math.round((km / TEMPO[modus]) * 60);
-  const stabelVisning = [...vis.lag].reverse(); // øverste lag først
+  const enkel = visning === 'enkel';
+  const stabelVisning = [...(enkel ? forenklet(vis) : vis).lag].reverse(); // øverste lag først
 
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
@@ -229,6 +231,11 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
               <ThemedText type="small" themeColor="textSecondary">Bruk heller vanlige klassiske ski, smurt slik:</ThemedText>
             </View>
           )}
+          <View style={styles.rad}>
+            <Chip aktiv={!enkel} onPress={() => setVisning('full')}>Full</Chip>
+            <Chip aktiv={enkel} onPress={() => setVisning('enkel')}>Enkel</Chip>
+            {enkel ? <ThemedText type="small" themeColor="textSecondary">Bare base og dagens smøring</ThemedText> : null}
+          </View>
           <ThemedText type="small" themeColor="textSecondary">{vis.lag.length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Øverst = siste lag. Bygg nedenfra og opp.' : 'Ingen smøring på festesonen.'}</ThemedText>
           <View style={{ gap: 6 }}>
             {stabelVisning.map((l, i) => (

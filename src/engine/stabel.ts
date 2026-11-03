@@ -187,3 +187,10 @@ export function byggSmøring(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner:
   if (stil === 'rubb') return byggRubb(tur, snø, seksjoner, lett);
   return byggStabel(tur, snø, seksjoner, lett);
 }
+
+const ENKEL_ROLLER = new Set(['Binder', 'Baseklister', 'Dagens voks', 'Dagens klister', 'Glider', 'Festesone', 'Glidesone (foran og bak)']);
+
+/** Forenklet utgave: bare base (binder/baseklister) og dagens smøring. Mellomlag, isklister, kaldere base og dekke utelates [Bruker]. */
+export function forenklet(stabel: Stabel): Stabel {
+  return { ...stabel, lag: stabel.lag.filter((l) => ENKEL_ROLLER.has(l.rolle)) };
+}
