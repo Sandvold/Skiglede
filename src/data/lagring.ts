@@ -105,3 +105,23 @@ export function useStedData<T>(base: string, standard: T): [T, (v: T) => void] {
   const gyldig = ekstra.some((s) => s.id === aktiv) ? aktiv : '';
   return useLagret<T>(stedNøkkel(base, gyldig), standard);
 }
+
+const lesListe = <T,>(nøkkel: string): T[] => {
+  try {
+    const v = JSON.parse(les(nøkkel) || '[]');
+    return Array.isArray(v) ? (v as T[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+/** Flytter et par ski (med lagret smøring) fra ett sted til et annet. Paret tas også ut av valgte ski på det gamle stedet. */
+export function flyttSki(skiId: string, fraId: string, tilId: string) {
+  if (fraId === tilId) return;
+  const fra = lesListe<Ski>(stedNøkkel(NØKKEL_SKIPARK, fraId));
+  const ski = fra.find((s) => s.id === skiId);
+  if (!ski) return;
+  skriv(stedNøkkel(NØKKEL_SKIPARK, fraId), JSON.stringify(fra.filter((s) => s.id !== skiId)));
+  skriv(stedNøkkel(NØKKEL_VALGTE, fraId), JSON.stringify(lesListe<string>(stedNøkkel(NØKKEL_VALGTE, fraId)).filter((v) => v !== skiId)));
+  skriv(stedNøkkel(NØKKEL_SKIPARK, tilId), JSON.stringify([...lesListe<Ski>(stedNøkkel(NØKKEL_SKIPARK, tilId)), ski]));
+}

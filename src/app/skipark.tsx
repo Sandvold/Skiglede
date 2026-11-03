@@ -9,7 +9,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { StedVelger } from '@/components/ski/sted';
 import { foreslåSki } from '@/data/skimodeller';
 import { SONER, SONE_NAVN, type Temperatursone } from '@/engine';
-import { NØKKEL_SKIPARK, TOM_LISTE, useStedData, type Ski } from '@/data/lagring';
+import { NØKKEL_SKIPARK, TOM_LISTE, flyttSki, useSteder, useStedData, type Ski } from '@/data/lagring';
 import { produkt, type Stil } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -19,6 +19,7 @@ const dato = (ts: number) => new Intl.DateTimeFormat('nb-NO', { day: 'numeric', 
 export default function Skipark() {
   const theme = useTheme();
   const [ski, setSki] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
+  const { steder, aktiv } = useSteder();
   const [navn, setNavn] = useState('');
   const [stil, setStil] = useState<Stil>('klassisk');
   const [sone, setSone] = useState<Temperatursone | undefined>(undefined);
@@ -116,6 +117,14 @@ export default function Skipark() {
                 <Chip key={z} aktiv={s.sone === z} onPress={() => setSki(ski.map((x) => (x.id === s.id ? { ...x, sone: x.sone === z ? undefined : z } : x)))}>{SONE_NAVN[z]}</Chip>
               ))}
             </View>
+            {steder.length > 1 ? (
+              <View style={styles.rad}>
+                <Text style={{ color: theme.textSecondary, fontWeight: '600', fontSize: 14 }}>Flytt til</Text>
+                {steder.filter((x) => x.id !== aktiv).map((x) => (
+                  <Chip key={x.id || 'standard'} aktiv={false} onPress={() => flyttSki(s.id, aktiv, x.id)}>{x.navn}</Chip>
+                ))}
+              </View>
+            ) : null}
             <View style={styles.rad}>
               {s.smoring ? <Chip aktiv={false} onPress={() => setSki(ski.map((x) => (x.id === s.id ? { ...x, smoring: undefined } : x)))}>Renset (nullstill)</Chip> : null}
               <Pressable onPress={() => setSki(ski.filter((x) => x.id !== s.id))} style={[styles.slett, { borderColor: theme.border }]}>
