@@ -151,6 +151,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
       const v = liste.find((y) => y.ski.id === x.id);
       return v && v.vurdering ? { ...x, smoring: lagreSmøring(x.stil, v.st, x.smoring, v.vurdering, Date.now()) } : x;
     }));
+  const [åpne, setÅpne] = useState<string[]>([]);
   const veksle = (id: string) => setValgte(valgte.includes(id) ? valgte.filter((v) => v !== id) : [...valgte, id]);
   const dagens = (st: Stabel) => st.lag.find((l) => ['Dagens voks', 'Dagens klister', 'Glider', 'Festesone'].includes(l.rolle));
 
@@ -268,30 +269,52 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
             <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>{skipark.length ? 'Skipark' : '+ Legg inn ski'}</Text>
           </Pressable>
         </View>
-        {valgteSki.map(({ ski, st, vurdering, lagret, sone }) => (
-          <Kort key={ski.id} style={{ borderColor: vurdering?.handling === 'rens' || st.egnet === false ? '#E3A64A' : theme.border, gap: Spacing.two }}>
-            <Text style={[styles.h3, { color: theme.text }]}>{ski.navn}: {vurdering ? vurdering.tittel : st.egnet === false ? 'Passer ikke i dag' : 'Ingen smøring å lagre'}</Text>
-            {dagens(st) && st.egnet !== false && (
-              <ThemedText type="small">Legg på: {dagens(st)!.produkt}{vurdering?.behold ? ' (trengs ikke, glideren som ligger på beholdes)' : ''}</ThemedText>
-            )}
-            {vurdering?.grunner.map((g, i) => (
-              <ThemedText key={i} type="small">• {g}</ThemedText>
-            ))}
-            {!vurdering && st.egnet === false && st.advarsler.map((g, i) => <ThemedText key={i} type="small">• {g}</ThemedText>)}
-            {!vurdering && st.egnet !== false && <ThemedText type="small">{ski.stil === 'felle' ? 'Felleski har ingen festesmøring. Bare glidesonene smøres.' : 'Rubbski har ingen festesmøring. Børst opp rubben.'}</ThemedText>}
-            {sone ? <View style={[styles.advarsel, { borderColor: '#E3A64A' }]}><ThemedText type="small">⚠ {sone}</ThemedText></View> : null}
-            {ski.smoring && <ThemedText type="small" themeColor="textSecondary">Ligger på nå: {ski.smoring.lag.map((l) => l.produkt).join(' → ')} (nederst → øverst), {ski.smoring.turer} tur{ski.smoring.turer === 1 ? '' : 'er'}.</ThemedText>}
-            {vurdering && (
-              <View style={styles.rad}>
-                <Chip aktiv={lagret} onPress={() => lagreSki([{ ski, st, vurdering, lagret, sone }])}>{lagret ? '✓ Smøringen er lagret' : 'Lagre smøring på dette paret'}</Chip>
+        {valgteSki.length > 0 && (
+          <Kort style={{ gap: 0, paddingVertical: Spacing.two }}>
+            {valgteSki.map(({ ski, st, vurdering, lagret, sone }, i) => {
+              const åpen = åpne.includes(ski.id);
+              const advar = vurdering?.handling === 'rens' || st.egnet === false;
+              return (
+                <View key={ski.id} style={{ paddingVertical: 8, borderTopWidth: i ? 1 : 0, borderTopColor: theme.border, gap: 6 }}>
+                  <Pressable onPress={() => setÅpne(åpen ? åpne.filter((x) => x !== ski.id) : [...åpne, ski.id])} accessibilityRole="button" accessibilityState={{ expanded: åpen }} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }} numberOfLines={1}>{ski.navn}{sone ? ' ⚠' : ''}</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 13 }} numberOfLines={1}>
+                        {dagens(st) && st.egnet !== false && (ski.stil === 'klassisk' || ski.stil === 'skoyting') ? `Legg på: ${dagens(st)!.produkt}${vurdering?.behold ? ' (behold glideren)' : ''}` : st.egnet === false ? 'Passer ikke i dag' : 'Ingen festesmøring'}
+                      </Text>
+                    </View>
+                    <View style={[styles.merke, { backgroundColor: lagret ? theme.accent : advar ? '#F6DFB4' : theme.accentSoft }]}>
+                      <Text style={{ color: lagret ? '#fff' : advar ? '#6B4A0B' : theme.accent, fontWeight: '700', fontSize: 13 }}>{lagret ? '✓ Lagret' : vurdering ? vurdering.tittel : st.egnet === false ? 'Passer ikke' : '–'}</Text>
+                    </View>
+                    <Text style={{ color: theme.textSecondary, fontSize: 16 }}>{åpen ? '▴' : '▾'}</Text>
+                  </Pressable>
+                  {åpen ? (
+                    <View style={{ gap: 4 }}>
+                      {vurdering?.grunner.map((g, k) => <ThemedText key={k} type="small">• {g}</ThemedText>)}
+                      {!vurdering && st.egnet === false && st.advarsler.map((g, k) => <ThemedText key={k} type="small">• {g}</ThemedText>)}
+                      {!vurdering && st.egnet !== false && <ThemedText type="small">{ski.stil === 'felle' ? 'Felleski har ingen festesmøring. Bare glidesonene smøres.' : 'Rubbski har ingen festesmøring. Børst opp rubben.'}</ThemedText>}
+                      {sone ? <ThemedText type="small">⚠ {sone}</ThemedText> : null}
+                      {ski.smoring && <ThemedText type="small" themeColor="textSecondary">Ligger på nå: {ski.smoring.lag.map((l) => l.produkt).join(' → ')} (nederst → øverst), {ski.smoring.turer} tur{ski.smoring.turer === 1 ? '' : 'er'}.</ThemedText>}
+                      {vurdering && !lagret ? (
+                        <View style={styles.rad}>
+                          <Chip aktiv={false} onPress={() => lagreSki([{ ski, st, vurdering, lagret, sone }])}>Lagre smøring på dette paret</Chip>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+            {valgteSki.some((v) => v.vurdering) && (
+              <View style={[styles.rad, { paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.border }]}>
+                {valgteSki.every((v) => !v.vurdering || v.lagret) ? (
+                  <ThemedText type="smallBold" themeColor="textSecondary">✓ Smøringen er lagret på alle valgte ski</ThemedText>
+                ) : (
+                  <Chip aktiv onPress={() => lagreSki(valgteSki.filter((v) => !v.lagret))}>{`Lagre smøring på alle valgte ski (${valgteSki.filter((v) => v.vurdering && !v.lagret).length})`}</Chip>
+                )}
               </View>
             )}
           </Kort>
-        ))}
-        {valgteSki.filter((v) => v.vurdering && !v.lagret).length > 1 && (
-          <View style={styles.rad}>
-            <Chip aktiv={false} onPress={() => lagreSki(valgteSki.filter((v) => !v.lagret))}>Lagre smøring på alle valgte ski</Chip>
-          </View>
         )}
 
         {/* Smøring */}
