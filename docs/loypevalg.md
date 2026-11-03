@@ -18,3 +18,6 @@ Gjelder løyper i `src/data/trails.json`, bygget av `scripts/hent_loyper.py` og 
 - Turrutebasen har løypene i biter og mangler korte koblinger. Kjeden kan være en del av en lengre rute.
 - Navnet på en løype er ikke det samme som hele turen en skiløper går. Galten og Lundane deler start.
 - Preparering er ofte ikke registrert i Turrutebasen, så dataene viser hva som finnes, ikke hva som er kjørt opp i dag.
+
+## Koblinger som mangler i Turrutebasen
+«Ny Lysløype Hovden» er bygget som runde fra stadion (startpunktet til Rørvikåsen) med rette koblinger til begge ender: `scripts/bygg_ny_lysloype_runde.py`. Kjøres hent_loyper.py på nytt for den løypa, må skriptet kjøres igjen, og deretter hent_terreng.py.
