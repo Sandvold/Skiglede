@@ -52,6 +52,15 @@ VP30 −16…−8; VP40 −10…−4; VP45 −5…−1; VP50 −3…0; VP55 −2
 Klister: KX30 −12…0; KX35N −8…0; KX45N −4…+1; KX40S −4…+2; KX65 +1…+5; KX75 +2…+15. Bindere VG30/VG35 har ikke område. K22 −3…+10, KN33 +1…−7 og KN44 −3…+5 er bekreftet mot swixsport.com; K21S og KX55 er ikke verifisert.
 Fargene i appen er tilnærminger til Swix’ etikettfarger, ikke offisielle fargekoder.
 
+### 8.1 Glidevoks (skøyting) [Bruker + Swix]
+Skøyting er bare glider; temperaturen er hovedsaken. Swix HS (hydrokarbon, uten fluor): HS5 turkis −18…−10, HS6 blå −12…−6, HS7 violett −8…−2, HS8 rød −4…+4, HS10 gul 0…+10 (swixsport.com-produktsidene). Glidere overlapper. Da velges den **kaldeste** som passer («heller hakket kaldt enn varmt»; brukeren gikk mest på violett i fjor). Temperaturen er snittet av snøtemperaturen langs turen. Klassisk glidesone er ikke med.
+
+### 8.2 Smørelager [Bruker]
+Brukeren krysser av produktene han eier (`/lager`). Når lageret ikke er tomt, byttes anbefalte produkter som mangler mot nærmeste i samme kategori (hardvoks, binder, klister, glider) etter senter av temperaturområdet; ved lik avstand velges det kaldeste. Finnes ingen i kategorien, markeres produktet som mangler. Tomt lager betyr at alt foreslås.
+
+### 8.3 Skipark [Bruker, regler Forslag]
+Flere par ski (`/skipark`), hvert klassisk eller skøyting. På en tur velges paret og smøringen lagres. Neste gang vurderes forrige smøring mot ny: **rens** hvis type endres (hardvoks ↔ klister ↔ glider), hvis ny dagsvoks/-klister/glider er kaldere enn den som ligger på, ved 4 turer uten rens, eller når smøringen er over 14 dager gammel; ellers **bare topplag** (ny dagsvoks, klister eller glider oppå). Terskler i `SKIPARK` (`engine/skipark.ts`). Testes med `scripts/test-lager-skipark.ts`. Lagring er lokalt i nettleseren (`data/lagring.ts`) til innlogging kommer.
+
 ## 9. Arkitektur [Bruker + Forslag]
 - Klient: Expo med web som første mål (Expo Router), senere Android/iOS.
 - Database: Neon (Postgres + PostGIS).

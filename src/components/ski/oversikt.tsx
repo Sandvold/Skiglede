@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import { HARDVOKS, KLISTER, KLISTER_ANDRE, V_LINJE, type Produkt } from '@/engine';
+import { GLIDER, HARDVOKS, KLISTER, KLISTER_ANDRE, V_LINJE, type Produkt } from '@/engine';
 
 const MIN = -25;
 const MAX = 15;
@@ -79,6 +79,7 @@ export function Temperaturoversikt({ tMin, tMaks, brukt }: { tMin: number; tMaks
       <Gruppe tittel="Hardvoks V" liste={V_LINJE} tMin={tMin} tMaks={tMaks} brukt={brukt} />
       <Gruppe tittel="Klister" liste={KLISTER} tMin={tMin} tMaks={tMaks} brukt={brukt} />
       <Gruppe tittel="Andre klistere" liste={KLISTER_ANDRE} tMin={tMin} tMaks={tMaks} brukt={brukt} />
+      <Gruppe tittel="Glidevoks (skøyting)" liste={GLIDER} tMin={tMin} tMaks={tMaks} brukt={brukt} />
       <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 8 }}>
         Området i °C slik Swix oppgir det på swixsport.com. Det lyseblå feltet er turens snøtemperatur ({tMin.toFixed(1)} til {tMaks.toFixed(1)} °C), og ● markerer produkter i smøringen din. Fargene er tilnærminger til Swix’ etikettfarger. Binder VG30 (Base Wax Blue) og VG35 (Base Binder Green) har ikke temperaturområde.
       </ThemedText>

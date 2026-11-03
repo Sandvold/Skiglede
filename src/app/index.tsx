@@ -5,6 +5,8 @@ import { ThemedText } from '@/components/themed-text';
 import { TrailMap } from '@/components/ski/kart';
 import { Hoydeprofil } from '@/components/ski/profil';
 import { Temperaturoversikt, tekstPå } from '@/components/ski/oversikt';
+import { Hero } from '@/components/ski/hero';
+import { Chip, Kort } from '@/components/ski/ui';
 import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
@@ -12,7 +14,9 @@ import { useTheme } from '@/hooks/use-theme';
 import trailsData from '@/data/trails.json';
 import vaerData from '@/data/vaer-hovden.json';
 import { hentVarsel, type Varsel } from '@/data/varsel';
-import { analyserSnø, produkt, byggStabel, lagSeksjoner, planTur, type Punkt, type Terreng, type Vær } from '@/engine';
+import { NØKKEL_LAGER, NØKKEL_SKIPARK, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
+import { useRouter } from 'expo-router';
+import { analyserSnø, produkt, byggSmøring, lagSeksjoner, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stil, type Terreng, type Vær } from '@/engine';
 
 type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[]; terreng?: Terreng[] };
 const LØYPER = trailsData as unknown as Løype[];
@@ -49,22 +53,6 @@ function produktFarge(navn: string) {
   return produkt(navn)?.hex ?? '#B9C7D6';
 }
 
-function Chip({ aktiv, onPress, children }: { aktiv: boolean; onPress: () => void; children: string }) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.chip, { backgroundColor: aktiv ? theme.accent : theme.backgroundElement, borderColor: aktiv ? theme.accent : theme.border }]}>
-      <Text style={{ color: aktiv ? '#fff' : theme.text, fontWeight: '600', fontSize: 15 }}>{children}</Text>
-    </Pressable>
-  );
-}
-
-function Kort({ children, style }: { children: React.ReactNode; style?: object }) {
-  const theme = useTheme();
-  return <View style={[styles.kort, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, style]}>{children}</View>;
-}
-
 function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
   const theme = useTheme();
   return (
@@ -81,6 +69,12 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
   const [startTime, setStartTime] = useState(10);
   const [debug, setDebug] = useState(false);
   const [dagIdx, setDagIdx] = useState(0);
+  const router = useRouter();
+  const [stil, setStil] = useState<Stil>('klassisk');
+  const [skiId, setSkiId] = useState<string | null>(null);
+  const [nå] = useState(() => Date.now());
+  const [lager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
+  const [skipark, setSkipark] = useLagret<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [varselFeil, setVarselFeil] = useState(false);
   useEffect(() => {
@@ -96,7 +90,7 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
     const snø = analyserSnø(alle, startTs);
     const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[modus], refH: vaerData.referansehoyde_m, terreng: løype.terreng });
-    const stabel = byggStabel(tur, snø, seksjoner, modus === 'Trening');
+    const stabel = tilpassTilLager(byggSmøring(stil, tur, snø, seksjoner, modus === 'Trening'), lager);
     const farger = tur.seksjoner.map((s) => tempFarge(s.tEff));
     const segmenter = seksjoner.map((s, i) => ({
       pts: løype.punkter.filter((p) => p[3] >= s.startM && p[3] <= s.endM).map((p) => [p[0], p[1]] as [number, number]),
@@ -109,7 +103,10 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
     const hs = løype.punkter.map((p) => p[2]);
     const opp = løype.punkter.slice(1).reduce((s, p, i) => s + Math.max(0, p[2] - løype.punkter[i][2]), 0);
     return { seksjoner, snø, tur, stabel, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
-  }, [løype, modus, startTime, dagIdx, varsel]);
+  }, [løype, modus, startTime, dagIdx, varsel, stil, lager]);
+  const ski = skipark.find((x) => x.id === skiId);
+  const vurdering = ski ? vurderPåfylling(ski.smoring, r.stabel, nå) : null;
+  const lagret = !!ski?.smoring && JSON.stringify(ski.smoring.lag) === JSON.stringify(r.stabel.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
 
   const km = løype.lengde_m / 1000;
   const minutter = Math.round((km / TEMPO[modus]) * 60);
@@ -149,6 +146,11 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
           ))}
         </View>
         <View style={styles.rad}>
+          {(['klassisk', 'skoyting'] as Stil[]).map((x) => (
+            <Chip key={x} aktiv={x === stil} onPress={() => { setStil(x); if (ski && ski.stil !== x) setSkiId(null); }}>{x === 'klassisk' ? 'Klassisk' : 'Skøyting'}</Chip>
+          ))}
+        </View>
+        <View style={styles.rad}>
           {(Object.keys(TEMPO) as Modus[]).map((m) => (
             <Chip key={m} aktiv={m === modus} onPress={() => setModus(m)}>{`${m} · ${TEMPO[m]} km/t`}</Chip>
           ))}
@@ -172,12 +174,38 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
           Ca. {Math.floor(minutter / 60)} t {minutter % 60} min · {tid(r.tur.startTs)}–{tid(r.tur.sluttTs)}
         </ThemedText>
 
+        {/* Ski */}
+        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>SKI</ThemedText>
+        <View style={styles.rad}>
+          {skipark.filter((x) => x.stil === stil).map((x) => (
+            <Chip key={x.id} aktiv={x.id === skiId} onPress={() => setSkiId(x.id === skiId ? null : x.id)}>{x.navn}</Chip>
+          ))}
+          <Pressable accessibilityRole="link" onPress={() => router.push('/skipark')} style={[styles.chip, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
+            <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>{skipark.some((x) => x.stil === stil) ? 'Skipark' : '+ Legg inn ski'}</Text>
+          </Pressable>
+        </View>
+        {ski && vurdering && (
+          <Kort style={{ borderColor: vurdering.handling === 'rens' ? '#E3A64A' : theme.border, gap: Spacing.two }}>
+            <Text style={[styles.h3, { color: theme.text }]}>{ski.navn}: {vurdering.tittel}</Text>
+            {vurdering.grunner.map((g, i) => (
+              <ThemedText key={i} type="small">• {g}</ThemedText>
+            ))}
+            <View style={styles.rad}>
+              <Chip
+                aktiv={lagret}
+                onPress={() => setSkipark(skipark.map((x) => (x.id === ski.id ? { ...x, smoring: lagreSmøring(stil, r.stabel, x.smoring, vurdering, Date.now()) } : x)))}>
+                {lagret ? '✓ Smøringen er lagret' : 'Lagre smøring på disse skiene'}
+              </Chip>
+            </View>
+          </Kort>
+        )}
+
         {/* Smøring */}
         <Kort style={{ gap: Spacing.three }}>
           <View style={styles.rad}>
             <Text style={[styles.h2, { color: theme.text, flex: 1 }]}>Smøring</Text>
             <View style={[styles.merke, { backgroundColor: theme.accentSoft }]}>
-              <Text style={{ color: theme.accent, fontWeight: '700' }}>{r.stabel.type === 'klister' ? 'Klister' : 'Hardvoks'}</Text>
+              <Text style={{ color: theme.accent, fontWeight: '700' }}>{r.stabel.type === 'klister' ? 'Klister' : r.stabel.type === 'glider' ? 'Glider' : 'Hardvoks'}</Text>
             </View>
           </View>
           <ThemedText type="small" themeColor="textSecondary">Øverst = siste lag. Bygg nedenfra og opp.</ThemedText>
@@ -198,7 +226,7 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
             </View>
           ))}
           <ThemedText type="small" themeColor="textSecondary">
-            Utkast: Swix-tabellene og tersklene er foreløpige og må verifiseres. Været er observert 2. nov som stand-in for prognose.
+            Utkast: temperaturområdene er hentet fra Swix, men tersklene i reglene er foreløpige og justeres mot erfaring.
           </ThemedText>
         </Kort>
 
@@ -261,23 +289,6 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
         )}
       </View>
     </ScrollView>
-  );
-}
-
-function Hero() {
-  const theme = useTheme();
-  return (
-      <View style={[styles.hero, { backgroundColor: theme.hero }]}>
-        {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
-          <Text key={i} style={[styles.flak, { left: `${8 + i * 14}%`, top: 14 + ((i * 37) % 70), fontSize: 14 + ((i * 5) % 14) }]}>{f}</Text>
-        ))}
-        <View style={styles.heroInnhold}>
-          <Text style={styles.heroTittel}>Skiglede</Text>
-          <Text style={styles.heroUnder}>Smøring for løypa du skal gå. Hovden · Swix</Text>
-        </View>
-        <View style={[styles.drift, { left: -80, width: 420, height: 160, backgroundColor: theme.background, bottom: -100 }]} />
-        <View style={[styles.drift, { right: -120, width: 560, height: 190, backgroundColor: theme.background, bottom: -120 }]} />
-      </View>
   );
 }
 

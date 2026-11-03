@@ -63,8 +63,10 @@ export type Tur = {
 export type Lag = { rolle: string; produkt: string; antall: string; merknad?: string };
 
 export type Stabel = {
-  type: 'hardvoks' | 'klister';
+  type: 'hardvoks' | 'klister' | 'glider';
   lag: Lag[]; // nederst først
   begrunnelse: string[];
   advarsler: string[];
 };
+
+export type Stil = 'klassisk' | 'skoyting';

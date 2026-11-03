@@ -5,3 +5,5 @@ export * from './tur';
 export * from './stabel';
 export * from './sol';
 export * from './terreng';
+export * from './lager';
+export * from './skipark';

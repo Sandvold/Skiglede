@@ -1,5 +1,5 @@
-import { HARDVOKS, KLISTER, hardvoksFor, klisterFor, produkt } from './tabeller';
-import type { Lag, Seksjon, SnøAnalyse, Stabel, Tur } from './typer';
+import { HARDVOKS, KLISTER, glideFor, hardvoksFor, klisterFor, produkt } from './tabeller';
+import type { Lag, Seksjon, SnøAnalyse, Stabel, Stil, Tur } from './typer';
 
 // Tidsgrenser for dekketrinn [Forslag, åpent punkt 2]
 // Dekketrinn styres av det kalde partiet før det blir varmt: begge kriteriene teller [Forslag, åpent punkt 2/8]
@@ -101,4 +101,27 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
     advarsler.push('Isingsfare når temperaturen svinger rundt 0: Swix anbefaler minst tre tynne lag hardvoks over klisteren (VP40–VP55, litt hardere enn temperaturen tilsier). Unntak, ikke standard.');
   }
   return { type: 'klister', lag, begrunnelse, advarsler };
+}
+
+/** Skøyting: bare glider, valgt etter snøtemperaturen (snitt langs turen). Temperatur er hovedsaken [Bruker]. */
+export function byggGlider(tur: Tur): Stabel {
+  const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
+  const g = glideFor(snitt);
+  const begrunnelse = [
+    `Skøyting: bare glider. Snøtemperatur snitt ${snitt.toFixed(1)} °C (kaldest ${tur.tMin.toFixed(1)}, varmest ${tur.tMaks.toFixed(1)}). ${g.navn} (${g.farge}) passer ${g.omr[0]} til ${g.omr[1]} °C.`,
+  ];
+  begrunnelse.push('Glidere overlapper i temperatur. Ved overlapp velges den kaldeste som passer: heller litt for kaldt enn for varmt.');
+  const advarsler: string[] = [];
+  if (tur.tMaks - tur.tMin >= 6) advarsler.push(`Stor temperaturforskjell langs løypa (${(tur.tMaks - tur.tMin).toFixed(1)} °C). Glideren er valgt for snittet, vurder en kaldere hvis mesteparten er i skyggen.`);
+  return {
+    type: 'glider',
+    lag: [{ rolle: 'Glider', produkt: g.navn, antall: '1 lag', merknad: 'Smelt inn, la den kjøle, skrap og børst. Hydrokarbon uten fluor.' }],
+    begrunnelse,
+    advarsler,
+  };
+}
+
+/** Samler klassisk (hardvoks/klister) og skøyting (glider). */
+export function byggSmøring(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false): Stabel {
+  return stil === 'skoyting' ? byggGlider(tur) : byggStabel(tur, snø, seksjoner, lett);
 }

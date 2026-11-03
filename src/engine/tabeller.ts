@@ -8,7 +8,7 @@ export type Produkt = {
   farge: string; // Swix' fargenavn
   hex: string; // tilnærmet etikettfarge
   omr: [number, number]; // [kaldest, varmest] °C
-  linje: 'VP' | 'V' | 'K';
+  linje: 'VP' | 'V' | 'K' | 'G'; // G = glider
   merknad?: string;
 };
 
@@ -61,9 +61,18 @@ export const KLISTER_ANDRE: Produkt[] = [
   { navn: 'KN44', farge: 'Nero', hex: '#5A5A60', omr: [-3, 5], linje: 'K' },
 ];
 
+/** Glidevoks (Swix HS, hydrokarbon uten fluor). Områder fra swixsport.com-produktsidene (HS10 0…+10, HS8 −4…+4, HS7 −8…−2, HS6 −12…−6, HS5 −18…−10). Kaldest først. */
+export const GLIDER: Produkt[] = [
+  { navn: 'HS5', farge: 'Turquoise', hex: '#1FB5B0', omr: [-18, -10], linje: 'G' },
+  { navn: 'HS6', farge: 'Blue', hex: '#2F6FD0', omr: [-12, -6], linje: 'G' },
+  { navn: 'HS7', farge: 'Violet', hex: '#7A3FB0', omr: [-8, -2], linje: 'G' },
+  { navn: 'HS8', farge: 'Red', hex: '#D6403A', omr: [-4, 4], linje: 'G' },
+  { navn: 'HS10', farge: 'Yellow', hex: '#F2CF3A', omr: [0, 10], linje: 'G' },
+];
+
 export const BASEKLISTER: Produkt = { navn: 'KB20C', farge: 'Green Base (spray)', hex: '#3DA35D', omr: [0, 0], linje: 'K', merknad: 'Baseklister, svært tynt' };
 
-export const ALLE_PRODUKTER: Produkt[] = [...HARDVOKS, ...V_LINJE, ...BINDER, ...KLISTER, ...KLISTER_ANDRE, BASEKLISTER];
+export const ALLE_PRODUKTER: Produkt[] = [...HARDVOKS, ...V_LINJE, ...BINDER, ...KLISTER, ...KLISTER_ANDRE, BASEKLISTER, ...GLIDER];
 export const produkt = (navn: string) => ALLE_PRODUKTER.find((p) => p.navn === navn);
 
 const senter = (r: [number, number]) => (r[0] + r[1]) / 2;
@@ -84,3 +93,20 @@ function nærmeste(liste: Produkt[], t: number): number {
 
 export const hardvoksFor = (t: number) => nærmeste(HARDVOKS, t);
 export const klisterFor = (t: number) => nærmeste(KLISTER, t);
+
+/**
+ * Glider for en snøtemperatur. Glidere overlapper; da velges den kaldeste som passer («heller hakket kaldt enn varmt») [Bruker].
+ * Utenfor området brukes ytterkantene.
+ */
+export function glideFor(t: number): Produkt {
+  const passer = GLIDER.filter((g) => t >= g.omr[0] && t <= g.omr[1]);
+  if (passer.length) return passer.reduce((a, b) => (senter(a.omr) <= senter(b.omr) ? a : b));
+  return t < GLIDER[0].omr[0] ? GLIDER[0] : GLIDER[GLIDER.length - 1];
+}
+
+export type Kategori = 'hard' | 'binder' | 'klister' | 'glid';
+export function kategori(p: Produkt): Kategori {
+  if (p.linje === 'G') return 'glid';
+  if (p.linje === 'K') return 'klister';
+  return BINDER.includes(p) ? 'binder' : 'hard';
+}
