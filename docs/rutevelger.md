@@ -31,3 +31,8 @@ Kjør uten `--skriv` for rapport, med `--skriv` for å lagre; deretter `hent_ter
 ## Oslo (Nordmarka) fra OSM (`scripts/bygg_osm_omrade.py`)
 Området har ingen eksisterende løyper, så rundene lages fra OSM-nettet (preparerte biter; backcountry og scooter ute; upreparerte biter over 150 m bare som siste utvei, kostnadsfaktor 4). Hver runde går fra et startpunkt til et mål (hytte/utsiktspunkt) på korteste vei og tilbake på en annen vei. Godtas ved 5–25 km, under 25 % overlapp og under 15 % upreparert. Navn: «Start – Mål». Data: `scripts/ut/osm-oslo.json`, ut: `src/data/trails-oslo.json`.
 Lagt inn 3. nov: 7 runder fra Sognsvann, Frognerseteren og Holmenkollen. Fossum (Eiksmarka) henger ikke sammen med noe preparert nett i OSM (950 m til hovednettet), og Sørkedalen/Krokskogen er et eget nett uten mål; derfor ikke med ennå.
+
+## Tre områder (4. nov): Hovden, Bærumsmarka, Nordmarka
+`src/data/omrader.ts` har tre områder med egen løypefil og værcelle: `trails.json` (Hovden), `trails-baerumsmarka.json` (værcelle 59.955 N 10.52 E, 228 m) og `trails-nordmarka.json` (59.98 N 10.65 E, 290 m). Gammelt valg «oslo» i nettleseren tolkes som Nordmarka.
+Bærumsmarka bygges med `scripts/bygg_auto_ruter.py` fra startpunkter (parkeringer): for hvert startpunkt tas én runde per lengdebånd (ca. 4, 7, 11 og 16 km ut), vendepunktet navngis fra OSM-stedsnavn, og runder som ligner hverandre droppes. OSM-nettet i Bærumsmarka har hull mellom delnett, så nettene kobles der avstanden er under 350 m (regnes som upreparert strekk). Tur-retur-varianter lages med `lag_retur_varianter.py` (bruker feltet `mal` på løypa).
+Data: `scripts/ut/osm-baerum.json` og `osm-oslo.json`. Startpunkt som ikke er nær løype (Fossum, 600 m) starter ved nærmeste løype.

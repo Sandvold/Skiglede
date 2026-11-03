@@ -16,7 +16,7 @@ m = lambda a, b: math.hypot((a[0] - b[0]) * K * 111320, (a[1] - b[1]) * 111320)
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ut", required=True)
-    ap.add_argument("--mal", action="append", required=True, help="Navn=lon,lat")
+    ap.add_argument("--mal", action="append", default=[], help="Navn=lon,lat (ellers brukes feltet «mal» på løypa)")
     a = ap.parse_args()
     mal = {s.split("=")[0]: tuple(map(float, s.split("=")[1].split(","))) for s in a.mal}
     trails = json.load(open(a.ut))
@@ -27,7 +27,7 @@ def main():
         # Hoppes over hvis det allerede finnes en variant
         if any(x.get("variantAv") == t["id"] or x["id"] == t["id"] + "-sloyfe" for x in trails):
             continue
-        mål = mal.get(t["navn"].split(" – ")[1])
+        mål = tuple(t["mal"]) if t.get("mal") else mal.get(t["navn"].split(" – ")[1])
         if not mål:
             continue
         p = t["punkter"]

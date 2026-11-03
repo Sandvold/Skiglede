@@ -59,8 +59,10 @@ class Rutenett(br.Nett):
             if best is not None:
                 self.kant(e, best)
         self.fjern_smaa()
+        self.bygg_broer()
 
     min_noder = 300
+    bro_m = 350  # hull mellom nett som kobles (som upreparert strekk, dyrt å bruke)
     koble_m = br.KOBLE_M
 
     def fjern_smaa(self, min_noder=None):
@@ -79,6 +81,26 @@ class Rutenett(br.Nett):
                         del self.adj[v][n]
                     self.adj[n] = {}
                     self.skjult.add(n)
+
+    def bygg_broer(self):
+        """OSM har ofte hull mellom løypenett (tagging, veikryssinger). Kobler nærmeste noder i ulike nett hvis de er innen bro_m."""
+        gjenstår, komp = set(i for i in self.adj if i not in self.skjult), []
+        while gjenstår:
+            k = komponent(self, next(iter(gjenstår)))
+            gjenstår -= k
+            komp.append(k)
+        komp.sort(key=len)
+        for k in komp[:-1]:
+            best = None
+            for i in list(k)[:: max(1, len(k) // 400)]:
+                n = self.nær(self.noder[i], self.bro_m, utenom=k | self.skjult)
+                if n is not None:
+                    d = math.dist(self.noder[i], self.noder[n])
+                    if best is None or d < best[0]:
+                        best = (d, i, n)
+            if best:
+                self.kant(best[1], best[2])
+                self.uprep.add((min(best[1], best[2]), max(best[1], best[2])))
 
     def vei(self, fra, til, brukt=None):
         import heapq
@@ -121,7 +143,7 @@ class Rutenett(br.Nett):
         return best[1] if best else None
 
     def nærmeste(self, q):
-        for r in (50, 150, 400):
+        for r in (50, 150, 400, 800):
             n = self.nær(q, r)
             if n is not None:
                 return n

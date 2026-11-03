@@ -1,6 +1,6 @@
 name: Oppdater værhistorikk
 
-# Henter siste 14 døgn fra MET Nordic Analysis hver sjette time og committer src/data/vaer-hovden.json og vaer-oslo.json.
+# Henter siste 14 døgn fra MET Nordic Analysis hver sjette time og committer src/data/vaer-hovden.json, vaer-nordmarka.json og vaer-baerumsmarka.json.
 # Netlify bygger siden på nytt når filen endres.
 on:
   schedule:
@@ -20,10 +20,11 @@ jobs:
           python-version: '3.12'
       - run: pip install numpy pyproj
       - run: python3 -I scripts/hent_vaer.py --lat 59.5667 --lon 7.3667 --days 14 --json src/data/vaer-hovden.json
-      - run: python3 -I scripts/hent_vaer.py --lat 59.98 --lon 10.65 --days 14 --ref-hoyde 290 --json src/data/vaer-oslo.json
+      - run: python3 -I scripts/hent_vaer.py --lat 59.98 --lon 10.65 --days 14 --ref-hoyde 290 --json src/data/vaer-nordmarka.json
+      - run: python3 -I scripts/hent_vaer.py --lat 59.955 --lon 10.52 --days 14 --ref-hoyde 228 --json src/data/vaer-baerumsmarka.json
       - name: Commit hvis endret
         run: |
           git config user.name "skiglede-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add src/data/vaer-hovden.json src/data/vaer-oslo.json
+          git add src/data/vaer-hovden.json src/data/vaer-nordmarka.json src/data/vaer-baerumsmarka.json
           git diff --cached --quiet || (git commit -m "Oppdater værhistorikk" && git push)

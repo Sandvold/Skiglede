@@ -1,9 +1,10 @@
-// Henter timesvarsel fra MET (Yr, locationforecast) for Hovden og Oslo og sender det videre i kompakt form.
+// Henter timesvarsel fra MET (Yr, locationforecast) for Hovden, Nordmarka og Bærumsmarka og sender det videre i kompakt form.
 // MET krever identifiserbar User-Agent (nettlesere kan ikke sette den) og ber om cache, derfor går alt via her.
 // Data: MET Norway, CC BY 4.0 / NLOD. Vis kreditering i appen.
 const STEDER = {
   hovden: { lat: 59.5667, lon: 7.3667, hoyde: 838 },
-  oslo: { lat: 59.98, lon: 10.65, hoyde: 290 },
+  nordmarka: { lat: 59.98, lon: 10.65, hoyde: 290 },
+  baerumsmarka: { lat: 59.955, lon: 10.52, hoyde: 228 },
 };
 const UA = 'Skiglede/0.1 (https://skiglede.netlify.app; sandvold40@gmail.com)';
 

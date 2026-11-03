@@ -53,7 +53,7 @@ export function Hero() {
 }
 
 const styles = StyleSheet.create({
-  hero: { width: '100%', height: 300, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  hero: { width: '100%', minHeight: 300, paddingTop: 24, paddingBottom: 36, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
   innhold: { width: '100%', maxWidth: MaxContentWidth, paddingHorizontal: Spacing.three, paddingBottom: 34 },
   tittel: { color: '#FFFFFF', fontSize: 52, fontWeight: '800', letterSpacing: -1 },
   under: { color: '#BFDDF7', fontSize: 17, marginTop: 4 },
