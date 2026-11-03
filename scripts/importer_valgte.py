@@ -37,6 +37,10 @@ for v in valgt:
         continue
     tol = 25.0 if v.get("kilde") == "osm" else 15.0
     pts = hh.kjed(biter, tol)
+    total = sum(math.dist(p, q) for b in biter for p, q in zip(b, b[1:]))
+    brukt = sum(math.dist(p, q) for p, q in zip(pts, pts[1:]))
+    if brukt < 0.9 * total:
+        print(f"ADVARSEL {navn}: bare {brukt / 1000:.1f} av {total / 1000:.1f} km av bitene henger i én kjede og kommer med. Resten forgrener seg eller henger ikke sammen. Del opp i flere løyper i Rutevelgeren, eller velg færre biter.")
     if typ == "sloyfe":
         gap = math.dist(pts[0], pts[-1])
         if gap > 600:

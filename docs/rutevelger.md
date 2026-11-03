@@ -1,36 +1,25 @@
-# Rutevelger: velg løyper fra Turrutebasen eller OpenStreetMap
+# Rutevelger: OSM som grunndata, navn fra Turrutebasen
 
-Verktøy på `/rutevelger` (https://skiglede.netlify.app/rutevelger, også lenke nederst på Løyper-siden). Det lar deg se kandidater fra to kilder i samme kart, velge hvilke som skal inn i appen, og lage en fil som importeres.
+Verktøy på `/rutevelger` (https://skiglede.netlify.app/rutevelger, lenke nederst på Løyper-siden). Beslutning [Bruker]: **OpenStreetMap er grunndata for løypegeometri, og navnene hentes fra Turrutebasen** (Kartverket). Backcountry (ikke preparert) tas ut.
 
-## Datakilder
-- **Turrutebasen (Kartverket, CC BY 4.0):** ferdig innebygd. Lista kommer fra `src/data/kandidater-turrutebasen.json`, laget av `scripts/hent_kandidater.py` (område 59.45–59.70 N, 7.15–7.55 Ø). Kjør skriptet på nytt for å oppdatere eller utvide området (`--bbox sør,vest,nord,øst`).
-- **OpenStreetMap (ODbL):** hentes av deg lokalt med `scripts/hent_osm_loyper.mjs` (Overpass er blokkert fra Claudes arbeidsmiljø) og lastes inn i siden som fil.
+## Hvordan dataene settes sammen (`src/data/osm.ts`, testet i `scripts/test-osm.ts`)
+1. OSM-biter leses fra `scripts/hent_osm_loyper.mjs` (eller rå Overpass-JSON). Biter med `piste:grooming=backcountry` kastes.
+2. Hver OSM-bit får **navn fra Turrutebasen** hvis minst 50 % av biten ligger innen 25 m langs en navngitt Turrutebasen-løype (`navnKilde: turrutebasen`). Ellers brukes OSM-navnet (`osm`). Ellers står den uten navn. (Turrutebasens «Ukjent» gir aldri navn.)
+3. **Dekning mot appen:** andel av biten innen 30 m av løypene som allerede ligger i appen. ≥ 80 % = «i appen», under 50 % = «NY».
+4. På den første kjøringen mot Hovden-filen fikk 192 av 226 biter (88,5 km) navn fra Turrutebasen, 24 fra OSM, og bare 10 biter (1,5 km) manglet navn.
 
-## Steg for steg
-1. **Hent OSM-løyper** (på din maskin, i en klone av repoet, Node 18+):
-   ```
-   git pull
-   node scripts/hent_osm_loyper.mjs
-   ```
-   Området er som standard Hovden (`--bbox 59.50,7.25,59.62,7.45`). Skriptet skriver `scripts/ut/osm-loyper.json` og en liste i terminalen med kilometer per løypenavn. Går Overpass tregt eller feiler: kjør spørringen i overpass-turbo, eksporter som JSON og bruk `node scripts/hent_osm_loyper.mjs --fil eksport.json`. Selve eksportfilen kan også lastes rett inn i Rutevelgeren.
-2. **Åpne Rutevelgeren** (nettadressen over). Velg kilde:
-   - «Turrutebasen» viser kandidatene som allerede er innebygd.
-   - «OpenStreetMap: last inn fil …» åpner en filvelger. Velg `osm-loyper.json`. Biter med samme navn slås sammen til én kandidat. Biter uten navn blir hver sin kandidat («(uten navn) way/123»).
-3. **Se på kartet.** Stiplet blå linje = løyper som allerede ligger i appen. Oransje = kandidater fra valgt kilde. Rød = valgt. «i appen» står bak kandidater med samme navn som en løype vi har.
-4. **Velg løyper**: trykk på navnet i lista eller på linja i kartet (trykk igjen for å fjerne). Zoom med +/−, musehjul eller klyping, og dra for å flytte kartet.
-5. **Under «Valgte»**: gi hver løype et navn (påkrevd for OSM-biter uten navn), og velg **Tur-retur** (ut og tilbake samme vei) eller **Sløyfe** (lukket runde; endene må ligge innen 600 m fra hverandre, ellers hoppes løypa over i importen).
-6. **Trykk «Last ned valgte-loyper.json».**
-7. **Importer** (en av to måter):
-   - Gi filen til Claude i chatten, så importerer og kontrollerer jeg den.
-   - Eller kjør selv: `python3 -I scripts/importer_valgte.py valgte-loyper.json` (trenger `pip install pyproj`, og tilgang til Kartverkets høyde-API). Skriptet kjeder bitene, setter punkt hvert 50. m, henter høyde og skog, beregner avstand og skriver til `src/data/trails.json` (løype med samme id erstattes).
-8. **Terreng og kontroll** for de nye løypene:
-   ```
-   python3 -I scripts/hent_terreng.py --ut src/data/trails.json --navn "Navnet"
-   node scripts/kontroller-loyper.mjs
-   ```
-9. **Se løypa i kartet i appen**, bygg (`npx expo export --platform web`), commit og push. Netlify bygger fra repoet.
+## Steg for steg (PowerShell)
+1. Hent OSM-løyper: `git pull`, så `node scripts\hent_osm_loyper.mjs` (skriver `scripts\ut\osm-loyper.json`). Eget område: `--bbox "59.50,7.25,59.62,7.45"` (anførselstegn i PowerShell). Overpass-feil: eksporter fra overpass-turbo og bruk `--fil`.
+2. Åpne siden og trykk «OpenStreetMap: last inn fil …», velg `osm-loyper.json`.
+3. **Se kartet.** Oransje = ny bit, beige = delvis i appen, grå = allerede i appen, rød = krysset av, grønn = med i en løype.
+4. **Velg biter:** trykk på et navn under «Løyper etter navn» (krysser av alle bitene med det navnet), eller trykk på biter i kartet. «Uten navn» åpner listen med biter uten navn.
+5. **Slå sammen:** gi navn og velg Tur-retur eller Sløyfe, trykk «Slå sammen til løype». Eller bruk «Lag én løype per nytt navn» (bare nye biter fra navn som ikke allerede er i appen) / «per navn (alle)».
+6. Under «Løyper som skal importeres» kan du endre navn og type eller fjerne en løype. Trykk «Last ned valgte-loyper.json».
+7. **Importer:** gi filen til Claude i chatten, eller `python3 -I scripts/importer_valgte.py valgte-loyper.json` (Windows: `python scripts\importer_valgte.py valgte-loyper.json`, `pip install pyproj`). Skriptet kjeder bitene (OSM 25 m toleranse), setter punkt hvert 50. m, henter høyde og skog, beregner avstand og skriver til `src/data/trails.json`. **Det advarer hvis ikke alle bitene henger i én kjede** (forgreninger tas ikke med): del da opp i flere løyper.
+8. Terreng og kontroll: `python3 -I scripts/hent_terreng.py --ut src/data/trails.json --navn "Navnet"` og `node scripts/kontroller-loyper.mjs`. Se løypa i kartet, bygg, commit og push.
 
-## Hva som ikke gjøres automatisk
-- Importen lager ikke koblinger der kildene mangler dem. Ligger endene langt fra hverandre, velg Tur-retur eller legg inn koblingen først (se `scripts/bygg_ny_lysloype_runde.py`).
-- Dublett-sjekken er bare på navn («i appen»). Sammenlign geometrien i kartet.
-- Løyper hentet fra OSM får `kilde: "osm"` i trails.json; husk å krediteres OpenStreetMap-bidragsyterne (ODbL) i appen hvis OSM-data tas i bruk.
+## Begrensninger og kjente punkter
+- Importen lager én kjede per løype. Nettverk med forgreninger (arenaen ved Hovden: 62 biter, 9 km) må deles i flere løyper eller bygges som sløyfe med tilpasset skript.
+- Sløyfe krever at endene ligger innen 600 m. Ellers: tur-retur eller legg inn koblingen.
+- Turrutebasen-kandidater (`src/data/kandidater-turrutebasen.json`, `scripts/hent_kandidater.py`) brukes både som navnekilde og som alternativ kilde i siden.
+- OSM-data krever kreditering (ODbL, © OpenStreetMap-bidragsytere) i appen når de tas i bruk. Importerte løyper får `kilde: "osm"`.
