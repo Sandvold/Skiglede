@@ -7,6 +7,7 @@ import { tekstPå } from '@/components/ski/oversikt';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { StedVelger } from '@/components/ski/sted';
+import { foreslåSki } from '@/data/skimodeller';
 import { NØKKEL_SKIPARK, TOM_LISTE, useStedData, type Ski } from '@/data/lagring';
 import { produkt, type Stil } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
@@ -20,6 +21,7 @@ export default function Skipark() {
   const [navn, setNavn] = useState('');
   const [stil, setStil] = useState<Stil>('klassisk');
   const [nå] = useState(() => Date.now());
+  const forslag = foreslåSki(navn);
 
   const legg = () => {
     const n = navn.trim();
@@ -45,10 +47,23 @@ export default function Skipark() {
             value={navn}
             onChangeText={setNavn}
             onSubmitEditing={legg}
-            placeholder="Navn, f.eks. «Fischer skøyte» eller «Madshus rubb»"
+            placeholder="Begynn å skrive, f.eks. «Fischer speedmax» eller «Atomic redster»"
             placeholderTextColor={theme.textSecondary}
             style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
           />
+          {forslag.length ? (
+            <View style={{ gap: 6 }} accessibilityRole="list">
+              <ThemedText type="small" themeColor="textSecondary">Forslag, trykk for å velge:</ThemedText>
+              <View style={styles.rad}>
+                {forslag.map((f) => (
+                  <Pressable key={f.navn} accessibilityRole="button" onPress={() => { setNavn(f.navn); setStil(f.stil); }} style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.background }}>
+                    <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>{f.navn}</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{STIL_NAVN[f.stil]}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
           <View style={styles.rad}>
             {(Object.keys(STIL_NAVN) as Stil[]).map((s) => (
               <Chip key={s} aktiv={s === stil} onPress={() => setStil(s)}>{STIL_NAVN[s]}</Chip>
