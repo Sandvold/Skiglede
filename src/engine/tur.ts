@@ -18,7 +18,7 @@ export function vektetPersentil(v: number[], vekt: number[], p: number): number 
   let akk = 0;
   for (const r of rad) {
     akk += r.w;
-    if (akk >= p * sum) return r.x;
+    if (akk > p * sum) return r.x; // strengt større: nøyaktig p % av lengden teller ikke
   }
   return rad[rad.length - 1].x;
 }
@@ -102,7 +102,7 @@ export function planTur(args: {
     tempoKmt,
     seksjoner: ut,
     tMin: vektetPersentil(t, lengder, 0.05), // 5./95. persentil etter lengde: korte partier avgjør ikke [Bruker]
-    tMaks: vektetPersentil(t, lengder, 0.95),
+    tMaks: -vektetPersentil(t.map((x) => -x), lengder, 0.05), // speilet, så 5 % i hver ende behandles likt
     tMinRå: Math.min(...t),
     tMaksRå: Math.max(...t),
     skyggeAndel: totalM ? skyggeM / totalM : 0,

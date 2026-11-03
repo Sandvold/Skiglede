@@ -95,6 +95,7 @@ sjekk('alternativ: skiftende temperatur gir felle', alt(['felle'], (h) => ({ tem
 const lik = Array(20).fill(250);
 sjekk('persentil: 1 av 20 biter i skygge (5 %) påvirker ikke 5. persentil', vektetPersentil([...Array(19).fill(0), -6], lik, 0.05), 0);
 sjekk('persentil: 4 av 20 biter (20 %) påvirker 5. persentil', vektetPersentil([...Array(16).fill(0), ...Array(4).fill(-6)], lik, 0.05), -6);
+sjekk('persentil: 1 av 20 varme biter (5 %) påvirker ikke 95. persentil', -vektetPersentil([...Array(19).fill(0), 6].map((x) => -x), lik, 0.05), 0);
 sjekk('persentil: lange biter veier mer', vektetPersentil([0, -6], [250, 1000], 0.05), -6);
 
 // Forenklet: bare base og dagens smøring
