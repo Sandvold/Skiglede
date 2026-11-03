@@ -194,3 +194,31 @@ const ENKEL_ROLLER = new Set(['Binder', 'Baseklister', 'Dagens voks', 'Dagens kl
 export function forenklet(stabel: Stabel): Stabel {
   return { ...stabel, lag: stabel.lag.filter((l) => ENKEL_ROLLER.has(l.rolle)) };
 }
+
+export type Alternativ = { stil: 'felle' | 'rubb'; stabel: Stabel; grunn: string };
+
+/** Hvorfor føret er utfordrende å smøre (null = ikke utfordrende) [Bruker: felleski ved utfordrende smøreforhold]. */
+export function utfordrendeGrunn(tur: Tur, stabel: Stabel): string | null {
+  if (tur.sludd) return 'sludd gjør smøringen vanskelig';
+  if (tur.variasjon >= 4 || tur.tMaks - tur.tMin >= 5) return 'skiftende temperatur gjør smøringen vanskelig';
+  if (stabel.type === 'klister') return 'klisterføre er krevende å smøre riktig';
+  return null;
+}
+
+/**
+ * Ekstra forslag fra skiparken ved klassisk tur: felleski når føret er utfordrende,
+ * rubbski når den passer (sluddføre uten fare for ordentlig minus) [Bruker].
+ * `eier` er skityper brukeren har i skiparken.
+ */
+export function byggAlternativer(eier: Stil[], tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], hoved: Stabel, lett = false): Alternativ[] {
+  const ut: Alternativ[] = [];
+  if (eier.includes('rubb')) {
+    const rubb = byggRubb(tur, snø, seksjoner, lett);
+    if (rubb.egnet) ut.push({ stil: 'rubb', stabel: rubb, grunn: 'Sluddføre uten fare for ordentlig minus: rubbski passer i dag.' });
+  }
+  if (eier.includes('felle')) {
+    const grunn = utfordrendeGrunn(tur, hoved);
+    if (grunn) ut.push({ stil: 'felle', stabel: byggFelle(tur), grunn: `Felleski er et trygt valg i dag: ${grunn}.` });
+  }
+  return ut;
+}

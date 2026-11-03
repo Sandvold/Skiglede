@@ -59,6 +59,7 @@ Skøyting er bare glider; temperaturen er hovedsaken. Swix HS (hydrokarbon, uten
 Skityper på turen og i skipark: klassisk (voks/klister), felleski, rubbski, skøyting.
 - **Felleski:** fungerer alltid, men aldri perfekt, og glir alltid. Ingen festevoks eller klister; samme felle uansett føre. Glidesonene foran og bak får en glider valgt etter temperaturen (Forslag, bekreft).
 - **Rubbski** (smørefri, festesonen børstes opp med sandpapir, ingen festesmøring): **bare på sluddføre** (nedbør ≥ 0,3 mm/t mellom −1 og +3,5 °C rundt turen) og **aldri ved fare for ordentlig minus**: frarådes hvis lufta eller snøen rundt turen går under −2 °C (`RUBB.minLuft`, Forslag). Frarådes den, vises vanlig klassisk smøring som alternativ. Kilder: snl.no/rubbski og klikk.no (rubbeski iser i kulde og snøbyger).
+- Felle og rubb er ikke valg på hovedsiden. Har brukeren slike ski i skiparken, vises de som **alternativ** under klassisk smøring: rubbski når den passer (sluddføre uten fare for ordentlig minus), felleski når føret er utfordrende (sludd, skiftende temperatur eller klister). Se `byggAlternativer` og `utfordrendeGrunn` i `engine/stabel.ts`.
 - Felle og rubb har ingen festesmøring å lagre i skiparken.
 
 ### 8.2 Smørelager [Bruker]

@@ -1,6 +1,6 @@
 // Kjøres med: npx --yes tsx scripts/test-lager-skipark.ts  (feiler med exit 1 hvis en sjekk ikke stemmer)
 import trails from '../src/data/trails.json';
-import { analyserSnø, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
+import { analyserSnø, byggAlternativer, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
 
 let feil = 0;
 const sjekk = (navn: string, faktisk: unknown, forventet: unknown) => {
@@ -69,6 +69,19 @@ for (const [navn, f] of [['kaldt', () => ({ temp: -12 })], ['sludd', () => ({ te
 sjekk('felle: ingen advarsler om feil smøring', kjør('felle', () => ({ temp: -12 })).advarsler.length, 0);
 sjekk('lager: «Felle» meldes ikke som manglende produkt (glideren kan det)', tilpassTilLager(kjør('felle', () => ({ temp: -5 })), ['VP40']).advarsler.some((a) => a.includes('Felle')), false);
 sjekk('lager: alternativ tilpasses også', tilpassTilLager(tørt, ['VP40']).alternativ?.advarsler.length, (tilpassTilLager(tørt.alternativ!, ['VP40'])).advarsler.length);
+
+// Alternativer fra skiparken (klassisk tur)
+const alt = (eier: ('felle' | 'rubb' | 'klassisk')[], f: (h: number) => Partial<Vær>) => {
+  const t = døgn(f);
+  const sn = analyserSnø(t, start);
+  const tur = planTur({ seksjoner: sek, timer: t.filter((x) => x.ts >= start - 3 * 3600_000), startTs: start, tempoKmt: 5, refH: 838 });
+  return byggAlternativer(eier, tur, sn, sek, byggSmøring('klassisk', tur, sn, sek)).map((a) => a.stil);
+};
+sjekk('alternativ: sludd + rubb og felle i parken gir begge', alt(['rubb', 'felle'], () => ({ temp: 1, nedbor: 0.8 })), ['rubb', 'felle']);
+sjekk('alternativ: tomt skipark gir ingen', alt([], () => ({ temp: 1, nedbor: 0.8 })), []);
+sjekk('alternativ: rubb i parken men tørt føre gir ikke rubb', alt(['rubb'], () => ({ temp: -8 })), []);
+sjekk('alternativ: stabilt kaldt føre gir ikke felle', alt(['felle'], () => ({ temp: -10 })), []);
+sjekk('alternativ: skiftende temperatur gir felle', alt(['felle'], (h) => ({ temp: h >= 6 && h < 18 ? 3 : -4 })), ['felle']);
 
 // Forenklet: bare base og dagens smøring
 const full = stabel('hardvoks', [['Binder', 'VG35'], ['Base (kaldere)', 'VP40'], ['Dagens voks', 'VP45'], ['Dekke 1', 'VP40']]);

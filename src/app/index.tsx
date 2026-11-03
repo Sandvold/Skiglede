@@ -16,7 +16,7 @@ import vaerData from '@/data/vaer-hovden.json';
 import { hentVarsel, type Varsel } from '@/data/varsel';
 import { NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
-import { analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stil, type Terreng, type Vær } from '@/engine';
+import { analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stil, type Terreng, type Vær } from '@/engine';
 
 type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[]; terreng?: Terreng[] };
 const LØYPER = trailsData as unknown as Løype[];
@@ -106,13 +106,14 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
     });
     const hs = løype.punkter.map((p) => p[2]);
     const opp = løype.punkter.slice(1).reduce((s, p, i) => s + Math.max(0, p[2] - løype.punkter[i][2]), 0);
-    return { seksjoner, snø, tur, stabel, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
-  }, [løype, modus, startTime, dagIdx, varsel, stil, lager]);
+    const alternativer = stil === 'klassisk'
+      ? byggAlternativer(skipark.map((x) => x.stil), tur, snø, seksjoner, stabel, modus === 'Trening').map((a) => ({ ...a, stabel: tilpassTilLager(a.stabel, lager) }))
+      : [];
+    return { seksjoner, snø, tur, stabel, alternativer, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
+  }, [løype, modus, startTime, dagIdx, varsel, stil, lager, skipark]);
   const ski = skipark.find((x) => x.id === skiId);
-  const frarådet = r.stabel.egnet === false;
-  const vis = frarådet && r.stabel.alternativ ? r.stabel.alternativ : r.stabel; // rubb som ikke passer: vis vanlig klassisk i stedet
-  const kanLagre = !frarådet && (stil === 'klassisk' || stil === 'skoyting'); // felle og rubb har ingen smøring å lagre
-  const vurdering = ski && kanLagre ? vurderPåfylling(ski.smoring, vis, nå) : null;
+  const vis = r.stabel;
+  const vurdering = ski ? vurderPåfylling(ski.smoring, vis, nå) : null;
   const lagret = !!ski?.smoring && JSON.stringify(ski.smoring.lag) === JSON.stringify(vis.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
 
   const km = løype.lengde_m / 1000;
@@ -154,7 +155,7 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
           ))}
         </View>
         <View style={styles.rad}>
-          {(Object.keys(STIL_NAVN) as Stil[]).map((x) => (
+          {(['klassisk', 'skoyting'] as Stil[]).map((x) => (
             <Chip key={x} aktiv={x === stil} onPress={() => { setStil(x); if (ski && ski.stil !== x) setSkiId(null); }}>{STIL_NAVN[x]}</Chip>
           ))}
         </View>
@@ -208,12 +209,6 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
           </Kort>
         )}
 
-        {ski && !kanLagre && (
-          <ThemedText type="small" themeColor="textSecondary">
-            {frarådet ? 'Rubbski frarådes i dag, så det er ingen smøring å lagre på dem.' : `${STIL_NAVN[stil]} har ingen festesmøring å lagre.`}
-          </ThemedText>
-        )}
-
         {/* Smøring */}
         <Kort style={{ gap: Spacing.three }}>
           <View style={styles.rad}>
@@ -222,15 +217,6 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
               <Text style={{ color: theme.accent, fontWeight: '700' }}>{TYPE_NAVN[vis.type]}</Text>
             </View>
           </View>
-          {frarådet && (
-            <View style={[styles.advarsel, { borderColor: '#D6403A', backgroundColor: 'rgba(214,64,58,0.08)', gap: 4 }]}>
-              <Text style={[styles.h3, { color: theme.text }]}>Rubbski passer ikke i dag</Text>
-              {r.stabel.advarsler.map((a, i) => (
-                <ThemedText key={i} type="small">• {a}</ThemedText>
-              ))}
-              <ThemedText type="small" themeColor="textSecondary">Bruk heller vanlige klassiske ski, smurt slik:</ThemedText>
-            </View>
-          )}
           <View style={styles.rad}>
             <Chip aktiv={!enkel} onPress={() => setVisning('full')}>Full</Chip>
             <Chip aktiv={enkel} onPress={() => setVisning('enkel')}>Enkel</Chip>
@@ -257,6 +243,30 @@ function Detalj({ løype, onVelg, onTilbake }: { løype: Løype; onVelg: (id: st
             Utkast: temperaturområdene er hentet fra Swix, men tersklene i reglene er foreløpige og justeres mot erfaring.
           </ThemedText>
         </Kort>
+
+        {r.alternativer.map((a) => (
+          <Kort key={a.stil} style={{ gap: Spacing.two }}>
+            <View style={styles.rad}>
+              <Text style={[styles.h3, { color: theme.text, flex: 1 }]}>Alternativ: {STIL_NAVN[a.stil]}</Text>
+              <View style={[styles.merke, { backgroundColor: theme.accentSoft }]}>
+                <Text style={{ color: theme.accent, fontWeight: '700' }}>{skipark.filter((x) => x.stil === a.stil).map((x) => x.navn).join(', ')}</Text>
+              </View>
+            </View>
+            <ThemedText type="small">{a.grunn}</ThemedText>
+            {a.stabel.lag.map((l, i) => (
+              <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.lagProdukt, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.produkt}<Text style={{ fontWeight: '500', fontSize: 14 }}>  {produkt(l.produkt)?.farge}</Text></Text>
+                  <Text style={[styles.lagRolle, { color: tekstPå(produktFarge(l.produkt)), opacity: 0.85 }]}>{l.rolle}{l.merknad ? ` · ${l.merknad}` : ''}</Text>
+                </View>
+                <Text style={[styles.lagAntall, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.antall}</Text>
+              </View>
+            ))}
+            {a.stabel.advarsler.map((w, i) => (
+              <ThemedText key={i} type="small">⚠ {w}</ThemedText>
+            ))}
+          </Kort>
+        ))}
 
         {/* Snø */}
         <Kort>
