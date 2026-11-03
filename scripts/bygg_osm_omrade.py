@@ -148,6 +148,7 @@ def main():
     ap.add_argument("--start", action="append", required=True, help="Navn=lon,lat")
     ap.add_argument("--mal", action="append", required=True, help="Navn=lon,lat")
     ap.add_argument("--par", action="append", default=[], help="Start>Mål: bare disse parene")
+    ap.add_argument("--maks-km", type=float, default=MAKS_KM)
     ap.add_argument("--skriv", action="store_true")
     a = ap.parse_args()
     nett = Rutenett(last(a.osm, uprep=True))
@@ -176,7 +177,7 @@ def main():
             runde = br.polylinje(nett, ut) + br.polylinje(nett, tilbake)[1:]
             L, ov = br.lengde(runde) / 1000, br.overlapp_pct(runde)
             up = nett.andel_uprep(ut) * len(ut) / (len(ut) + len(tilbake)) + nett.andel_uprep(tilbake) * len(tilbake) / (len(ut) + len(tilbake))
-            ok = MIN_KM <= L <= MAKS_KM and ov <= br.MAKS_OVERLAPP and up <= MAKS_UPREP
+            ok = MIN_KM <= L <= a.maks_km and ov <= br.MAKS_OVERLAPP and up <= MAKS_UPREP
             print(f"{sn} – {mn}: {L:5.1f} km, overlapp {ov:3d} %, upreparert ca. {up * 100:.0f} %  {'OK' if ok else 'forkastet'}")
             if ok:
                 funnet.append((sn, mn, runde))
