@@ -64,8 +64,8 @@ export function TrailMap({ segmenter, hoyde = 320 }: { segmenter: KartSegment[];
           {segmenter.map((s, i) => (
             <Polyline key={i} points={s.pts.map(toXY).join(' ')} fill="none" stroke={s.farge} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
           ))}
-          <Circle cx={xy(start)[0]} cy={xy(start)[1]} r={7} fill="#2E9B5B" stroke="#fff" strokeWidth={2.5} />
-          <Circle cx={xy(slutt)[0]} cy={xy(slutt)[1]} r={7} fill="#12386B" stroke="#fff" strokeWidth={2.5} />
+          <Circle cx={xy(slutt)[0]} cy={xy(slutt)[1]} r={9} fill="#12386B" stroke="#fff" strokeWidth={2.5} />
+          <Circle cx={xy(start)[0]} cy={xy(start)[1]} r={4.5} fill="#2E9B5B" stroke="#fff" strokeWidth={1.5} />
         </Svg>
       )}
       <View style={{ position: 'absolute', right: 6, bottom: 4, backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 6, borderRadius: 6 }}>

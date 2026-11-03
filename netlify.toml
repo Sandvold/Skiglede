@@ -1,5 +1,5 @@
 [build]
-  command = "npx expo export --platform web"
+  command = "node scripts/kontroller-loyper.mjs && npx expo export --platform web"
   publish = "dist"
 
 [build.environment]

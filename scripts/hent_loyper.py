@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import hent_hoyde as hh  # noqa: E402
 from pyproj import Transformer  # noqa: E402
 
+KOBLING_M = 300  # største lengde på rett kobling mellom startpunkt og sløyfe
 WFS = "https://wfs.geonorge.no/skwms1/wfs.turogfriluftsruter"
 
 
@@ -166,9 +167,16 @@ def sett_sammen(kjede_navn, nett, gml_segs, type_, start_fra):
         # mål = knutepunkter i nettet som ligger på sløyfa (også kryss midt i runden, ikke bare endene)
         mal = {i for i, n in enumerate(nett.noder) if nett.adj[i] and min(math.dist(n, v) for v in sl) <= nett.tol}
         r = nett.korteste(nett.node(trailhead), mal)
-        if not r:
-            raise SystemExit(f"{kjede_navn}: finner ikke vei fra {start_fra}")
-        stikk, J = r[2], nett.noder[r[1]]
+        # Turrutebasen mangler ofte korte koblinger. Ligger runden nær startpunktet og nettet gir en
+        # lang omvei, bruker vi en rett kobling (må kontrolleres i kartet).
+        dmin, kmin = min((math.dist(trailhead, v), k) for k, v in enumerate(sl))
+        if dmin <= KOBLING_M and (r is None or r[0] > 3 * dmin):
+            stikk, J = [trailhead, sl[kmin]], sl[kmin]
+            print(f"  {kjede_navn}: rett kobling på {dmin:.0f} m fra startpunktet (nettet ga {'ingen vei' if r is None else f'{r[0]:.0f} m'})")
+        else:
+            if not r:
+                raise SystemExit(f"{kjede_navn}: finner ikke vei fra {start_fra}")
+            stikk, J = r[2], nett.noder[r[1]]
     else:
         stikk, J = [], ende[0]
     i = min(range(len(sl)), key=lambda k: math.dist(sl[k], J))
