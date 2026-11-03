@@ -59,3 +59,49 @@ export function useMerke(): [Smøresystem, (id: MerkeId) => void] {
   const gyldig = (MERKE_IDER as string[]).includes(id) ? (id as MerkeId) : 'swix';
   return [SYSTEMER[gyldig], sett];
 }
+
+// ---- Steder: egne smørelager, skipark og valgte ski per sted (f.eks. fjellet og hjemme). Uten ekstra steder er alt samlet på «Standard». ----
+export type Sted = { id: string; navn: string };
+export const NØKKEL_STEDER = 'skiglede.steder';
+export const NØKKEL_AKTIVT_STED = 'skiglede.sted';
+export const NØKKEL_STANDARDSTED = 'skiglede.standardsted';
+/** Standardstedet har tom id, så data lagret før steder fantes (uendrede nøkler) hører til det. */
+const stedNøkkel = (base: string, id: string) => (id ? `${base}.${id}` : base);
+const STEDDATA = [NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE];
+
+export function useSteder() {
+  const [ekstra, setEkstra] = useLagret<Sted[]>(NØKKEL_STEDER, TOM_LISTE);
+  const [aktivRå, setAktiv] = useLagret<string>(NØKKEL_AKTIVT_STED, '');
+  const [standardnavn, setStandardnavn] = useLagret<string>(NØKKEL_STANDARDSTED, 'Standard');
+  const steder: Sted[] = [{ id: '', navn: standardnavn || 'Standard' }, ...ekstra];
+  const aktiv = steder.some((s) => s.id === aktivRå) ? aktivRå : '';
+  return {
+    steder,
+    aktiv,
+    velg: setAktiv,
+    leggTil(navn: string) {
+      const id = `s${Date.now().toString(36)}`;
+      setEkstra([...ekstra, { id, navn: navn.trim() }]);
+      setAktiv(id);
+    },
+    gi_nytt_navn(id: string, navn: string) {
+      if (!navn.trim()) return;
+      if (!id) setStandardnavn(navn.trim());
+      else setEkstra(ekstra.map((s) => (s.id === id ? { ...s, navn: navn.trim() } : s)));
+    },
+    fjern(id: string) {
+      if (!id) return; // standardstedet kan ikke fjernes
+      STEDDATA.forEach((b) => skriv(stedNøkkel(b, id), ''));
+      setEkstra(ekstra.filter((s) => s.id !== id));
+      setAktiv('');
+    },
+  };
+}
+
+/** Som useLagret, men data hører til aktivt sted (lager, skipark, valgte ski). */
+export function useStedData<T>(base: string, standard: T): [T, (v: T) => void] {
+  const [aktiv] = useLagret<string>(NØKKEL_AKTIVT_STED, '');
+  const [ekstra] = useLagret<Sted[]>(NØKKEL_STEDER, TOM_LISTE);
+  const gyldig = ekstra.some((s) => s.id === aktiv) ? aktiv : '';
+  return useLagret<T>(stedNøkkel(base, gyldig), standard);
+}

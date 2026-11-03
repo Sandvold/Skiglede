@@ -4,6 +4,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { ThemedText } from '@/components/themed-text';
 import { TrailMap } from '@/components/ski/kart';
 import { Hoydeprofil } from '@/components/ski/profil';
+import { StedVelger } from '@/components/ski/sted';
 import { Temperaturoversikt, tekstPå, type OversiktVisning } from '@/components/ski/oversikt';
 import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
@@ -14,7 +15,7 @@ import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, type Varsel } from '@/data/varsel';
-import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
+import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
 import { SWIX, innkjøpsforslag, analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
@@ -84,9 +85,9 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const [dagIdx, setDagIdx] = useState(0);
   const router = useRouter();
   const [stil, setStil] = useState<Stil>('klassisk');
-  const [valgte, setValgte] = useLagret<string[]>(NØKKEL_VALGTE, TOM_LISTE);
+  const [valgte, setValgte] = useStedData<string[]>(NØKKEL_VALGTE, TOM_LISTE);
   const [nå] = useState(() => Date.now());
-  const [lager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
+  const [lager] = useStedData<string[]>(NØKKEL_LAGER, TOM_LISTE);
   const [oversiktVisning, setOversiktVisning] = useState<OversiktVisning>('alle');
   const kjøp = useMemo(() => innkjøpsforslag(område.vinter, lager, SWIX), [område, lager]);
   const sys = SWIX; // Anbefalingen tar alltid utgangspunkt i Swix
@@ -94,7 +95,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   // Uten avkrysning: ren Swix-anbefaling. Med avkrysning: tilpasset smørelageret, på tvers av merker.
   const lagerBruk = brukLager ? lager : TOM_LISTE;
   const [visning, setVisning] = useLagret<'full' | 'enkel'>(NØKKEL_VISNING, 'full');
-  const [skipark, setSkipark] = useLagret<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
+  const [skipark, setSkipark] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [varselFeil, setVarselFeil] = useState(false);
   useEffect(() => {
@@ -253,6 +254,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
         </ThemedText>
 
         {/* Ski */}
+        <Kort><StedVelger forklaring="Skiene og smørelageret hører til valgt sted." /></Kort>
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>SKI JEG SMØRER I DAG</ThemedText>
         <View style={styles.rad}>
           {skipark.map((x) => (

@@ -5,7 +5,8 @@ import { Chip, Kort } from '@/components/ski/ui';
 import { tekstPå } from '@/components/ski/oversikt';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { NØKKEL_LAGER, TOM_LISTE, useLagret } from '@/data/lagring';
+import { StedVelger } from '@/components/ski/sted';
+import { NØKKEL_LAGER, TOM_LISTE, useStedData } from '@/data/lagring';
 import { useState } from 'react';
 import { MERKE_IDER, SYSTEMER, type MerkeId, type Produkt } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
@@ -14,7 +15,7 @@ export default function Lager() {
   const theme = useTheme();
   const [visMerke, setVisMerke] = useState<MerkeId | 'alle'>('swix'); // Swix vises først; de andre merkene velges med chips
   const GRUPPER = MERKE_IDER.filter((id) => visMerke === 'alle' || id === visMerke).flatMap((id) => SYSTEMER[id].oversikt.map((g) => ({ tittel: visMerke === 'alle' ? `${SYSTEMER[id].navn}: ${g.tittel}` : g.tittel, liste: g.liste })));
-  const [lager, setLager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
+  const [lager, setLager] = useStedData<string[]>(NØKKEL_LAGER, TOM_LISTE);
   const har = (n: string) => lager.includes(n);
   const bytt = (n: string) => setLager(har(n) ? lager.filter((x) => x !== n) : [...lager, n]);
   const gruppe = (liste: Produkt[], på: boolean) => setLager(på ? [...new Set([...lager, ...liste.map((p) => p.navn)])] : lager.filter((n) => !liste.some((p) => p.navn === n)));
@@ -24,6 +25,7 @@ export default function Lager() {
       <Hero />
       <View style={styles.innhold}>
         <Text style={[styles.h1, { color: theme.text }]}>Smørelager</Text>
+        <Kort><StedVelger forklaring="Hvert sted har eget smørelager. Valgt sted brukes også på forsiden og i skiparken." /></Kort>
         <ThemedText themeColor="textSecondary">
           Kryss av det du har, fra alle merker. Når du huker av «Bruk min smøring» under smøretipsene, foreslår Skiglede bare det du eier, og bytter det som mangler mot nærmeste du har, på tvers av merker.
         </ThemedText>

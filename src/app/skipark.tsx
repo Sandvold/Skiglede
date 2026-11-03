@@ -6,7 +6,8 @@ import { Chip, Kort } from '@/components/ski/ui';
 import { tekstPå } from '@/components/ski/oversikt';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { NØKKEL_SKIPARK, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
+import { StedVelger } from '@/components/ski/sted';
+import { NØKKEL_SKIPARK, TOM_LISTE, useStedData, type Ski } from '@/data/lagring';
 import { produkt, type Stil } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -15,7 +16,7 @@ const dato = (ts: number) => new Intl.DateTimeFormat('nb-NO', { day: 'numeric', 
 
 export default function Skipark() {
   const theme = useTheme();
-  const [ski, setSki] = useLagret<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
+  const [ski, setSki] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const [navn, setNavn] = useState('');
   const [stil, setStil] = useState<Stil>('klassisk');
   const [nå] = useState(() => Date.now());
@@ -35,6 +36,8 @@ export default function Skipark() {
         <ThemedText themeColor="textSecondary">
           Legg inn skiene dine. Når du velger et par på en tur og lagrer smøringen, husker Skiglede hva som ligger på og sier fra neste gang om skia må renses eller bare trenger topplag.
         </ThemedText>
+
+        <Kort><StedVelger forklaring="Hvert sted har egen skipark. Valgt sted brukes også på forsiden og i smørelageret." /></Kort>
 
         <Kort>
           <Text style={[styles.h2, { color: theme.text }]}>Legg til ski</Text>
