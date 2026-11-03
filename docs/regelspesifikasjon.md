@@ -76,6 +76,6 @@ Klister (fra produktlister): KX30 −12…0; KX35 +1…−4; KX40S −4…+2; KX
 
 ## 12. Løyperegler (håndheves av scripts/kontroller-loyper.mjs før hvert bygg)
 1. Hver løype starter og slutter på samme punkt (maks 15 m) og samme høyde.
-2. Formen er `retur` (tur-retur fra laveste ende, ut-turen speiles) eller `sloyfe` (lukket runde). Felles startpunkt kan angis med `start=ANNEN_LØYPE`; ligger runden innen 300 m og nettet gir en omvei på mer enn 3 ganger så mye, brukes en rett kobling som må kontrolleres i kartet.
+2. Formen er `retur` (tur-retur fra laveste ende, ut-turen speiles) eller `sloyfe` (lukket runde). Fra enden av en løype tas en annen løype tilbake hvis nettet har en vei som ikke bruker samme løype og er kortere enn 75 % av løypa (Lundane går ut hele Lundane og tilbake via Galten). `retur-ren` tvinger samme vei tilbake. Felles startpunkt kan angis med `start=ANNEN_LØYPE`; ligger runden innen 300 m og nettet gir en omvei på mer enn 3 ganger så mye, brukes en rett kobling som må kontrolleres i kartet.
 3. Ingen hopp over 120 m mellom nabopunkter (hull i løypa), avstanden øker jevnt, og siste avstand stemmer med lengden.
 Kontrollen feiler bygget på Netlify hvis en regel brytes. Kjør lokalt med `npm run kontroller`.

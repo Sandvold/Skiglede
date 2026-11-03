@@ -132,6 +132,80 @@ class Nett:
         return None
 
 
+class Tett:
+    """Detaljert graf (alle punkter) over løyper utenom `utenom`, til å finne en annen vei tilbake."""
+
+    def __init__(self, segs, utenom, tol=15.0):
+        self.tol, self.pos, self.adj, self.celler = tol, [], collections.defaultdict(list), collections.defaultdict(list)
+        idx, ender = {}, []
+
+        def nid(pt):
+            k = (round(pt[0]), round(pt[1]))
+            if k not in idx:
+                idx[k] = len(self.pos)
+                self.pos.append(pt)
+                self.celler[(int(pt[0] // tol), int(pt[1] // tol))].append(idx[k])
+            return idx[k]
+
+        for nm, p in segs:
+            if nm == utenom:
+                continue
+            ids = [nid(q) for q in p]
+            ender += [ids[0], ids[-1]]
+            for a, b in zip(ids, ids[1:]):
+                if a != b:
+                    L = math.dist(self.pos[a], self.pos[b])
+                    self.adj[a].append((b, L))
+                    self.adj[b].append((a, L))
+        for e in ender:  # koble endepunkter til punkter på andre løyper innen toleransen (kryss)
+            for o in self.rundt(self.pos[e], tol):
+                if o != e:
+                    L = math.dist(self.pos[e], self.pos[o])
+                    self.adj[e].append((o, L))
+                    self.adj[o].append((e, L))
+
+    def rundt(self, pt, r):
+        cx, cy, n = int(pt[0] // self.tol), int(pt[1] // self.tol), int(r // self.tol) + 1
+        return [i for dx in range(-n, n + 1) for dy in range(-n, n + 1) for i in self.celler.get((cx + dx, cy + dy), []) if math.dist(self.pos[i], pt) <= r]
+
+    def nærmeste(self, pt, r):
+        c = self.rundt(pt, r)
+        return min(c, key=lambda i: math.dist(self.pos[i], pt)) if c else None
+
+    def vei(self, fra, til):
+        d, prev, q = {fra: 0.0}, {}, [(0.0, fra)]
+        while q:
+            c, u = heapq.heappop(q)
+            if c > d.get(u, 1e18):
+                continue
+            if u == til:
+                lin, x = [self.pos[u]], u
+                while x in prev:
+                    x = prev[x]
+                    lin.append(self.pos[x])
+                return c, lin[::-1]
+            for v, L in self.adj[u]:
+                if c + L < d.get(v, 1e18):
+                    d[v] = c + L
+                    prev[v] = u
+                    heapq.heappush(q, (c + L, v))
+        return None
+
+
+def alternativ_retur(ende, start, navn, segs, koblingsradius):
+    """Vei fra løypas ende tilbake til start uten å bruke løypa selv. Siste stykke inn til start kan være rett kobling."""
+    t = Tett(segs, utenom=navn)
+    a = t.nærmeste(ende, 60)
+    b = t.nærmeste(start, koblingsradius)
+    if a is None or b is None:
+        return None
+    r = t.vei(a, b)
+    if not r:
+        return None
+    lin = [ende] + r[1] + [start]
+    return lengde(lin), lin
+
+
 def laveste_ende(kjede):
     h = hh.hoyder([kjede[0], kjede[-1]])
     return kjede if h[0]["z"] <= h[1]["z"] else kjede[::-1]
@@ -145,6 +219,22 @@ def sett_sammen(kjede_navn, nett, gml_segs, type_, start_fra):
     if start_fra:
         tr = hh.kjed([p for nm, p in gml_segs if nm == start_fra])
         trailhead = laveste_ende(tr)[0]
+    alt = None
+    if type_ in ("auto", "runde", "retur"):
+        # alternativ vei tilbake (en annen løype fra enden til start) gjør tur-retur til en runde
+        ori = ende if not trailhead else min([kj, kj[::-1]], key=lambda c: math.dist(c[0], trailhead))
+        alt = alternativ_retur(ori[-1], ori[0], kjede_navn, gml_segs, KOBLING_M)
+        if alt and (alt[0] > 0.75 * lengde(ori) or math.dist(ori[0], ori[-1]) <= nett.tol):
+            alt = None
+    if type_ == "runde" or (type_ in ("auto", "retur") and alt and type_ != "retur-ren"):
+        if alt:
+            ori = ende if not trailhead else min([kj, kj[::-1]], key=lambda c: math.dist(c[0], trailhead))
+            print(f"  {kjede_navn}: tilbake via annen løype ({alt[0]:.0f} m) i stedet for samme vei")
+            return ori + alt[1][1:], "sloyfe"
+        if type_ == "runde":
+            raise SystemExit(f"{kjede_navn}: finner ingen annen vei tilbake")
+    if type_ == "retur-ren":
+        type_ = "retur"
     if type_ == "auto":
         hull = math.dist(kj[0], kj[-1])
         if hull <= nett.tol:
