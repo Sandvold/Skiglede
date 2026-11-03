@@ -66,7 +66,14 @@ Skityper på turen og i skipark: klassisk (voks/klister), felleski, rubbski, sk�
 Brukeren krysser av produktene han eier (`/lager`). Når lageret ikke er tomt, byttes anbefalte produkter som mangler mot nærmeste i samme kategori (hardvoks, binder, klister, glider) etter senter av temperaturområdet; ved lik avstand velges det kaldeste. Finnes ingen i kategorien, markeres produktet som mangler. Tomt lager betyr at alt foreslås.
 
 ### 8.3 Skipark [Bruker, regler Forslag]
-Flere par ski (`/skipark`), hvert klassisk eller skøyting. På en tur velges paret og smøringen lagres. Neste gang vurderes forrige smøring mot ny: **rens** hvis type endres (hardvoks ↔ klister ↔ glider), hvis ny dagsvoks/-klister/glider er kaldere enn den som ligger på, ved 4 turer uten rens, eller når smøringen er over 14 dager gammel; ellers **bare topplag** (ny dagsvoks, klister eller glider oppå). Terskler i `SKIPARK` (`engine/skipark.ts`). Testes med `scripts/test-lager-skipark.ts`. Lagring er lokalt i nettleseren (`data/lagring.ts`) til innlogging kommer.
+Flere par ski (`/skipark`), hvert klassisk, skøyting, felle eller rubb. På hovedsiden krysser brukeren av alle parene som smøres i dag (valget huskes), og hvert par får sin egen vurdering og «Lagre smøring» (eller «Lagre på alle valgte»). Lagret smøring huskes til neste gang paret smøres. Lagring er lokalt i nettleseren (`data/lagring.ts`) til innlogging kommer.
+
+Regler for **rens eller topplag** (`vurderPåfylling`, `SKIPARK` i `engine/skipark.ts`):
+- **Rens** hvis type endres (hardvoks ↔ klister ↔ glider), ved 4 turer uten rens, eller når smøringen er over 14 dager gammel.
+- **Voks og klister:** nytt lag legges oppå *øverste* lag på skia. Varmere eller lik går alltid fint som topplag (smurt opp til blå ekstra, så fiolett oppå: ok) [Bruker]. Kaldere oppå varmere fester seg dårlig, f.eks. blå oppå rød: **rens** [Bruker]. Boulder Nordic bekrefter at kaldere kan ligge *som tynt dekke* ca. ett trinn (en til to temperaturområder) over varmere, så er den nye voksen opptil `maksKaldere` = 3 °C kaldere (midt i området) enn øverste lag, anbefales bare et tynt dekke; mer enn det gir rens.
+- **Glider:** å bytte glider krever rens [Bruker]. Ligger det en glider på, er det slingringsmonn: er snøtemperaturen i dag innenfor området til glideren som ligger på ±`glideMonn` (1,5 °C, Forslag), beholdes den (ingen rens, ingen ny glider). Utenfor monnet: rens.
+- Felle og rubb har ingen festesmøring å lagre.
+Testes med `scripts/test-lager-skipark.ts`.
 
 ## 9. Arkitektur [Bruker + Forslag]
 - Klient: Expo med web som første mål (Expo Router), senere Android/iOS.

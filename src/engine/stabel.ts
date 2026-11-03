@@ -115,6 +115,7 @@ export function byggGlider(tur: Tur): Stabel {
   if (tur.tMaks - tur.tMin >= 6) advarsler.push(`Stor temperaturforskjell langs løypa (${(tur.tMaks - tur.tMin).toFixed(1)} °C). Glideren er valgt for snittet, vurder en kaldere hvis mesteparten er i skyggen.`);
   return {
     type: 'glider',
+    tSnitt: snitt,
     lag: [{ rolle: 'Glider', produkt: g.navn, antall: '1 lag', merknad: 'Smelt inn, la den kjøle, skrap og børst. Hydrokarbon uten fluor.' }],
     begrunnelse,
     advarsler,

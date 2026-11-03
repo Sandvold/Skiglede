@@ -10,7 +10,7 @@ const MAX_Z = 17;
 export type Utsnitt = { z: number; left: number; top: number; w: number; h: number };
 
 /** Kartramme med Kartverket-fliser, dra for å flytte, knapper/musehjul/klyping for å zoome. */
-export function ZoomKart({ punkter, hoyde, startZ = 16, children }: { punkter: number[][]; hoyde: number; startZ?: number; children: (u: Utsnitt) => ReactNode }) {
+export function ZoomKart({ punkter, hoyde, startZ = 16, fast, children }: { punkter: number[][]; hoyde: number; startZ?: number; /** Fast startvisning (senter og zoom) i stedet for å tilpasse til punktene */ fast?: { lon: number; lat: number; z: number }; children: (u: Utsnitt) => ReactNode }) {
   const [w, setW] = useState(0);
   const lons = punkter.map((p) => p[0]);
   const lats = punkter.map((p) => p[1]);
@@ -18,15 +18,16 @@ export function ZoomKart({ punkter, hoyde, startZ = 16, children }: { punkter: n
 
   // Passende zoom som standard
   const passZ = useMemo(() => {
+    if (fast) return fast.z;
     if (w <= 0) return startZ;
     let z = startZ;
     const pad = 20;
     while (z > MIN_Z && (mx(maxLon, z) - mx(minLon, z) > w - 2 * pad || my(minLat, z) - my(maxLat, z) > hoyde - 2 * pad)) z--;
     return z;
-  }, [w, hoyde, startZ, minLon, maxLon, minLat, maxLat]);
+  }, [w, hoyde, startZ, fast, minLon, maxLon, minLat, maxLat]);
 
   const [dz, setDz] = useState(0);
-  const [senter, setSenter] = useState<[number, number]>([(mx(minLon, 0) + mx(maxLon, 0)) / 2, (my(minLat, 0) + my(maxLat, 0)) / 2]);
+  const [senter, setSenter] = useState<[number, number]>(fast ? [mx(fast.lon, 0), my(fast.lat, 0)] : [(mx(minLon, 0) + mx(maxLon, 0)) / 2, (my(minLat, 0) + my(maxLat, 0)) / 2]);
   const z = Math.max(MIN_Z, Math.min(MAX_Z, passZ + dz));
 
   const ref = useRef({ z, w, passZ });

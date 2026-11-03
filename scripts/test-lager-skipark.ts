@@ -29,14 +29,21 @@ const ny = stabel('hardvoks', [['Dagens voks', 'VP45']]);
 sjekk('ingen forrige = ny', vurderPåfylling(undefined, ny).handling, 'ny');
 sjekk('varmere hardvoks = topplag', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP40']]), ny).handling, 'topplag');
 sjekk('samme hardvoks = topplag', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP45']]), ny).handling, 'topplag');
-sjekk('kaldere hardvoks = rens', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP55']]), ny).handling, 'rens');
+sjekk('mye kaldere hardvoks (rød under, blå oppå) = rens', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP65']]), ny).handling, 'rens');
+sjekk('litt kaldere hardvoks = topplag som tynt dekke', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP55']]), ny).handling, 'topplag');
+sjekk('smurt opp til blå ekstra, fiolett på toppen = topplag', vurderPåfylling(smør('hardvoks', [['Binder', 'VG35'], ['Dagens voks', 'VP45'], ['Dekke 1', 'VP40']]), stabel('hardvoks', [['Dagens voks', 'VP55']])).handling, 'topplag');
+sjekk('øverste lag teller, ikke dagens: dekke VP40 under ny VP65 er fortsatt fint', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP45'], ['Dekke 1', 'VP40']]), stabel('hardvoks', [['Dagens voks', 'VP65']])).handling, 'topplag');
 sjekk('klister -> hardvoks = rens', vurderPåfylling(smør('klister', [['Dagens klister', 'KX65']]), ny).handling, 'rens');
 sjekk('hardvoks -> klister = rens', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP45']]), stabel('klister', [['Dagens klister', 'KX65']])).handling, 'rens');
 sjekk('4 turer = rens', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP40']], 4), ny).handling, 'rens');
 sjekk('3 turer = topplag', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP40']], 3), ny).handling, 'topplag');
 sjekk('15 dager gammel = rens', vurderPåfylling(smør('hardvoks', [['Dagens voks', 'VP40']], 1, 15), ny).handling, 'rens');
 sjekk('klister varmere = topplag', vurderPåfylling(smør('klister', [['Dagens klister', 'KX45N']]), stabel('klister', [['Dagens klister', 'KX65']])).handling, 'topplag');
-sjekk('glider: HS7 -> HS8 (varmere) = topplag', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), stabel('glider', [['Glider', 'HS8']])).handling, 'topplag');
+sjekk('glider: bytte uten temperatur = rens', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), stabel('glider', [['Glider', 'HS8']])).handling, 'rens');
+const medT = (g: string, t: number): Stabel => ({ ...stabel('glider', [['Glider', g]]), tSnitt: t });
+sjekk('glider: HS7 på, snø −1 °C (innenfor monn) = behold', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), medT('HS8', -1)).behold, true);
+sjekk('glider: HS7 på, snø +1 °C (utenfor monn) = rens', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), medT('HS8', 1)).handling, 'rens');
+sjekk('glider: HS8 på, snø −9 °C (kaldere, utenfor) = rens', vurderPåfylling(smør('glider', [['Glider', 'HS8']]), medT('HS6', -9)).handling, 'rens');
 sjekk('glider: HS8 -> HS7 (kaldere) = rens', vurderPåfylling(smør('glider', [['Glider', 'HS8']]), stabel('glider', [['Glider', 'HS7']])).handling, 'rens');
 
 // Felle og rubb. Syntetisk døgn rundt turen: temp(h) og nedbør(h) for hver time (UTC).

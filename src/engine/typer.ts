@@ -72,6 +72,8 @@ export type Stabel = {
   /** false når skityper ikke passer føret (rubb). Da ligger anbefalt alternativ i `alternativ`. */
   egnet?: boolean;
   alternativ?: Stabel;
+  /** Snøtemperatur (snitt langs turen), brukt til å vurdere om en glider som allerede ligger på kan beholdes. */
+  tSnitt?: number;
 };
 
 /** Type ski: klassisk (voks/klister), felleski, rubbski (smørefri med oppbørstet festesone) eller skøyting. */
