@@ -4,11 +4,44 @@ import type { Lag, Seksjon, SnøAnalyse, Stabel, Stil, Tur } from './typer';
 // Tidsgrenser for dekketrinn [Forslag, åpent punkt 2]
 // Dekketrinn styres av det kalde partiet før det blir varmt: begge kriteriene teller [Forslag, åpent punkt 2/8]
 export const DEKKE = { toTrinnMinKm: 6, toTrinnMinMin: 90 };
+/** Maks antall tynne lag hardvoks totalt (brukerens erfaring: 4–10). Motoren reduserer selv i stedet for å anbefale mer. */
+export const MAKS_LAG = 10;
+/** Under denne varmeste snøtemperaturen (°C) brukes ikke klister selv om snøen er skarp: da er det hardvoks over binder. */
+export const KLISTER_KALDGRENSE = -8;
+/** Et produkt regnes som utenfor området når temperaturen er mer enn dette (°C) utenfor det oppgitte området. */
+const TOLERANSE = 1;
+
+function utenfor(p: { navn: string; omr: [number, number] }, t: number, hva: string): string | null {
+  const [lo, hi] = p.omr;
+  if (t >= lo - TOLERANSE && t <= hi + TOLERANSE) return null;
+  return `${p.navn} (${lo} til ${hi} °C) dekker ikke ${hva} (${t.toFixed(1)} °C). ${t < lo ? 'Du trenger noe kaldere.' : 'Du trenger noe varmere.'}`;
+}
 
 const persentil = (v: number[], p: number) => {
   const s = [...v].sort((a, b) => a - b);
   return s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))];
 };
+
+/** Reduserer lagantallet til høyst MAKS_LAG (grepsonen). Returnerer en kort beskrivelse av hva som ble kuttet, eller null. */
+function begrensLag(lag: Lag[]): string | null {
+  const maks = (l: Lag) => parseInt(l.antall.split('–').pop() as string, 10) || 0;
+  const grep = () => lag.filter((l) => l.rolle !== 'Glidesone (foran og bak)').reduce((s, l) => s + maks(l), 0);
+  if (grep() <= MAKS_LAG) return null;
+  const kutt: string[] = [];
+  const sett = (rolle: (r: string) => boolean, nytt: string, tekst: string) => {
+    for (const l of lag) if (grep() > MAKS_LAG && rolle(l.rolle) && maks(l) > parseInt(nytt, 10)) { l.antall = nytt; if (!kutt.includes(tekst)) kutt.push(tekst); }
+  };
+  sett((r) => r.startsWith('Dekke'), '1 lag', 'ett lag i hvert dekke');
+  sett((r) => r.startsWith('Base'), '1 lag', 'ett lag i hvert base-trinn');
+  sett((r) => r === 'Dagens voks', '3 lag', 'tre lag dagens voks');
+  while (grep() > MAKS_LAG) {
+    const i = lag.map((l) => l.rolle).lastIndexOf('Base (kaldere)');
+    if (i < 0) break;
+    lag.splice(i, 1);
+    if (!kutt.includes('ett base-trinn færre')) kutt.push('ett base-trinn færre');
+  }
+  return kutt.join(', ');
+}
 
 /** lett = Trening: færre lag og høyst ett dekketrinn. */
 export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false, sys: Smøresystem = SWIX): Stabel {
@@ -23,7 +56,12 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   ];
   const advarsler = [...snø.advarsler];
 
-  const klisterFøre = snø.type === 'omdannet' && (snø.skarphet >= 50 || tur.tMaks >= 0.5);
+  const skarpSnø = snø.type === 'omdannet' && (snø.skarphet >= 50 || tur.tMaks >= 0.5);
+  // Klister brukes ikke i skikkelig kulde: skarp, iset bane ved −10 er hardvoks over binder (og evt. isklister bare på de verste partiene)
+  const klisterFøre = skarpSnø && tur.tMaks > KLISTER_KALDGRENSE;
+  if (skarpSnø && !klisterFøre) {
+    begrunnelse.push(`Skarp/omdannet snø, men varmeste del er ${tur.tMaks.toFixed(1)} °C (under ${KLISTER_KALDGRENSE} °C): hardvoks over binder, ikke klister.`);
+  }
   if (klisterFøre) return klisterStabel(tur, snø, { kald, midt, varm }, begrunnelse, advarsler, lett, sys);
 
   // ---- Hardvoks ----
@@ -43,6 +81,8 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   const blirVarmt = iKaldt > 0 && iKaldt < tur.seksjoner.length;
 
   const lag: Lag[] = [];
+  const gl = glidesone(tur, sys);
+  if (gl) lag.push(gl);
   if (sys.binder) {
     const skarp = snø.skarphet >= 50 || lengdeKm > 15 || tur.tMaks >= 0;
     const binder = skarp ? sys.binder.skarp : sys.binder.mild;
@@ -55,6 +95,9 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   mellom.forEach((i) => lag.push({ rolle: 'Base (kaldere)', produkt: HARDVOKS[i].navn, antall: '1–2 lag' }));
   lag.push({ rolle: 'Dagens voks', produkt: dagVoks.navn, antall: lett ? '2–3 lag' : '3–4 lag', merknad: `Passer ${dagVoks.omr[0]} til ${dagVoks.omr[1]} °C` });
   begrunnelse.push(`Dagens voks ${dagVoks.navn} velges for varm del (${varm.toFixed(1)} °C).`);
+  const ute = utenfor(dagVoks, varm, 'varm del av løypa');
+  if (ute) advarsler.push(ute);
+  if (tur.sludd) advarsler.push('Nedbør rundt 0 °C: hardvoks kan snøballe og islegge seg i sludd. Vurder klister, felleski eller rubb.');
 
   if (blirVarmt && dag > 0) {
     let trinn = kmKaldt >= DEKKE.toTrinnMinKm || minKaldt >= DEKKE.toTrinnMinMin ? 2 : 1;
@@ -69,8 +112,8 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
     begrunnelse.push('Ingen kaldt parti etterfulgt av varmere føre: ingen dekke.');
   }
   if (lett) begrunnelse.push('Trening: færre og tynnere lag enn på tur, og ingen mellomtrinn i basen.');
-  const totalt = lag.reduce((s, l) => s + parseInt(l.antall.split('–').pop() as string, 10), 0);
-  if (totalt > 12) advarsler.push('Mange lag. Hold deg til 4–10 tynne lag totalt og dropp ett base-trinn om nødvendig.');
+  const redusert = begrensLag(lag);
+  if (redusert) begrunnelse.push(`Lagantallet er redusert til høyst ${MAKS_LAG} tynne lag (${redusert}).`);
   return { type: 'hardvoks', lag, begrunnelse, advarsler };
 }
 
@@ -87,8 +130,11 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   const dag = dagP ?? KLISTER[klisterFor(T.varm, sys)];
   const hardBane = snø.skarphet >= 70 || tur.tMin < -3;
   // Mellomlag bare med vanlig klister som ikke står i utenMellomlag; universal og sludd-klister brukes som ett tykt lag.
-  const mellom = dagP || sys.utenMellomlag.includes(dag.navn) || !sys.mellomKlister ? null : KLISTER[sys.mellomKlister[T.varm < -3 ? 0 : 1]];
+  const mellomNavn = sys.mellomKlister?.[T.varm < -3 ? 0 : 1];
+  const mellom = dagP || sys.utenMellomlag.includes(dag.navn) || !mellomNavn ? null : KLISTER.find((k) => k.navn === mellomNavn) ?? null;
   const lag: Lag[] = [];
+  const gl = glidesone(tur, sys);
+  if (gl) lag.push(gl);
   if (sys.baseKlister) lag.push({ rolle: 'Baseklister', produkt: sys.baseKlister.navn, antall: '1 lag', merknad: 'Svært tynt, bare over det slipte området' });
   if (hardBane && sys.isKlister && dag.navn !== sys.isKlister.navn) lag.push({ rolle: 'Isklister', produkt: sys.isKlister.navn, antall: '1 lag', merknad: 'Hard/isete bane: gir feste under dagens klister' });
   if (mellom && !lett) lag.push({ rolle: 'Mellomlag', produkt: mellom.navn, antall: '1 lag', merknad: 'Fiskebeinsmønster, gni jevnt. Hindrer at dagens klister vandrer bakover' });
@@ -103,10 +149,12 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   begrunnelse.push(
     `Klister: omdannet snø, skarphet ${Math.round(snø.skarphet)} og varmest ${tur.tMaks.toFixed(1)} °C. Dagens klister ${dag.navn} (${dag.farge}) for ${T.varm.toFixed(1)} °C. ${lag.length} lag totalt (maks 4).`
   );
+  const ute = utenfor(dag, T.varm, 'varm del av løypa');
+  if (ute) advarsler.push(ute);
   if (hardBane) begrunnelse.push(`Isklister: ${snø.skarphet >= 70 ? `skarphet ${Math.round(snø.skarphet)} ≥ 70` : `kaldeste del ${tur.tMin.toFixed(1)} °C`} gir hard bane.`);
   if (lett) begrunnelse.push('Trening: uten mellomlag.');
   if (tur.tMin < -2 && tur.tMaks > 0) {
-    advarsler.push(`Isingsfare når temperaturen svinger rundt 0: ${sys.ising} Unntak, ikke standard.`);
+    advarsler.push(`Isingsfare når temperaturen svinger rundt 0 °C. Valgfritt tiltak: ${sys.ising}`);
   }
   return { type: 'klister', lag, begrunnelse, advarsler };
 }
@@ -114,12 +162,16 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
 /** Skøyting: bare glider, valgt etter snøtemperaturen (snitt langs turen). Temperatur er hovedsaken [Bruker]. */
 export function byggGlider(tur: Tur, sys: Smøresystem = SWIX): Stabel {
   const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
+  if (!sys.glider.length) return { type: 'glider', tSnitt: snitt, lag: [], begrunnelse: ['Ingen glidevoks å velge blant.'], advarsler: ['Ingen glidevoks i lageret.'] };
   const g = glideFor(snitt, sys);
   const begrunnelse = [
     `Skøyting: bare glider. Snøtemperatur snitt ${snitt.toFixed(1)} °C (kaldest ${tur.tMin.toFixed(1)}, varmest ${tur.tMaks.toFixed(1)}). ${g.navn} (${g.farge}) passer ${g.omr[0]} til ${g.omr[1]} °C.`,
   ];
   begrunnelse.push('Glidere overlapper i temperatur. Ved overlapp velges den kaldeste som passer: heller litt for kaldt enn for varmt.');
   const advarsler: string[] = [];
+  const ute = utenfor(g, snitt, 'snøen i snitt');
+  if (ute) advarsler.push(ute);
+  if (tur.sludd) advarsler.push('Sludd/våt snø: velg heller den varmeste glideren som passer og skrap/børst godt.');
   if (tur.tMaks - tur.tMin >= 6) advarsler.push(`Stor temperaturforskjell langs løypa (${(tur.tMaks - tur.tMin).toFixed(1)} °C). Glideren er valgt for snittet, vurder en kaldere hvis mesteparten er i skyggen.`);
   return {
     type: 'glider',
@@ -133,7 +185,8 @@ export function byggGlider(tur: Tur, sys: Smøresystem = SWIX): Stabel {
 /** Rubbski: bare sludd, aldri ved fare for ordentlig minus [Bruker; −2 °C er Forslag]. */
 export const RUBB = { minLuft: -2 };
 
-function glidesone(tur: Tur, sys: Smøresystem): Lag {
+function glidesone(tur: Tur, sys: Smøresystem): Lag | null {
+  if (!sys.glider.length) return null;
   const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
   const g = glideFor(snitt, sys);
   return { rolle: 'Glidesone (foran og bak)', produkt: g.navn, antall: '1 lag', merknad: `Passer ${g.omr[0]} til ${g.omr[1]} °C. Ikke på festesonen.` };
@@ -145,7 +198,7 @@ export function byggFelle(tur: Tur, sys: Smøresystem = SWIX): Stabel {
     type: 'felle',
     lag: [
       { rolle: 'Festesone', produkt: 'Felle', antall: 'Ingen smøring', merknad: 'Ingen festevoks eller klister. Hold fella ren og tørr' },
-      glidesone(tur, sys),
+      ...(glidesone(tur, sys) ? [glidesone(tur, sys)!] : []),
     ],
     begrunnelse: [
       'Felleski fungerer i alle føre, men gir aldri perfekt feste eller glid: et kompromiss som slår feil smøring, men ikke riktig smøring.',
@@ -181,7 +234,7 @@ export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett
     type: 'rubb',
     lag: [
       { rolle: 'Festesone', produkt: 'Rubb', antall: 'Ingen smøring', merknad: 'Børst opp med sandpapir (grovt midt under, finere ytterst). Ingen festevoks eller klister' },
-      glidesone(tur, sys),
+      ...(glidesone(tur, sys) ? [glidesone(tur, sys)!] : []),
     ],
     begrunnelse: [`Sluddføre rundt 0 °C uten fare for ordentlig minus (lufta ned til ${tur.luftMin.toFixed(1)} °C): rubb passer.`],
     advarsler: tur.tMaks > 3 ? ['Over +3 °C og blankt: rubben kan bli for glatt og klister er da bedre.'] : [],

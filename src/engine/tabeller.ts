@@ -98,7 +98,7 @@ export const TOKO_KLISTER: Produkt[] = [
   T('Toko Klister rød', 'Klister rød', '#D6403A', [-8, -1], 'K', 'Universal for midt i temperaturområdet'),
   T('Toko Klister gul', 'Klister gul', '#F2CF3A', [-2, 0], 'K', 'Våt snø nær 0 °C'),
 ];
-export const TOKO_BASEKLISTER = T('Toko Base klister grønn', 'Base klister grønn', '#3DA35D', [-30, 0], 'K', 'Binder for slitesterk snø, brukes under andre klistere');
+export const TOKO_BASEKLISTER = T('Toko Base klister grønn', 'Base klister grønn', '#3DA35D', [0, 0], 'K', 'Baseklister (binder) under andre klistere, −30…0 °C');
 export const TOKO_UNIVERSAL = T('Toko Universal klisterspray', 'KlisterSpray Universal', '#C8CDD3', [-30, 0], 'K', 'Spray, enkel å bruke ved skiftende føre');
 // Performance (fluorfri, hot wax). Områder fra skimo.co og sport-conrad.com
 export const TOKO_GLIDER: Produkt[] = [
@@ -179,8 +179,8 @@ export type Smøresystem = {
   universalKald?: Produkt;
   sluddKald?: Produkt;
   sluddVarm?: Produkt;
-  /** Indekser i `klister` for mellomlag (kald, mild). Mangler = ingen mellomlag */
-  mellomKlister?: [number, number];
+  /** Navn på klister brukt som mellomlag (kald, mild). Mangler i lista = ingen mellomlag */
+  mellomKlister?: [string, string];
   /** Klister som brukes som ett tykt lag alene, uten mellomlag */
   utenMellomlag: string[];
   ising: string;
@@ -191,13 +191,14 @@ export type Smøresystem = {
 
 export const SWIX: Smøresystem = {
   id: 'swix', navn: 'Swix',
-  hardvoks: HARDVOKS, klister: KLISTER, glider: GLIDER,
+  hardvoks: [V_LINJE[0], ...HARDVOKS], // V05 Polar som kaldeste (under −16 °C)
+  klister: KLISTER, glider: GLIDER,
   binder: { mild: BINDER[0], skarp: BINDER[1] },
   baseKlister: BASEKLISTER, isKlister: KLISTER[0],
   universalVarm: KLISTER_ANDRE[3], universalKald: KLISTER_ANDRE[2],
   sluddKald: KLISTER_ANDRE[0], sluddVarm: KLISTER_ANDRE[4],
-  mellomKlister: [1, 2], utenMellomlag: ['KX45N', 'KX35N'],
-  ising: 'Swix anbefaler minst tre tynne lag hardvoks over klisteren (VP40–VP55, litt hardere enn temperaturen tilsier).',
+  mellomKlister: ['KX35N', 'KX45N'], utenMellomlag: ['KX45N', 'KX35N'],
+  ising: 'Minst tre tynne lag hardvoks over klisteren (Swix: VP40–VP55, litt hardere enn temperaturen tilsier).',
   kilde: 'swixsport.com, kontrollert 3. nov 2026.',
   oversikt: [
     { tittel: 'Hardvoks VP (Pro)', liste: HARDVOKS },
@@ -216,7 +217,7 @@ export const TOKO: Smøresystem = {
   baseKlister: TOKO_BASEKLISTER, isKlister: TOKO_KLISTER[0],
   universalVarm: TOKO_UNIVERSAL, universalKald: TOKO_UNIVERSAL,
   utenMellomlag: [],
-  ising: 'Legg minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
+  ising: 'Minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
   kilde: 'toko.ch og forhandlere, hentet 3. nov 2026. Ikke kontrollert mot etikett.',
   oversikt: [
     { tittel: 'Hardvoks (GripWax)', liste: [...TOKO_HARDVOKS, TOKO_BINDER] },
@@ -231,7 +232,7 @@ export const RODE: Smøresystem = {
   baseKlister: RODE_BASEKLISTER,
   universalVarm: RODE_UNIVERSAL, universalKald: RODE_UNIVERSAL,
   utenMellomlag: [],
-  ising: 'Legg minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
+  ising: 'Minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
   kilde: 'skiwax.ca (Rode-oversikt og produktsider), hentet 3. nov 2026. Ikke kontrollert mot etikett.',
   oversikt: [
     { tittel: 'Hardvoks (P-serien)', liste: [...RODE_HARDVOKS, ...RODE_ANDRE.filter((p) => p.linje === 'V')] },
@@ -246,7 +247,7 @@ export const SKIGO: Smøresystem = {
   binder: { mild: SKIGO_BINDER, skarp: SKIGO_BINDER },
   universalVarm: SKIGO_UNIVERSAL, universalKald: SKIGO_UNIVERSAL,
   utenMellomlag: [],
-  ising: 'Legg minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
+  ising: 'Minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
   kilde: 'Ski-Go-katalogen (skigo.se), nordicx.com og skiwax.ca, hentet 3. nov 2026. Ikke kontrollert mot etikett.',
   oversikt: [
     { tittel: 'Hardvoks (XC kickwax)', liste: [...SKIGO_HARDVOKS, SKIGO_BINDER] },

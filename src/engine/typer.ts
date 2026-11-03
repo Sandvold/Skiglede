@@ -80,6 +80,8 @@ export type Stabel = {
   /** false når skityper ikke passer føret (rubb). Da ligger anbefalt alternativ i `alternativ`. */
   egnet?: boolean;
   alternativ?: Stabel;
+  /** Tilsvarende dagens smøring med andre merker du har i lageret, f.eks. «Toko: Toko Rød». */
+  alternativer?: string[];
   /** Snøtemperatur (snitt langs turen), brukt til å vurdere om en glider som allerede ligger på kan beholdes. */
   tSnitt?: number;
 };

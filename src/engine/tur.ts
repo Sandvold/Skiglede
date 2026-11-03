@@ -11,6 +11,17 @@ export function skogDemping(solH: number): number {
 }
 /** Skygge må dekke minst så stor andel av løypa for å telle i temperaturene [Bruker]. */
 export const SKYGGE_MIN_ANDEL = 0.1;
+/**
+ * Utstråling: på stille, tørre morgener og kvelder uten sol er snøen kaldere enn lufta (inntil 2–5 °C på klare netter). Vi har ikke skydekke for historikken,
+ * så vind og fuktighet brukes som indikator: stille og tørr luft uten sol og under +1 °C gir kjøling [Forslag, justeres mot erfaring].
+ */
+export const UTSTRÅLING = { maksSol: 100, stille: 2.5, litVind: 4, tørrRh: 0.8, middelRh: 0.88, kjøl: 1.5, litKjøl: 0.7, maksLuft: 1 };
+export function utstråling(v: { temp: number; rh: number; vind: number }, swWm2: number): number {
+  if (swWm2 >= UTSTRÅLING.maksSol || v.temp > UTSTRÅLING.maksLuft) return 0;
+  if (v.vind < UTSTRÅLING.stille && v.rh < UTSTRÅLING.tørrRh) return -UTSTRÅLING.kjøl;
+  if (v.vind < UTSTRÅLING.litVind && v.rh < UTSTRÅLING.middelRh) return -UTSTRÅLING.litKjøl;
+  return 0;
+}
 export const SOL_GRAD_PER_500W = 2.0; // °C ekstra «snøtemperatur» ved 500 W/m² uten skygge [Forslag]
 
 /** Lengdevektet persentil (p 0–1): lange strekk teller mer enn korte. */
@@ -60,7 +71,8 @@ export function lagSeksjoner(p: Punkt[], lengde = 250): Seksjon[] {
 /** Lineær interpolasjon mellom timesverdier. */
 export function værVed(timer: Vær[], ts: number): Vær {
   const k = timer.findIndex((x) => x.ts >= ts);
-  if (k <= 0) return timer[Math.max(0, k)] ?? timer[timer.length - 1];
+  if (k === -1) return timer[timer.length - 1]; // etter siste time: bruk siste kjente
+  if (k === 0) return timer[0];
   const a = timer[k - 1];
   const b = timer[k];
   const f = (ts - a.ts) / (b.ts - a.ts || 1);
@@ -90,7 +102,7 @@ export function planTur(args: {
       // Skog demper sola. Terrenget gir skygge (horisonten) og retning (sør-vendt får mer, nord-vendt mindre).
       const tf = terrengFaktor(terrengVed(terreng, (s.startM + s.endM) / 2), tid, sted.lat, sted.lon, ignorerSkygge);
       const sol = (1 - skogDemping(solHøyde(tid, sted.lat, sted.lon)) * s.skog) * tf.faktor;
-      return { seq: s.seq, tid, tLuft, sw, sol, skygge: tf.skygge, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
+      return { seq: s.seq, tid, tLuft, sw, sol, skygge: tf.skygge, tEff: tLuft + utstråling(v, sw) + SOL_GRAD_PER_500W * (sw / 500) * sol };
     });
   const skyggeAndelAv = (u: SeksjonVær[]) => (totalM ? lengder.reduce((a, l, i) => a + (u[i].skygge ? l : 0), 0) / totalM : 0);
   // Skygge teller bare med når den dekker minst 10 % av løypa [Bruker]; ellers regnes sola som uhindret.

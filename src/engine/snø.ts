@@ -10,6 +10,8 @@ export const SNØ = {
   sykluserForFull: 2.5, // vektet sum som gir indeks 100
   vekter: [1, 1, 1, 0.6, 0.6, 0.6, 0.6, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3], // nyeste dag først
   nysnøMm: 5, // snøfall siste 48 t som nullstiller til «ny»
+  begravMm: 10, // snø som har falt etter en tine/frys-syklus: 10 mm eller mer dekker skorpa helt, mindre dekker den delvis
+  minSum: 0.3, // vektet tine/frys-sum under dette er ikke nok til å kalle snøen omdannet (én svak mild dag er ikke omdanning)
   vindStille: 3, // under dette (m/s, snitt kl. 08-16 UTC) har vinden ingen effekt på smelting
   vindIngenSmelting: 5, // ved dette og over er det nesten ingen smelting når det bare er svakt over null
   vindMaksT: 4, // over denne maks-temperaturen (°C) tiner det uansett, så vinden dempes ikke
@@ -44,6 +46,11 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
       if (f < 0.95) forklaring.push(`${new Date(d * DAG).toISOString().slice(0, 10)}: maks ${maks.toFixed(1)} °C med ${vind.toFixed(1)} m/s vind gir lite smelting (×${f.toFixed(2)}).`);
       syklus *= f;
     }
+    // Snø som falt etter denne syklusen ligger oppå skorpa og skjuler den: syklusen teller bare for det som ikke er dekket.
+    const snøEtter = h.filter((x) => x.ts >= d * DAG + 17 * 3600_000 && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
+    const dekket = clamp(snøEtter / SNØ.begravMm, 0, 1);
+    if (syklus > 0 && dekket > 0.05) forklaring.push(`${new Date(d * DAG).toISOString().slice(0, 10)}: skorpa er dekket av ${snøEtter.toFixed(0)} mm snø siden og teller ×${(1 - dekket).toFixed(2)}.`);
+    syklus *= 1 - dekket;
     sum += syklus * SNØ.vekter[i];
     dager.push({ dato: new Date(d * DAG).toISOString().slice(0, 10), maks, natt: nattMin, syklus });
   }
@@ -60,7 +67,7 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
     type = 'ny';
     skarphet *= 0.3;
     forklaring.push(`Nysnø: ${snøfall48.toFixed(1)} mm snø siste 48 t nullstiller snøen (skarphet ×0,3).`);
-  } else if (sum > 0 || regn7 >= 3 || milde >= 6) {
+  } else if (sum >= SNØ.minSum || regn7 >= 3 || milde >= 6) {
     type = 'omdannet';
     forklaring.push(`Omdannet snø: vektet tine/frys-sum ${sum.toFixed(2)}, regn siste 7 d ${regn7.toFixed(1)} mm, ${milde} milde soltimer siste 7 d.`);
   } else {

@@ -174,3 +174,75 @@ sjekk('sone: −10 kald', soneFor(-10), 'kald'); sjekk('sone: −4 mid', soneFor
 sjekk('sone: passer = ingen melding', soneVurdering('mid', -4), null);
 sjekk('sone: ikke valgt = ingen melding', soneVurdering(undefined, -12), null);
 sjekk('sone: kald ski på varm snø gir melding', !!soneVurdering('kald', 1)?.includes('varm'), true);
+
+// ---- Kontrollfunn: snølogikk, klister i kulde, glidesone, lagantall, lager i ett merke, innkjøp, værVed ----
+import { byggMedLager, værVed, innkjøpsforslag as innkjøp2, MAKS_LAG } from '../src/engine';
+const serie = (f: (ts: number, dagerSiden: number, h: number) => Partial<Vær>): Vær[] =>
+  Array.from({ length: 24 * 15 }, (_, i) => { const ts = start - 14 * 86400_000 + i * 3600_000; const h = new Date(ts).getUTCHours(); return { ts, temp: -5, nedbor: 0, rh: 0.8, vind: 1, sw: 0, ...f(ts, (start - ts) / 86400_000, h) }; });
+const tur5 = (t: Vær[]) => planTur({ seksjoner: sek, timer: t.filter((x) => x.ts >= start - 3 * 3600_000), startTs: start, tempoKmt: 5, refH: 838 });
+// mild-og-frost-dager 13–8 døgn siden, så kaldt
+const skorpe = (ts: number, d: number, h: number): Partial<Vær> => (d > 8 && d < 13.5 ? { temp: h >= 8 && h <= 16 ? 4 : -9, sw: h >= 8 && h <= 16 ? 500_000 : 0 } : {});
+const kald = serie((ts, d, h) => ({ ...skorpe(ts, d, h), ...(d <= 8 ? { temp: -6 } : {}) }));
+sjekk('snø: gammel skorpe uten snø oppå = omdannet', analyserSnø(kald, start).type, 'omdannet');
+const begravd = serie((ts, d, h) => ({ ...skorpe(ts, d, h), ...(d <= 8 ? { temp: -6 } : {}), ...(d > 3.2 && d < 4.2 ? { nedbor: 1.5, temp: -3 } : {}) }));
+sjekk('snø: 30 mm snø oppå skorpa begraver den (ikke omdannet)', analyserSnø(begravd, start).type, 'ny');
+const enMild = serie((ts, d, h) => (d > 9.5 && d < 10.5 ? { temp: h >= 8 && h <= 16 ? 1.2 : -1 } : { temp: -6 }));
+sjekk('snø: én svak mild dag er ikke omdanning', analyserSnø(enMild, start).type, 'ny');
+// klister bare når det ikke er dyp kulde
+const skarpKald = serie((ts, d, h) => ({ ...skorpe(ts, d, h), ...(d <= 8 ? { temp: -14 } : {}) }));
+const snKald = analyserSnø(skarpKald, start);
+const stKald = byggSmøring('klassisk', tur5(skarpKald), snKald, sek);
+sjekk('klister ikke ved −14 °C selv med skarp snø', stKald.type, 'hardvoks');
+sjekk('−14 °C bruker binder under hardvoks', stKald.lag.some((l) => l.rolle === 'Binder'), true);
+// V05 for veldig kaldt
+const veldigKald = serie(() => ({ temp: -22 }));
+const stV = byggSmøring('klassisk', tur5(veldigKald), analyserSnø(veldigKald, start), sek);
+sjekk('−22 °C: Swix velger V05', stV.lag.find((l) => l.rolle === 'Dagens voks')?.produkt, 'V05');
+sjekk('V05 dekker −22, ingen utenfor-område-advarsel', stV.advarsler.some((a) => a.includes('dekker ikke')), false);
+// Klassisk har glidesone
+const mild = serie(() => ({ temp: -5 }));
+const stM = byggSmøring('klassisk', tur5(mild), analyserSnø(mild, start), sek);
+sjekk('klassisk har glidesone først', stM.lag[0].rolle, 'Glidesone (foran og bak)');
+sjekk('forenklet beholder glidesone', forenklet(stM).lag.some((l) => l.rolle === 'Glidesone (foran og bak)'), true);
+sjekk('vurderPåfylling ser ikke på glidesonen som toppen', vurderPåfylling({ stil: 'klassisk', type: 'hardvoks', lag: stM.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })), ts: start, turer: 1 }, stM, start + 1000).handling, 'topplag');
+// Lagantall
+const stigende = serie((ts) => ({ temp: -11 + Math.max(0, (new Date(ts).getUTCHours() - 6)) * 1.1, nedbor: 0.5 }));
+const stSt = byggSmøring('klassisk', tur5(stigende), analyserSnø(stigende, start), sek);
+const grep = stSt.lag.filter((l) => !l.rolle.startsWith('Glidesone')).reduce((s, l) => s + parseInt(l.antall.split('–').pop()!, 10), 0);
+sjekk(`lagantall høyst ${MAKS_LAG}`, grep <= MAKS_LAG, true);
+// Utenfor området gir advarsel
+const varmNy = serie(() => ({ temp: 5, nedbor: 0 }));
+const stVarm = byggSmøring('klassisk', tur5(varmNy), analyserSnø(varmNy, start), sek);
+sjekk('+5 °C: advarsel når valgt produkt ikke dekker', stVarm.advarsler.some((a) => a.includes('dekker ikke')) || stVarm.type === 'klister', true);
+// Sludd i hardvoks gir advarsel
+const sluddHard = serie(() => ({ temp: -0.5, nedbor: 0.8 }));
+const stSl = byggSmøring('klassisk', tur5(sluddHard), analyserSnø(sluddHard, start), sek);
+sjekk('hardvoks i sludd advarer', stSl.type === 'hardvoks' ? stSl.advarsler.some((a) => a.includes('snøballe')) : true, true);
+// Lager: ett merke, alternativer
+const tNy = tur5(mild); const sNy = analyserSnø(mild, start);
+const lagerBland = ['VP40', 'VP45', 'VG35', 'Toko Rød', 'Toko Blå', 'Toko Base grønn'];
+const bl = byggMedLager('klassisk', tNy, sNy, sek, false, lagerBland);
+const merker = new Set(bl.lag.filter((l) => !l.rolle.startsWith('Glidesone')).map((l) => pr(l.produkt)?.merke ?? 'swix'));
+sjekk('lager: alle grepslag er fra ETT merke', merker.size, 1);
+sjekk('lager: Swix foretrekkes når du har det', [...merker][0], 'swix');
+sjekk('lager: Toko nevnes som alternativ', !!bl.alternativer?.some((a) => a.startsWith('Toko')), true);
+sjekk('lager: ingen duplikat av dagens voks som dekke', new Set(bl.lag.filter((l) => l.rolle.startsWith('Dekke')).map((l) => l.produkt)).has(bl.lag.find((l) => l.rolle === 'Dagens voks')!.produkt), false);
+sjekk('lager: bare Toko gir Toko-stabel', new Set(byggMedLager('klassisk', tNy, sNy, sek, false, ['Toko Rød', 'Toko Blå', 'Toko Gul']).lag.filter((l) => l.rolle === 'Dagens voks' || l.rolle === 'Dekke 1').map((l) => pr(l.produkt)?.merke)).has('toko'), true);
+sjekk('lager: tomt lager = Swix', byggMedLager('klassisk', tNy, sNy, sek, false, []).lag.map((l) => l.produkt), byggSmøring('klassisk', tNy, sNy, sek).lag.map((l) => l.produkt));
+sjekk('lager: bare glidere gir advarsel om manglende voks', byggMedLager('klassisk', tNy, sNy, sek, false, ['HS7']).advarsler.some((a) => a.includes('ingen hardvoks') || a.includes('ingen klister')), true);
+sjekk('lager: skøyting fra Toko-glider', byggMedLager('skoyting', tNy, sNy, sek, false, ['Toko Performance rød']).lag[0].produkt, 'Toko Performance rød');
+// Innkjøp bare ved hull
+sjekk('innkjøp: ingen hull = ingen forslag', innkjøp2([-9, -5], ['VP40', 'VG35', 'KB20C', 'KX35N', 'HS6', 'HS7']).length, 0);
+const hullKjøp = innkjøp2([-9, 1], ['VP40', 'VG35', 'KB20C', 'KX35N', 'HS6', 'HS7', 'HS8']);
+sjekk('innkjøp: foreslår noe varmere hardvoks for hullet', hullKjøp.some((x) => x.produkt.linje === 'VP' && x.produkt.omr[1] >= 0), true);
+sjekk('innkjøp: foreslår ikke det du dekker fra før', hullKjøp.some((x) => x.produkt.navn === 'VP40'), false);
+// værVed etter siste time
+sjekk('værVed etter siste time gir siste', værVed(mild, start + 99 * 86400_000).ts, mild[mild.length - 1].ts);
+// Lagre smøring for en tur: samme tur erstatter, ny tur teller
+import { lagreSmøring as lagre } from '../src/engine';
+const stMål = byggSmøring('klassisk', tNy, sNy, sek);
+const v1 = lagre('klassisk', stMål, undefined, vurderPåfylling(undefined, stMål, start), start, '2026-11-05');
+const v2 = lagre('klassisk', stMål, v1, vurderPåfylling(v1, stMål, start), start + 1000, '2026-11-05');
+sjekk('samme tur lagres på nytt: ingen ny tur', v2.turer, v1.turer);
+sjekk('mål huskes', v2.mål, '2026-11-05');
+console.log('Kontrollfunn-tester ferdig');

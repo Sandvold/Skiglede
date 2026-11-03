@@ -50,15 +50,7 @@ export const NØKKEL_VISNING = 'skiglede.visning';
 export const NØKKEL_VALGTE = 'skiglede.valgte';
 export const NØKKEL_SKIPARK = 'skiglede.skipark';
 export const TOM_LISTE: never[] = [];
-export const NØKKEL_MERKE = 'skiglede.merke';
 export const NØKKEL_BRUK_LAGER = 'skiglede.brukLager';
-
-/** Valgt smøremerke (Swix er standard). Ugyldig lagret verdi gir Swix. */
-export function useMerke(): [Smøresystem, (id: MerkeId) => void] {
-  const [id, sett] = useLagret<string>(NØKKEL_MERKE, 'swix');
-  const gyldig = (MERKE_IDER as string[]).includes(id) ? (id as MerkeId) : 'swix';
-  return [SYSTEMER[gyldig], sett];
-}
 
 // ---- Steder: egne smørelager, skipark og valgte ski per sted (f.eks. fjellet og hjemme). Uten ekstra steder er alt samlet på «Standard». ----
 export type Sted = { id: string; navn: string };

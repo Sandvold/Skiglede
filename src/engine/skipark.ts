@@ -2,7 +2,7 @@ import { produkt } from './tabeller';
 import type { Stabel, Stil } from './typer';
 
 /** Det som ligger på et par ski etter forrige tur. */
-export type Smøring = { stil: Stil; type: Stabel['type']; lag: { rolle: string; produkt: string }[]; ts: number; turer: number };
+export type Smøring = { stil: Stil; type: Stabel['type']; lag: { rolle: string; produkt: string }[]; ts: number; turer: number; /** Datoen (ÅÅÅÅ-MM-DD) smøringen ble gjort for. Lagres den på nytt for samme tur, erstattes den uten å telle en ny tur. */ mål?: string };
 
 export type Påfylling = { handling: 'ny' | 'topplag' | 'rens'; tittel: string; grunner: string[]; /** true: glideren som ligger på beholdes (ingen ny glider) */ behold?: boolean };
 
@@ -23,7 +23,7 @@ function hoved(lag: { rolle: string; produkt: string }[]) {
 /** Øverste lag som er voks eller klister (ikke binder/baseklister): det nye laget legges oppå dette. */
 function topp(lag: { rolle: string; produkt: string }[]) {
   for (let i = lag.length - 1; i >= 0; i--) {
-    if (lag[i].rolle === 'Binder' || lag[i].rolle === 'Baseklister') continue;
+    if (lag[i].rolle === 'Binder' || lag[i].rolle === 'Baseklister' || lag[i].rolle.startsWith('Glidesone')) continue;
     if (produkt(lag[i].produkt)) return lag[i].produkt;
   }
   return undefined;
@@ -82,14 +82,16 @@ export function vurderPåfylling(forrige: Smøring | undefined, ny: Stabel, nå:
 }
 
 /** Lagret smøring etter at stabelen er lagt på. */
-export function lagreSmøring(stil: Stil, stabel: Stabel, forrige: Smøring | undefined, påfylling: Påfylling, nå: number = Date.now()): Smøring {
-  if (påfylling.behold && forrige) return { ...forrige, ts: nå, turer: forrige.turer + 1 }; // glideren på skia beholdes
+export function lagreSmøring(stil: Stil, stabel: Stabel, forrige: Smøring | undefined, påfylling: Påfylling, nå: number = Date.now(), mål?: string): Smøring {
+  const sammeTur = !!forrige && mål !== undefined && forrige.mål === mål;
+  if (påfylling.behold && forrige) return { ...forrige, ts: nå, mål, turer: sammeTur ? forrige.turer : forrige.turer + 1 }; // glideren på skia beholdes
   return {
     stil,
     type: stabel.type,
     lag: stabel.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })),
     ts: nå,
-    turer: påfylling.handling === 'topplag' && forrige ? forrige.turer + 1 : 1,
+    mål,
+    turer: påfylling.handling === 'topplag' && forrige ? (sammeTur ? forrige.turer : forrige.turer + 1) : 1,
   };
 }
 

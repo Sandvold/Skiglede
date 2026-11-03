@@ -119,8 +119,27 @@ Velger man en løype, kan man legge til løyper som starter ved samme sted (star
 
 ## Smøremerker (Swix, Toko, Rode, Ski Go)
 
-Valgt merke (chips i toppen, lagret som `skiglede.merke`) styrer hvilke produkter motoren bruker. Hvert merke er et `Smøresystem` i `src/engine/tabeller.ts` med hardvoks, klister, glider og valgfrie roller (binder, baseklister, isklister, universal, sludd, mellomlag). Reglene (lagoppbygging, dekke, persentiler, klisterlogikk) er like for alle merker; mangler et merke en rolle, hoppes laget over (f.eks. ingen mellomlag eller isklister for Toko/Rode/Ski Go).
-- Swix = det opprinnelige systemet (VP/V/KX/KN/K22/glidere), kontrollert mot swixsport.com.
-- Toko, Rode, Ski Go: fluorfrie produkter, hentet 3. nov 2026 fra produsent/forhandler (Toko: toko.ch; Rode: skiwax.ca; Ski Go: katalog, nordicx.com). Temperaturområdene er IKKE kontrollert mot etikett. Rode K-serien og Ski Go klister har uklare områder hos ulike kilder (Ski Go glider blå oppgis både −3…−13 og −3…−10).
-- Produktnavn er unike på tvers av merker (f.eks. «Toko Rød»), slik at smørelager og skipark virker uendret. Lagertilpasning bytter først til samme merke.
-- Å legge til et nytt merke: lag produktlistene og et `Smøresystem`, legg det i `SYSTEMER`. Tester i `scripts/test-lager-skipark.ts` sjekker alle merker automatisk.
+**Anbefalingen tar alltid utgangspunkt i Swix** [Bruker]. Det finnes ingen merkevelger. Avkrysningen «Bruk min smøring» tilpasser anbefalingen til smørelageret (`byggMedLager` i `engine/lager.ts`): bygger idealstabelen i Swix og velger deretter ETT merke for festelagene, Swix hvis lageret rekker, ellers merket med flest brukbare produkter. Andre merker som også rekker vises som «Alternativ: …». Mangler lageret en hel type (hardvoks, klister, glider), vises idealstabelen med advarsel. Glidesonen kan komme fra et annet merke enn festelagene. Tomt lager gir ren Swix.
+
+Hvert merke er et `Smøresystem` i `src/engine/tabeller.ts` med hardvoks, klister, glider og valgfrie roller (binder, baseklister, isklister, universal, sludd, mellomlag). Mangler et merke en rolle, hoppes laget over.
+- Swix: kontrollert mot swixsport.com.
+- Toko, Rode, Ski Go: fluorfrie produkter, hentet 3. nov 2026 fra produsent/forhandler. Temperaturområdene er IKKE kontrollert mot etikett. Rode K-serien og Ski Go klister har uklare områder hos ulike kilder.
+- Produktnavn er unike på tvers av merker («Toko Rød»). «Mine produkter» i temperaturtabellen viser alt du eier, fra alle merker. «Forslag til innkjøp» foreslår Swix-produkter bare der det er et **hull** i dekningen (et sammenhengende temperaturområde du ikke dekker, f.eks. −6 til −1 °C), ikke alle varianter [Bruker].
+- Nytt merke: lag listene og et `Smøresystem`, legg det i `SYSTEMER`. Testene i `scripts/test-lager-skipark.ts` sjekker alle merker.
+
+### Regler fra kontrollen (nov 2026) [Forslag der tall er nevnt]
+- **Snøtype**: nysnø som er begravd under ca. 10 mm ny snø (`SNØ.begravMm`) etter at forrige syklus sluttet, teller ikke lenger som skarp; omdannet snø krever minst 0,3 sum (`SNØ.minSum`), 3 mm regn siste uke eller 6 milde timer.
+- **Klister ved dyp kulde**: klister brukes bare når skarp snø og varmeste punkt er over −8 °C (`KLISTER_KALDGRENSE`); kaldere gir hardvoks.
+- **Glidesone** ligger nederst i festestabelen (hardvoks og klister) og vises som eget lag. Klassisk glidesone følger glidertabellen.
+- **Maks 10 lag** i festesonen (`MAKS_LAG`); over det reduseres dekke, base og dagens voks, og begrunnelsen sier det.
+- **Utenfor produktets område** (mer enn 1 °C, `TOLERANSE`) gir advarsel for dagens voks, klister og glider. Sludd/regn rundt 0 °C gir advarsel om snøballing med hardvoks.
+- **Utstråling** (klar, stille natt/morgen) trekker snøtemperaturen ned 0,7–1,5 °C (`UTSTRÅLING` i `engine/tur.ts`), og sola varmer som før.
+- **Tempo** [Bruker]: klassisk 5 km/t tur og 9 km/t trening; skøyting 7 og 11 (+2 km/t).
+- **Isingsfare** gir bare et valgfritt tiltak.
+
+### Prognose og lagring av smøring
+- Siste vellykkede Yr-prognose lagres på enheten med tidspunkt og brukes hvis ny henting feiler. Finnes ingen brukbar prognose (tom eller utløpt), vises ingen smøretips, bare en tydelig advarsel; dagvalget er av.
+- «Oppdater vær» henter på nytt. Advarsel når prognosen er over 6 timer gammel og når observert vær i appen er over 12 timer gammelt.
+- Valg som løype, ekstra løyper, dag, starttid, tur/trening og stil huskes mellom sidene.
+- Lagring av smøring på ski: i Enkel visning lagres bare base, glidesone og dagens smøring; i Full lagres hele stabelen. Smøringen knyttes til datoen turen gjelder (`mål`): lagres den på nytt for samme tur, erstattes den uten å telle en ny tur.
+- Å slette et ski krever bekreftelse; «Renset (nullstill)» gjør ikke det.

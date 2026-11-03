@@ -21,6 +21,7 @@ export default function Skipark() {
   const [ski, setSki] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const { steder, aktiv } = useSteder();
   const [navn, setNavn] = useState('');
+  const [slettId, setSlettId] = useState<string | null>(null); // ski som venter på bekreftelse av sletting
   const [stil, setStil] = useState<Stil>('klassisk');
   const [sone, setSone] = useState<Temperatursone | undefined>(undefined);
   const [nå] = useState(() => Date.now());
@@ -127,9 +128,20 @@ export default function Skipark() {
             ) : null}
             <View style={styles.rad}>
               {s.smoring ? <Chip aktiv={false} onPress={() => setSki(ski.map((x) => (x.id === s.id ? { ...x, smoring: undefined } : x)))}>Renset (nullstill)</Chip> : null}
-              <Pressable onPress={() => setSki(ski.filter((x) => x.id !== s.id))} style={[styles.slett, { borderColor: theme.border }]}>
-                <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>Slett</Text>
-              </Pressable>
+              {slettId === s.id ? (
+                <>
+                  <Pressable onPress={() => { setSki(ski.filter((x) => x.id !== s.id)); setSlettId(null); }} style={[styles.slett, { borderColor: '#C0392B', backgroundColor: '#FBE3E0' }]}>
+                    <Text style={{ color: '#8E2418', fontWeight: '700', fontSize: 15 }}>{`Ja, slett ${s.navn}`}</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setSlettId(null)} style={[styles.slett, { borderColor: theme.border }]}>
+                    <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>Avbryt</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Pressable onPress={() => setSlettId(s.id)} style={[styles.slett, { borderColor: theme.border }]}>
+                  <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>Slett</Text>
+                </Pressable>
+              )}
             </View>
           </Kort>
         ))}
