@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -9,6 +9,7 @@ import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import trailsData from '@/data/trails.json';
 import vaerData from '@/data/vaer-hovden.json';
+import { hentVarsel, type Varsel } from '@/data/varsel';
 import { analyserSnø, produkt, byggStabel, lagSeksjoner, planTur, type Punkt, type Vær } from '@/engine';
 
 type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[] };
@@ -17,9 +18,24 @@ const LØYPER = trailsData as unknown as Løype[];
 const TIMER: Vær[] = (vaerData.timer as (string | number)[][]).map((r) => ({
   ts: Date.parse(r[0] as string), temp: r[1] as number, nedbor: r[2] as number, rh: r[3] as number, vind: r[4] as number, sw: r[5] as number,
 }));
-// Turdag: observert 2. nov. Står i for prognosen til Yr er koblet på.
-const DAG_START = Date.parse('2026-11-02T00:00:00Z');
-const DAG_TIMER = TIMER.filter((t) => t.ts >= DAG_START);
+// Reserve hvis Yr-varselet ikke kommer: observert 2. nov.
+const RESERVE_DATO = '2026-11-02';
+
+/** Dato (ÅÅÅÅ-MM-DD) i Oslo, `dager` frem i tid. */
+const osloDato = (dager: number) =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(Date.now() + dager * 86400_000);
+/** UTC-tidspunkt for lokal Oslo-klokketime på en dato (håndterer sommer-/vintertid). */
+function osloTs(dato: string, time: number) {
+  for (const off of [1, 2]) {
+    const ts = Date.parse(`${dato}T${String(time).padStart(2, '0')}:00:00Z`) - off * 3600_000;
+    const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(ts));
+    if (h === time) return ts;
+  }
+  return Date.parse(`${dato}T${String(time).padStart(2, '0')}:00:00Z`) - 3600_000;
+}
+const dagNavn = (dato: string, i: number) =>
+  i === 0 ? 'I dag' : i === 1 ? 'I morgen' : new Intl.DateTimeFormat('nb-NO', { weekday: 'long', timeZone: 'UTC' }).format(Date.parse(dato + 'T12:00:00Z'));
+const DAGER = [0, 1, 2];
 
 const TEMPO = { Trening: 9, Tur: 5 } as const;
 type Modus = keyof typeof TEMPO;
@@ -63,13 +79,23 @@ export default function Hjem() {
   const [modus, setModus] = useState<Modus>('Tur');
   const [startTime, setStartTime] = useState(10);
   const [debug, setDebug] = useState(false);
+  const [dagIdx, setDagIdx] = useState(0);
+  const [varsel, setVarsel] = useState<Varsel | null>(null);
+  const [varselFeil, setVarselFeil] = useState(false);
+  useEffect(() => {
+    hentVarsel().then(setVarsel).catch(() => setVarselFeil(true));
+  }, []);
 
   const løype = LØYPER.find((l) => l.id === løypeId)!;
   const r = useMemo(() => {
     const seksjoner = lagSeksjoner(løype.punkter);
-    const startTs = Date.parse(`2026-11-02T${String(startTime - 1).padStart(2, '0')}:00:00Z`);
-    const snø = analyserSnø(TIMER, startTs);
-    const tur = planTur({ seksjoner, timer: DAG_TIMER, startTs, tempoKmt: TEMPO[modus], refH: vaerData.referansehoyde_m });
+    const dato = varsel ? osloDato(dagIdx) : RESERVE_DATO;
+    const startTs = osloTs(dato, startTime);
+    // Observert historikk, så Yr-varselet fra der historikken slutter.
+    const sisteHist = TIMER[TIMER.length - 1].ts;
+    const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
+    const snø = analyserSnø(alle, startTs);
+    const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[modus], refH: vaerData.referansehoyde_m });
     const stabel = byggStabel(tur, snø, seksjoner, modus === 'Trening');
     const farger = tur.seksjoner.map((s) => tempFarge(s.tEff));
     const segmenter = seksjoner.map((s, i) => ({
@@ -83,7 +109,7 @@ export default function Hjem() {
     const hs = løype.punkter.map((p) => p[2]);
     const opp = løype.punkter.slice(1).reduce((s, p, i) => s + Math.max(0, p[2] - løype.punkter[i][2]), 0);
     return { seksjoner, snø, tur, stabel, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
-  }, [løype, modus, startTime]);
+  }, [løype, modus, startTime, dagIdx, varsel]);
 
   const km = løype.lengde_m / 1000;
   const minutter = Math.round((km / TEMPO[modus]) * 60);
@@ -131,6 +157,11 @@ export default function Hjem() {
         {/* Tur */}
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>TUREN</ThemedText>
         <View style={styles.rad}>
+          {DAGER.map((i) => (
+            <Chip key={i} aktiv={varsel ? i === dagIdx : false} onPress={() => varsel && setDagIdx(i)}>{dagNavn(osloDato(i), i)}</Chip>
+          ))}
+        </View>
+        <View style={styles.rad}>
           {(Object.keys(TEMPO) as Modus[]).map((m) => (
             <Chip key={m} aktiv={m === modus} onPress={() => setModus(m)}>{`${m} · ${TEMPO[m]} km/t`}</Chip>
           ))}
@@ -140,6 +171,13 @@ export default function Hjem() {
             <Chip key={h} aktiv={h === startTime} onPress={() => setStartTime(h)}>{`Start ${String(h).padStart(2, '0')}:00`}</Chip>
           ))}
         </View>
+        <ThemedText type="small" themeColor="textSecondary">
+          {varsel
+            ? `Prognose: MET Norway / Yr (oppdatert ${tid(Date.parse(varsel.oppdatert))}) · solinnstråling anslått fra skydekke`
+            : varselFeil
+              ? 'Fikk ikke hentet Yr-prognosen. Viser observert vær 2. november.'
+              : 'Henter prognose fra Yr …'}
+        </ThemedText>
         <ThemedText themeColor="textSecondary">
           Ca. {Math.floor(minutter / 60)} t {minutter % 60} min · {tid(r.tur.startTs)}–{tid(r.tur.sluttTs)}
         </ThemedText>
