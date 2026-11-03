@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { MERKE_IDER, SYSTEMER, type MerkeId, type Smøresystem, type Smøring, type Stil } from '@/engine';
+import { MERKE_IDER, SYSTEMER, type MerkeId, type Smøresystem, type Smøring, type Stil, type Temperatursone } from '@/engine';
 
 // Brukerdata (smørelager og skipark) lagres foreløpig lokalt i nettleseren, per enhet. Uten innlogging er det ikke delt mellom enheter.
 // Kan senere byttes mot konto og database (premium) uten å røre skjermene, siden alt går gjennom useLagret.
@@ -44,7 +44,7 @@ export function useLagret<T>(nøkkel: string, standard: T): [T, (v: T) => void] 
   return [verdi, sett];
 }
 
-export type Ski = { id: string; navn: string; stil: Stil; smoring?: Smøring };
+export type Ski = { id: string; navn: string; stil: Stil; /** Temperatursonen skiene (slipen/strukturen) er laget for */ sone?: Temperatursone; smoring?: Smøring };
 export const NØKKEL_LAGER = 'skiglede.lager';
 export const NØKKEL_VISNING = 'skiglede.visning';
 export const NØKKEL_VALGTE = 'skiglede.valgte';

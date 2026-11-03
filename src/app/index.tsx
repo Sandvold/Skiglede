@@ -17,7 +17,7 @@ import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, type Varsel } from '@/data/varsel';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
-import { SWIX, innkjøpsforslag, analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
+import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
 const løyperI = (o: Område) => o.løyper as unknown as Løype[];
 const timerI = (o: Område): Vær[] => o.vær.timer.map((r) => ({
@@ -140,7 +140,11 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
       const harSmøring = x.stil === 'klassisk' || x.stil === 'skoyting';
       const vurdering = harSmøring ? vurderPåfylling(x.smoring, st, nå) : null;
       const lagret = !!x.smoring && !!vurdering && sammeDag(x.smoring.ts) && (!!vurdering.behold || lagLik(x.smoring.lag, st));
-      return { ski: x, st, vurdering, lagret };
+      const tSnitt = r.tur.seksjoner.reduce((a, y) => a + y.tEff, 0) / r.tur.seksjoner.length;
+      const sone = soneVurdering(x.sone, tSnitt);
+      // Annet par av samme type som passer sonen bedre
+      const bedre = sone ? skipark.find((y) => y.id !== x.id && y.stil === x.stil && y.sone === soneFor(tSnitt)) : undefined;
+      return { ski: x, st, vurdering, lagret, sone: sone && bedre ? `${sone} Du har ${bedre.navn}.` : sone };
     });
   const lagreSki = (liste: typeof valgteSki) =>
     setSkipark(skipark.map((x) => {
@@ -258,13 +262,13 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>SKI JEG SMØRER I DAG</ThemedText>
         <View style={styles.rad}>
           {skipark.map((x) => (
-            <Chip key={x.id} aktiv={valgte.includes(x.id)} onPress={() => veksle(x.id)}>{`${valgte.includes(x.id) ? '✓ ' : ''}${x.navn} · ${STIL_NAVN[x.stil]}`}</Chip>
+            <Chip key={x.id} aktiv={valgte.includes(x.id)} onPress={() => veksle(x.id)}>{`${valgte.includes(x.id) ? '✓ ' : ''}${x.navn} · ${STIL_NAVN[x.stil]}${x.sone ? ` · ${x.sone}` : ''}`}</Chip>
           ))}
           <Pressable accessibilityRole="link" onPress={() => router.push('/skipark')} style={[styles.chip, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
             <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>{skipark.length ? 'Skipark' : '+ Legg inn ski'}</Text>
           </Pressable>
         </View>
-        {valgteSki.map(({ ski, st, vurdering, lagret }) => (
+        {valgteSki.map(({ ski, st, vurdering, lagret, sone }) => (
           <Kort key={ski.id} style={{ borderColor: vurdering?.handling === 'rens' || st.egnet === false ? '#E3A64A' : theme.border, gap: Spacing.two }}>
             <Text style={[styles.h3, { color: theme.text }]}>{ski.navn}: {vurdering ? vurdering.tittel : st.egnet === false ? 'Passer ikke i dag' : 'Ingen smøring å lagre'}</Text>
             {dagens(st) && st.egnet !== false && (
@@ -275,10 +279,11 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
             ))}
             {!vurdering && st.egnet === false && st.advarsler.map((g, i) => <ThemedText key={i} type="small">• {g}</ThemedText>)}
             {!vurdering && st.egnet !== false && <ThemedText type="small">{ski.stil === 'felle' ? 'Felleski har ingen festesmøring. Bare glidesonene smøres.' : 'Rubbski har ingen festesmøring. Børst opp rubben.'}</ThemedText>}
+            {sone ? <View style={[styles.advarsel, { borderColor: '#E3A64A' }]}><ThemedText type="small">⚠ {sone}</ThemedText></View> : null}
             {ski.smoring && <ThemedText type="small" themeColor="textSecondary">Ligger på nå: {ski.smoring.lag.map((l) => l.produkt).join(' → ')} (nederst → øverst), {ski.smoring.turer} tur{ski.smoring.turer === 1 ? '' : 'er'}.</ThemedText>}
             {vurdering && (
               <View style={styles.rad}>
-                <Chip aktiv={lagret} onPress={() => lagreSki([{ ski, st, vurdering, lagret }])}>{lagret ? '✓ Smøringen er lagret' : 'Lagre smøring på dette paret'}</Chip>
+                <Chip aktiv={lagret} onPress={() => lagreSki([{ ski, st, vurdering, lagret, sone }])}>{lagret ? '✓ Smøringen er lagret' : 'Lagre smøring på dette paret'}</Chip>
               </View>
             )}
           </Kort>

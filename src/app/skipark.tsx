@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { StedVelger } from '@/components/ski/sted';
 import { foreslåSki } from '@/data/skimodeller';
+import { SONER, SONE_NAVN, type Temperatursone } from '@/engine';
 import { NØKKEL_SKIPARK, TOM_LISTE, useStedData, type Ski } from '@/data/lagring';
 import { produkt, type Stil } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
@@ -20,14 +21,16 @@ export default function Skipark() {
   const [ski, setSki] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const [navn, setNavn] = useState('');
   const [stil, setStil] = useState<Stil>('klassisk');
+  const [sone, setSone] = useState<Temperatursone | undefined>(undefined);
   const [nå] = useState(() => Date.now());
   const forslag = foreslåSki(navn);
 
   const legg = () => {
     const n = navn.trim();
     if (!n) return;
-    setSki([...ski, { id: `${nå}-${ski.length}-${Math.round(Math.random() * 1e6)}`, navn: n, stil }]);
+    setSki([...ski, { id: `${nå}-${ski.length}-${Math.round(Math.random() * 1e6)}`, navn: n, stil, sone }]);
     setNavn('');
+    setSone(undefined);
   };
 
   return (
@@ -68,8 +71,15 @@ export default function Skipark() {
             {(Object.keys(STIL_NAVN) as Stil[]).map((s) => (
               <Chip key={s} aktiv={s === stil} onPress={() => setStil(s)}>{STIL_NAVN[s]}</Chip>
             ))}
+          </View>
+          <View style={styles.rad}>
+            <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>Sone</Text>
+            {(['kald', 'mid', 'varm'] as Temperatursone[]).map((z) => (
+              <Chip key={z} aktiv={sone === z} onPress={() => setSone(sone === z ? undefined : z)}>{SONE_NAVN[z]}</Chip>
+            ))}
             <Chip aktiv={false} onPress={legg}>+ Legg til</Chip>
           </View>
+          <ThemedText type="small" themeColor="textSecondary">Sone er valgfri: hvilken snøtemperatur skiene er laget for (kald under {SONER.kaldMaks} °C, mid {SONER.kaldMaks} til {SONER.varmMin} °C, varm over {SONER.varmMin} °C).</ThemedText>
         </Kort>
 
         {ski.length === 0 ? <ThemedText themeColor="textSecondary">Ingen ski ennå.</ThemedText> : null}
@@ -100,6 +110,12 @@ export default function Skipark() {
             ) : (
               <ThemedText type="small" themeColor="textSecondary">Ingen lagret smøring.</ThemedText>
             )}
+            <View style={styles.rad}>
+              <Text style={{ color: theme.textSecondary, fontWeight: '600', fontSize: 14 }}>Sone</Text>
+              {(['kald', 'mid', 'varm'] as Temperatursone[]).map((z) => (
+                <Chip key={z} aktiv={s.sone === z} onPress={() => setSki(ski.map((x) => (x.id === s.id ? { ...x, sone: x.sone === z ? undefined : z } : x)))}>{SONE_NAVN[z]}</Chip>
+              ))}
+            </View>
             <View style={styles.rad}>
               {s.smoring ? <Chip aktiv={false} onPress={() => setSki(ski.map((x) => (x.id === s.id ? { ...x, smoring: undefined } : x)))}>Renset (nullstill)</Chip> : null}
               <Pressable onPress={() => setSki(ski.filter((x) => x.id !== s.id))} style={[styles.slett, { borderColor: theme.border }]}>

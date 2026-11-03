@@ -169,3 +169,8 @@ const uten = innkjøpsforslag([-12, 2], eier.filter((n) => n !== kjøp0[0].produ
 sjekk('innkjøp: mangler ett produkt foreslås bare det', uten.map((x) => x.produkt.navn), [kjøp0[0].produkt.navn]);
 sjekk('innkjøp: overlappende Toko-voks hindrer forslag', innkjøpsforslag([-12, 2], ['Toko Blå', 'Toko Rød', 'Toko Gul', 'Toko X-Cold']).filter((x) => x.produkt.linje === 'VP').length < kjøp0.filter((x) => x.produkt.linje === 'VP').length, true);
 console.log(kjøp0.map((x) => `${x.produkt.navn} (${x.grunn})`).join('\n'));
+import { soneFor, soneVurdering } from '../src/engine';
+sjekk('sone: −10 kald', soneFor(-10), 'kald'); sjekk('sone: −4 mid', soneFor(-4), 'mid'); sjekk('sone: 0 varm', soneFor(0), 'varm');
+sjekk('sone: passer = ingen melding', soneVurdering('mid', -4), null);
+sjekk('sone: ikke valgt = ingen melding', soneVurdering(undefined, -12), null);
+sjekk('sone: kald ski på varm snø gir melding', !!soneVurdering('kald', 1)?.includes('varm'), true);

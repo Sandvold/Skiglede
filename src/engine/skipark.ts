@@ -93,3 +93,17 @@ export function lagreSmøring(stil: Stil, stabel: Stabel, forrige: Smøring | un
   };
 }
 
+
+/** Temperatursone for ski: kald (snø kaldere enn −6 °C), mid (−6 til −2 °C), varm (varmere enn −2 °C, inkludert sludd) [Forslag, justeres mot erfaring]. */
+export type Temperatursone = 'kald' | 'mid' | 'varm';
+export const SONER = { kaldMaks: -6, varmMin: -2 };
+export const SONE_NAVN: Record<Temperatursone, string> = { kald: 'Kald', mid: 'Mid', varm: 'Varm' };
+export const soneFor = (t: number): Temperatursone => (t <= SONER.kaldMaks ? 'kald' : t >= SONER.varmMin ? 'varm' : 'mid');
+
+/** Passer skiparets sone til snøen i dag (snitt langs turen)? Uten valgt sone sies ingenting. */
+export function soneVurdering(sone: Temperatursone | undefined, tSnitt: number): string | null {
+  if (!sone) return null;
+  const nå = soneFor(tSnitt);
+  if (nå === sone) return null;
+  return `Disse skiene er for ${SONE_NAVN[sone].toLowerCase()} snø (${sone === 'kald' ? `under ${SONER.kaldMaks}` : sone === 'varm' ? `over ${SONER.varmMin}` : `${SONER.kaldMaks} til ${SONER.varmMin}`} °C), men snøen i dag er ${SONE_NAVN[nå].toLowerCase()} (snitt ${tSnitt.toFixed(1)} °C). Vurder et par for ${SONE_NAVN[nå].toLowerCase()} snø.`;
+}
