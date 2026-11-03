@@ -43,12 +43,13 @@ Binder (VG35 grønn, ved aggressiv/skarp omdannet snø og lange turer; VG30 blå
 
 ### 7.2 Klister (omdannet snø)
 Maks **fire lag** [Bruker: «sjelden mer enn tre-fire»; Swix-veiledningen bekrefter]. Swix: ett tynt baselag (KB20C/KX20), ett mellomlag (KX35N/KX45N) og ett tykt toppsjikt som er tykkere enn base + mellomlag til sammen. Valgfritt: tre eller flere tynne lag hardvoks over klisteret mot ising.
+Valg av dagens klister [Bruker]: **KX-klistrene** (KX35N, KX45N, KX40S, KX65, KX75) når været er veldig stabilt. **Universal** (K22 fra −3 °C, K21S kaldere) er mest brukt totalt og passer ved skiftende vær (utslag ≥ 4 °C i lufta ±3 t rundt turen, eller ≥ 5 °C langs løypa). **KN33** (+1…−7) og **KN44** (+5…−3), Nero, ved sludd og vekslende forhold (nedbør ≥ 0,3 mm/t mellom −1 og +3,5 °C; KN44 når varmeste del ≥ −0,5 °C). Universal og Nero legges som ett tykt dagslag uten mellomlag.
 Slik bygges det: Baseklister KB20C → isklister KX30 (bare hard bane: skarphet ≥70 eller tMin < −3) → mellomlag (utelates når dagens klister er KX35N/KX45N, og i Trening) → dagens klister, ett tykt lag. Tidligere 2–5 mellomlag var for mange.
 
 ## 8. Swix-tabeller (verifisert mot swixsport.com, se `src/engine/tabeller.ts`)
 Swix oppgir **ett** temperaturområde per voks, ikke ett for nysnø og ett for omdannet. Kolonnen «omdannet» fra første utkast er droppet.
 VP30 −16…−8; VP40 −10…−4; VP45 −5…−1; VP50 −3…0; VP55 −2…+1; VP60 −1…+2; VP65 0…+2; VP70 0…+3.
-Klister: KX30 −12…0; KX35N −8…0; KX45N −4…+1; KX40S −4…+2; KX65 +1…+5; KX75 +2…+15. Bindere VG30/VG35 har ikke område.
+Klister: KX30 −12…0; KX35N −8…0; KX45N −4…+1; KX40S −4…+2; KX65 +1…+5; KX75 +2…+15. Bindere VG30/VG35 har ikke område. K22 −3…+10, KN33 +1…−7 og KN44 −3…+5 er bekreftet mot swixsport.com; K21S og KX55 er ikke verifisert.
 Fargene i appen er tilnærminger til Swix’ etikettfarger, ikke offisielle fargekoder.
 
 ## 9. Arkitektur [Bruker + Forslag]

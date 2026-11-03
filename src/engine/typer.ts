@@ -53,6 +53,10 @@ export type Tur = {
   seksjoner: SeksjonVær[];
   tMin: number;
   tMaks: number;
+  /** Største temperaturutslag i lufta fra 3 t før til 3 t etter turen (°C). Stort = skiftende vær. */
+  variasjon: number;
+  /** Nedbør i grenseland (−1…+3,5 °C) rundt turen: sludd eller bløt snø. */
+  sludd: boolean;
 };
 
 export type Lag = { rolle: string; produkt: string; antall: string; merknad?: string };

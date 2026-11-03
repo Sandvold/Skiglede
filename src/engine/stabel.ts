@@ -1,4 +1,4 @@
-import { HARDVOKS, KLISTER, hardvoksFor, klisterFor } from './tabeller';
+import { HARDVOKS, KLISTER, hardvoksFor, klisterFor, produkt } from './tabeller';
 import type { Lag, Seksjon, SnøAnalyse, Stabel, Tur } from './typer';
 
 // Tidsgrenser for dekketrinn [Forslag, åpent punkt 2]
@@ -73,13 +73,25 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
 function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: number; varm: number }, begrunnelse: string[], advarsler: string[], lett: boolean): Stabel {
   // Swix' klisterguide: ett tynt lag baseklister, ett mellomlag, ett tykt dagslag (tykkere enn lagene under til sammen).
   // Isklister (KX30) legges mellom ved skarp/hard bane. Maks fire lag totalt (brukerens erfaring: sjelden mer enn 3–4).
-  const dag = KLISTER[klisterFor(T.varm)];
+  // Erfaring (bruker): KX-klistrene brukes i veldig stabilt vær. Universal (K22/K21S) er mest brukt totalt og passer ved
+  // skiftende temperatur. KN33/KN44 (Nero) brukes ved sludd og vekslende forhold.
+  const skiftende = tur.sludd || tur.variasjon >= 4 || tur.tMaks - tur.tMin >= 5;
+  const dagNavn = tur.sludd ? (T.varm >= -0.5 ? 'KN44' : 'KN33') : skiftende ? (T.varm >= -1 ? 'K22' : 'K21S') : null;
+  const dag = dagNavn ? produkt(dagNavn)! : KLISTER[klisterFor(T.varm)];
   const hardBane = snø.skarphet >= 70 || tur.tMin < -3;
-  const mellom = dag.navn === 'KX45N' || dag.navn === 'KX35N' ? null : KLISTER[T.varm < -3 ? 1 : 2];
+  // Mellomlag bare med KX-klister utenom KX35N/KX45N; universal og Nero brukes som ett tykt lag.
+  const mellom = dagNavn || dag.navn === 'KX45N' || dag.navn === 'KX35N' ? null : KLISTER[T.varm < -3 ? 1 : 2];
   const lag: Lag[] = [{ rolle: 'Baseklister', produkt: 'KB20C', antall: '1 lag', merknad: 'Svært tynt, bare over det slipte området' }];
   if (hardBane && dag.navn !== 'KX30') lag.push({ rolle: 'Isklister', produkt: 'KX30', antall: '1 lag', merknad: 'Hard/isete bane: gir feste under dagens klister' });
   if (mellom && !lett) lag.push({ rolle: 'Mellomlag', produkt: mellom.navn, antall: '1 lag', merknad: 'Fiskebeinsmønster, gni jevnt. Hindrer at dagens klister vandrer bakover' });
   lag.push({ rolle: 'Dagens klister', produkt: dag.navn, antall: '1 tykt lag', merknad: 'Tykkere enn lagene under til sammen' });
+  begrunnelse.push(
+    tur.sludd
+      ? 'Sludd/bløt snø rundt turen: Nero-klister (KN33 kaldere, KN44 varmere).'
+      : skiftende
+        ? `Skiftende vær (${tur.variasjon.toFixed(1)} °C utslag i lufta, ${(tur.tMaks - tur.tMin).toFixed(1)} °C langs løypa): Universal-klister.`
+        : 'Stabilt vær: vanlig KX-klister.'
+  );
   begrunnelse.push(
     `Klister: omdannet snø, skarphet ${Math.round(snø.skarphet)} og varmest ${tur.tMaks.toFixed(1)} °C. Dagens klister ${dag.navn} (${dag.farge}) for ${T.varm.toFixed(1)} °C. ${lag.length} lag totalt (maks 4).`
   );

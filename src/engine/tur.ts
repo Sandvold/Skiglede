@@ -65,12 +65,19 @@ export function planTur(args: {
     return { seq: s.seq, tid, tLuft, sw, sol, tEff: tLuft + SOL_GRAD_PER_500W * (sw / 500) * sol };
   });
   const t = ut.map((x) => x.tEff);
+  const sluttTs = startTs + ms(seksjoner[seksjoner.length - 1].endM);
+  const vindu = timer.filter((x) => x.ts >= startTs - 3 * 3600_000 && x.ts <= sluttTs + 3 * 3600_000);
+  const lufttemp = vindu.map((x) => x.temp);
+  const variasjon = lufttemp.length ? Math.max(...lufttemp) - Math.min(...lufttemp) : 0;
+  const sludd = vindu.some((x) => x.nedbor >= 0.3 && x.temp >= -1 && x.temp <= 3.5);
   return {
     startTs,
-    sluttTs: startTs + ms(seksjoner[seksjoner.length - 1].endM),
+    sluttTs,
     tempoKmt,
     seksjoner: ut,
     tMin: Math.min(...t),
     tMaks: Math.max(...t),
+    variasjon,
+    sludd,
   };
 }
