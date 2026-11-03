@@ -6,12 +6,14 @@ import { tekstPå } from '@/components/ski/oversikt';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { NØKKEL_LAGER, TOM_LISTE, useLagret } from '@/data/lagring';
-import { MERKE_IDER, SYSTEMER, type Produkt } from '@/engine';
+import { useState } from 'react';
+import { MERKE_IDER, SYSTEMER, type MerkeId, type Produkt } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function Lager() {
   const theme = useTheme();
-  const GRUPPER = MERKE_IDER.flatMap((id) => SYSTEMER[id].oversikt.map((g) => ({ tittel: `${SYSTEMER[id].navn}: ${g.tittel}`, liste: g.liste })));
+  const [visMerke, setVisMerke] = useState<MerkeId | 'alle'>('swix'); // Swix vises først; de andre merkene velges med chips
+  const GRUPPER = MERKE_IDER.filter((id) => visMerke === 'alle' || id === visMerke).flatMap((id) => SYSTEMER[id].oversikt.map((g) => ({ tittel: visMerke === 'alle' ? `${SYSTEMER[id].navn}: ${g.tittel}` : g.tittel, liste: g.liste })));
   const [lager, setLager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
   const har = (n: string) => lager.includes(n);
   const bytt = (n: string) => setLager(har(n) ? lager.filter((x) => x !== n) : [...lager, n]);
@@ -26,7 +28,12 @@ export default function Lager() {
           Kryss av det du har, fra alle merker. Når du huker av «Bruk min smøring» under smøretipsene, foreslår Skiglede bare det du eier, og bytter det som mangler mot nærmeste du har, på tvers av merker.
         </ThemedText>
         <View style={styles.rad}>
-          <Chip aktiv={false} onPress={() => setLager([...new Set(GRUPPER.flatMap((g) => g.liste.map((p) => p.navn)))])}>Velg alle</Chip>
+          {([...MERKE_IDER, 'alle'] as const).map((id) => (
+            <Chip key={id} aktiv={visMerke === id} onPress={() => setVisMerke(id)}>{id === 'alle' ? 'Alle merker' : SYSTEMER[id].navn}</Chip>
+          ))}
+        </View>
+        <View style={styles.rad}>
+          <Chip aktiv={false} onPress={() => setLager([...new Set([...lager, ...GRUPPER.flatMap((g) => g.liste.map((p) => p.navn))])])}>{visMerke === 'alle' ? 'Velg alle' : `Velg alle ${SYSTEMER[visMerke].navn}`}</Chip>
           <Chip aktiv={false} onPress={() => setLager([])}>Tøm alt</Chip>
           <ThemedText type="smallBold" themeColor="textSecondary">{lager.length} produkter totalt</ThemedText>
         </View>
