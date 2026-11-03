@@ -26,10 +26,10 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   if (klisterFøre) return klisterStabel(tur, snø, { kald, midt, varm }, begrunnelse, advarsler, lett);
 
   // ---- Hardvoks ----
-  const dag = hardvoksFor(varm, snø.type);
-  const kaldIdx = hardvoksFor(kald, snø.type);
+  const dag = hardvoksFor(varm);
+  const kaldIdx = hardvoksFor(kald);
   const dagVoks = HARDVOKS[dag];
-  const [lo] = dagVoks[snø.type];
+  const [lo] = dagVoks.omr;
   // Kaldt parti før det blir varmt: sammenhengende fra start til første seksjon over underkanten til dagens voks
   let kmKaldt = 0;
   let minKaldt = 0;
@@ -49,7 +49,7 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   const mellom: number[] = [];
   if (!lett) for (let i = Math.min(kaldIdx, dag); i < dag && mellom.length < 2; i++) mellom.push(i);
   mellom.forEach((i) => lag.push({ rolle: 'Base (kaldere)', produkt: HARDVOKS[i].navn, antall: '1–2 lag' }));
-  lag.push({ rolle: 'Dagens voks', produkt: dagVoks.navn, antall: lett ? '2–3 lag' : '3–4 lag', merknad: `Passer ${dagVoks[snø.type][0]} til ${dagVoks[snø.type][1]} °C (${snø.type === 'ny' ? 'nysnø' : 'omdannet'})` });
+  lag.push({ rolle: 'Dagens voks', produkt: dagVoks.navn, antall: lett ? '2–3 lag' : '3–4 lag', merknad: `Passer ${dagVoks.omr[0]} til ${dagVoks.omr[1]} °C` });
   begrunnelse.push(`Dagens voks ${dagVoks.navn} velges for varm del (${varm.toFixed(1)} °C).`);
 
   if (blirVarmt && dag > 0) {
@@ -71,20 +71,22 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
 }
 
 function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: number; varm: number }, begrunnelse: string[], advarsler: string[], lett: boolean): Stabel {
-  const dag = klisterFor(T.varm);
-  const midt = klisterFor(T.midt);
-  const mellomLag = lett ? (snø.skarphet >= 70 ? '2–3 lag' : '2 lag') : snø.skarphet >= 70 ? '4–5 lag' : snø.skarphet >= 50 ? '3–4 lag' : '2–3 lag';
-  const lag: Lag[] = [
-    { rolle: 'Baseklister', produkt: 'KB20C', antall: '1 lag', merknad: 'Glatt ut og la det sette seg' },
-    { rolle: 'Isklister', produkt: 'KX30', antall: lett ? '1 lag' : '1–2 lag' },
-    { rolle: 'Mellomlag', produkt: KLISTER[midt === dag ? Math.max(0, dag - 1) : midt].navn, antall: mellomLag, merknad: 'Bygg opp i mange lag, kjøl mellom lag' },
-    { rolle: 'Dagens klister', produkt: KLISTER[dag].navn, antall: '1 tykt lag', merknad: 'Tykkere enn lagene under til sammen' },
-  ];
+  // Swix' klisterguide: ett tynt lag baseklister, ett mellomlag, ett tykt dagslag (tykkere enn lagene under til sammen).
+  // Isklister (KX30) legges mellom ved skarp/hard bane. Maks fire lag totalt (brukerens erfaring: sjelden mer enn 3–4).
+  const dag = KLISTER[klisterFor(T.varm)];
+  const hardBane = snø.skarphet >= 70 || tur.tMin < -3;
+  const mellom = dag.navn === 'KX45N' || dag.navn === 'KX35N' ? null : KLISTER[T.varm < -3 ? 1 : 2];
+  const lag: Lag[] = [{ rolle: 'Baseklister', produkt: 'KB20C', antall: '1 lag', merknad: 'Svært tynt, bare over det slipte området' }];
+  if (hardBane && dag.navn !== 'KX30') lag.push({ rolle: 'Isklister', produkt: 'KX30', antall: '1 lag', merknad: 'Hard/isete bane: gir feste under dagens klister' });
+  if (mellom && !lett) lag.push({ rolle: 'Mellomlag', produkt: mellom.navn, antall: '1 lag', merknad: 'Fiskebeinsmønster, gni jevnt. Hindrer at dagens klister vandrer bakover' });
+  lag.push({ rolle: 'Dagens klister', produkt: dag.navn, antall: '1 tykt lag', merknad: 'Tykkere enn lagene under til sammen' });
   begrunnelse.push(
-    `Klister: omdannet snø med skarphet ${Math.round(snø.skarphet)} og varmest ${tur.tMaks.toFixed(1)} °C. Mellomlag ${mellomLag} etter skarphet${lett ? ' (Trening: færre lag)' : ''}. Dagens klister ${KLISTER[dag].navn} for ${T.varm.toFixed(1)} °C.`
+    `Klister: omdannet snø, skarphet ${Math.round(snø.skarphet)} og varmest ${tur.tMaks.toFixed(1)} °C. Dagens klister ${dag.navn} (${dag.farge}) for ${T.varm.toFixed(1)} °C. ${lag.length} lag totalt (maks 4).`
   );
+  if (hardBane) begrunnelse.push(`Isklister: ${snø.skarphet >= 70 ? `skarphet ${Math.round(snø.skarphet)} ≥ 70` : `kaldeste del ${tur.tMin.toFixed(1)} °C`} gir hard bane.`);
+  if (lett) begrunnelse.push('Trening: uten mellomlag.');
   if (tur.tMin < -2 && tur.tMaks > 0) {
-    advarsler.push('Isingsfare når temperaturen svinger rundt 0: vurder et tynt dekke hardvoks øverst. Dette er unntaket, ikke standard.');
+    advarsler.push('Isingsfare når temperaturen svinger rundt 0: Swix anbefaler minst tre tynne lag hardvoks over klisteren (VP40–VP55, litt hardere enn temperaturen tilsier). Unntak, ikke standard.');
   }
   return { type: 'klister', lag, begrunnelse, advarsler };
 }

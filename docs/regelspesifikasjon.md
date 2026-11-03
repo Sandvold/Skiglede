@@ -42,12 +42,14 @@ Binder (VG35 grønn, ved aggressiv/skarp omdannet snø og lange turer; VG30 blå
 - Dekke: ett eller to trinn kaldere. Antall avhenger av **hvor lenge** man er i varmere føre [Bruker]: noen få km eller ca. en time gir ett trinn; lang strekning videre (f.eks. 12 km av 20) gir to. [Åpent: tidsgrenser; forslag: 1 t = ett, 2 t eller mer = to]
 
 ### 7.2 Klister (omdannet snø)
-Baseklister (KB20C/KX20 grønn) → **isklister** (blå) → flere mellomlag (kan bygges opp i mange lag) → dagens klister (tykkere enn lagene under til sammen [Kilde]). Hardvoks på toppen er unntaket og brukes ved isingsfare, ikke som standard [Bruker].
-- Antall lag og valg av klister styres av hvor skarp snøen er [Bruker]. [Åpent: hvilke klistertyper hører til hvilken skarphetsgrad]
+Maks **fire lag** [Bruker: «sjelden mer enn tre-fire»; Swix-veiledningen bekrefter]. Swix: ett tynt baselag (KB20C/KX20), ett mellomlag (KX35N/KX45N) og ett tykt toppsjikt som er tykkere enn base + mellomlag til sammen. Valgfritt: tre eller flere tynne lag hardvoks over klisteret mot ising.
+Slik bygges det: Baseklister KB20C → isklister KX30 (bare hard bane: skarphet ≥70 eller tMin < −3) → mellomlag (utelates når dagens klister er KX35N/KX45N, og i Trening) → dagens klister, ett tykt lag. Tidligere 2–5 mellomlag var for mange.
 
-## 8. Swix-tabeller – PLASSHOLDERE, må verifiseres mot offisiell tabell
-VP (nysnø / omdannet): VP30 −8…−16 / −12…−20; VP40 −4…−10 / −5…−14; VP45 −1…−5 / −3…−8; VP50 0…−3 / −1…−6; VP55 +1…−2 / 0…−5; VP60 +2…−1 / −1…−4; VP65 0…+2 / 0…−4.
-Klister (fra produktlister): KX30 −12…0; KX35 +1…−4; KX40S −4…+2; KX45N −4…+1; KX65 +1…+5; KX75 +2…+15.
+## 8. Swix-tabeller (verifisert mot swixsport.com, se `src/engine/tabeller.ts`)
+Swix oppgir **ett** temperaturområde per voks, ikke ett for nysnø og ett for omdannet. Kolonnen «omdannet» fra første utkast er droppet.
+VP30 −16…−8; VP40 −10…−4; VP45 −5…−1; VP50 −3…0; VP55 −2…+1; VP60 −1…+2; VP65 0…+2; VP70 0…+3.
+Klister: KX30 −12…0; KX35N −8…0; KX45N −4…+1; KX40S −4…+2; KX65 +1…+5; KX75 +2…+15. Bindere VG30/VG35 har ikke område.
+Fargene i appen er tilnærminger til Swix’ etikettfarger, ikke offisielle fargekoder.
 
 ## 9. Arkitektur [Bruker + Forslag]
 - Klient: Expo med web som første mål (Expo Router), senere Android/iOS.

@@ -4,11 +4,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { TrailMap } from '@/components/ski/kart';
 import { Hoydeprofil } from '@/components/ski/profil';
+import { Temperaturoversikt, tekstPå } from '@/components/ski/oversikt';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import trailsData from '@/data/trails.json';
 import vaerData from '@/data/vaer-hovden.json';
-import { HARDVOKS, KLISTER, analyserSnø, byggStabel, lagSeksjoner, planTur, type Punkt, type Vær } from '@/engine';
+import { analyserSnø, produkt, byggStabel, lagSeksjoner, planTur, type Punkt, type Vær } from '@/engine';
 
 type Løype = { id: string; navn: string; type?: 'retur' | 'sloyfe'; lengde_m: number; punkter: Punkt[] };
 const LØYPER = trailsData as unknown as Løype[];
@@ -26,12 +27,8 @@ const STARTTIDER = [9, 10, 11, 12, 13]; // lokal tid (UTC+1 i november)
 
 const tid = (ts: number) => new Intl.DateTimeFormat('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' }).format(ts);
 
-function produktFarge(navn: string, snø: 'ny' | 'omdannet') {
-  const v = HARDVOKS.find((x) => x.navn === navn);
-  if (v) return tempFarge((v[snø][0] + v[snø][1]) / 2);
-  const k = KLISTER.find((x) => x.navn === navn);
-  if (k) return tempFarge((k.omr[0] + k.omr[1]) / 2);
-  return navn === 'KB20C' ? '#9FBFAE' : '#B9C7D6';
+function produktFarge(navn: string) {
+  return produkt(navn)?.hex ?? '#B9C7D6';
 }
 
 function Chip({ aktiv, onPress, children }: { aktiv: boolean; onPress: () => void; children: string }) {
@@ -158,12 +155,12 @@ export default function Hjem() {
           <ThemedText type="small" themeColor="textSecondary">Øverst = siste lag. Bygg nedenfra og opp.</ThemedText>
           <View style={{ gap: 6 }}>
             {stabelVisning.map((l, i) => (
-              <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt, r.snø.type) }]}>
+              <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.lagProdukt}>{l.produkt}</Text>
-                  <Text style={styles.lagRolle}>{l.rolle}{l.merknad ? ` · ${l.merknad}` : ''}</Text>
+                  <Text style={[styles.lagProdukt, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.produkt}<Text style={{ fontWeight: '500', fontSize: 14 }}>  {produkt(l.produkt)?.farge}</Text></Text>
+                  <Text style={[styles.lagRolle, { color: tekstPå(produktFarge(l.produkt)), opacity: 0.85 }]}>{l.rolle}{l.merknad ? ` · ${l.merknad}` : ''}</Text>
                 </View>
-                <Text style={styles.lagAntall}>{l.antall}</Text>
+                <Text style={[styles.lagAntall, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.antall}</Text>
               </View>
             ))}
           </View>
@@ -185,6 +182,13 @@ export default function Hjem() {
             <Tall verdi={`${Math.round(r.snø.skarphet)}`} tekst="skarphet (0–100)" />
             <Tall verdi={`${r.tur.tMin.toFixed(1)} / ${r.tur.tMaks.toFixed(1)} °C`} tekst="kaldest / varmest" />
           </View>
+        </Kort>
+
+        {/* Temperaturoversikt */}
+        <Kort>
+          <Text style={[styles.h2, { color: theme.text }]}>Voks og klister</Text>
+          <ThemedText type="small" themeColor="textSecondary">Hva hvert produkt fungerer på, med Swix’ fargekoder.</ThemedText>
+          <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={r.stabel.lag.map((l) => l.produkt)} />
         </Kort>
 
         {/* Feilsøking */}
