@@ -43,6 +43,7 @@ for (const t of trails) {
   }
   const andel = dobbelt / n;
   if (t.type === 'sloyfe' && andel > 0.25) mld(`sløyfe går ${(andel * 100).toFixed(0)} % av veien to ganger (maks 25 %). Velg annen retur eller bruk retur`);
+  if (!t.terreng?.length) advarsler.push(`${t.navn}: mangler terrengdata (kjør: python3 -I scripts/hent_terreng.py --ut src/data/trails.json --navn "${t.navn}")`);
   if (t.lengde_m < 3000 || t.lengde_m > 25000) advarsler.push(`${t.navn}: ${(t.lengde_m / 1000).toFixed(1)} km er utenfor 3–25 km, vurder om det er fornuftig`);
   if (Math.abs(p[n - 1][3] - t.lengde_m) > 0.01 * t.lengde_m) mld(`lengde_m ${t.lengde_m} stemmer ikke med siste avstand ${p[n - 1][3]}`);
 }
