@@ -3,12 +3,16 @@
 // Fargene er tilnærminger til etikettfargene (Swix navngir dem, f.eks. «Pro lys fiolett»), ikke eksakte NCS-verdier.
 // Swix oppgir ett område per voks. Eventuell egen kolonne for omdannet snø er ikke verifisert og brukes ikke.
 
+export type MerkeId = 'swix' | 'toko' | 'rode' | 'skigo';
+
 export type Produkt = {
-  navn: string; // produktkode
+  merke?: MerkeId; // standard: swix
+  rolle?: 'binder'; // grunnvoks/binder (ingen temperaturområde)
+  navn: string; // produktkode (unik på tvers av merker)
   farge: string; // Swix' fargenavn
   hex: string; // tilnærmet etikettfarge
   omr: [number, number]; // [kaldest, varmest] °C
-  linje: 'VP' | 'V' | 'K' | 'G'; // G = glider
+  linje: 'VP' | 'V' | 'K' | 'G'; // G = glider, K = klister, ellers hardvoks
   merknad?: string;
 };
 
@@ -38,8 +42,8 @@ export const V_LINJE: Produkt[] = [
 
 /** Binder (ingen temperaturområde, legges under dagens voks). */
 export const BINDER: Produkt[] = [
-  { navn: 'VG30', farge: 'Basevoks blå', hex: '#4E8FDB', omr: [0, 0], linje: 'V', merknad: 'Bindervoks for mild snø' },
-  { navn: 'VG35', farge: 'Bindervoks grønn', hex: '#3DA35D', omr: [0, 0], linje: 'V', merknad: 'Binder for skarp/omdannet snø og lange turer' },
+  { navn: 'VG30', farge: 'Basevoks blå', hex: '#4E8FDB', omr: [0, 0], linje: 'V', rolle: 'binder', merknad: 'Bindervoks for mild snø' },
+  { navn: 'VG35', farge: 'Bindervoks grønn', hex: '#3DA35D', omr: [0, 0], linje: 'V', rolle: 'binder', merknad: 'Binder for skarp/omdannet snø og lange turer' },
 ];
 
 /** Klister: rekkefølge fra kaldest til varmest (senter). Brukes av regelmotoren. */
@@ -72,8 +76,199 @@ export const GLIDER: Produkt[] = [
 
 export const BASEKLISTER: Produkt = { navn: 'KB20C', farge: 'Grønn base (spray)', hex: '#3DA35D', omr: [0, 0], linje: 'K', merknad: 'Baseklister, svært tynt' };
 
-export const ALLE_PRODUKTER: Produkt[] = [...HARDVOKS, ...V_LINJE, ...BINDER, ...KLISTER, ...KLISTER_ANDRE, BASEKLISTER, ...GLIDER];
+// ---------------------------------------------------------------------------------------------
+// Øvrige merker. Hentet 3. nov 2026 fra produsentenes egne sider (Toko, Ski-Go-katalogen) og fra forhandleroversikter
+// (Rode: skiwax.ca). Temperaturområdene er snøtemperatur slik produsent/forhandler oppgir dem, og er IKKE kontrollert mot
+// etikett på boksen. Sjekk mot etiketten før smøresesongen. Bare fluorfrie produkter er med (fluor er forbudt i konkurranse).
+// ---------------------------------------------------------------------------------------------
+const T = (navn: string, farge: string, hex: string, omr: [number, number], linje: Produkt['linje'], merknad?: string, rolle?: 'binder'): Produkt => ({ merke: 'toko', navn, farge, hex, omr, linje, merknad, rolle });
+const R = (navn: string, farge: string, hex: string, omr: [number, number], linje: Produkt['linje'], merknad?: string, rolle?: 'binder'): Produkt => ({ merke: 'rode', navn, farge, hex, omr, linje, merknad, rolle });
+const S = (navn: string, farge: string, hex: string, omr: [number, number], linje: Produkt['linje'], merknad?: string, rolle?: 'binder'): Produkt => ({ merke: 'skigo', navn, farge, hex, omr, linje, merknad, rolle });
+
+// Toko Nordic (toko.ch). Hardvoks X-Cold −30…−12, blå −30…−7, rød −10…−2, gul −2…0. Klister blå −30…−7, rød −8…−1, gul −2…0.
+export const TOKO_HARDVOKS: Produkt[] = [
+  T('Toko X-Cold', 'GripWax X-Cold', '#9FD0F0', [-30, -12], 'V'),
+  T('Toko Blå', 'GripWax blå', '#2F6FD0', [-30, -7], 'V'),
+  T('Toko Rød', 'GripWax rød', '#D6403A', [-10, -2], 'V'),
+  T('Toko Gul', 'GripWax gul', '#F2CF3A', [-2, 0], 'V', 'Varmeste hardvoks fra Toko. Over 0 °C brukes klister'),
+];
+export const TOKO_BINDER = T('Toko Base grønn', 'Nordic Base Wax grønn', '#3DA35D', [0, 0], 'V', 'Grunnvoks/binder, −30…0 °C', 'binder');
+export const TOKO_KLISTER: Produkt[] = [
+  T('Toko Klister blå', 'Klister blå', '#2F6FD0', [-30, -7], 'K', 'Isete snø i kulde'),
+  T('Toko Klister rød', 'Klister rød', '#D6403A', [-8, -1], 'K', 'Universal for midt i temperaturområdet'),
+  T('Toko Klister gul', 'Klister gul', '#F2CF3A', [-2, 0], 'K', 'Våt snø nær 0 °C'),
+];
+export const TOKO_BASEKLISTER = T('Toko Base klister grønn', 'Base klister grønn', '#3DA35D', [-30, 0], 'K', 'Binder for slitesterk snø, brukes under andre klistere');
+export const TOKO_UNIVERSAL = T('Toko Universal klisterspray', 'KlisterSpray Universal', '#C8CDD3', [-30, 0], 'K', 'Spray, enkel å bruke ved skiftende føre');
+// Performance (fluorfri, hot wax). Områder fra skimo.co og sport-conrad.com
+export const TOKO_GLIDER: Produkt[] = [
+  T('Toko Performance blå', 'Performance blå', '#2F6FD0', [-19, -10], 'G'),
+  T('Toko Performance rød', 'Performance rød', '#D6403A', [-12, -4], 'G'),
+  T('Toko Performance gul', 'Performance gul', '#F2CF3A', [-6, 0], 'G'),
+];
+
+// Rode (skiwax.ca, produktsider R-serien). P-serien er hardvoks, K-serien klister, R-serien fluorfri glider.
+export const RODE_HARDVOKS: Produkt[] = [
+  R('Rode P20', 'Grønn (P20)', '#3DA35D', [-15, -4], 'V'),
+  R('Rode P36', 'Blå Special Multigrade (P36)', '#2F6FD0', [-12, -3], 'V'),
+  R('Rode P28', 'Blå Super Weiss (P28)', '#8FC8F0', [-7, -1], 'V'),
+  R('Rode P40', 'Viola (P40)', '#8A4FC0', [-4, 0], 'V'),
+  R('Rode P50', 'Rossa (P50)', '#D6403A', [0, 3], 'V'),
+];
+export const RODE_ANDRE: Produkt[] = [
+  R('Rode P32', 'Blå Super (P32)', '#3A7FDB', [-10, -1], 'V'),
+  R('Rode P38', 'Blå Super Extra (P38)', '#1F4FB5', [-10, -1], 'V'),
+  R('Rode P46', 'Viola Special Multigrade (P46)', '#9B63CF', [-5, 0], 'V'),
+  R('Rode K46', 'Rossa Special klister (K46)', '#A81C1C', [0, 3], 'K'),
+];
+export const RODE_KLISTER: Produkt[] = [
+  R('Rode K20', 'Blå klister (K20)', '#2F6FD0', [-7, -3], 'K'),
+  R('Rode K36', 'Violet Special klister (K36)', '#7A3FB0', [-5, -1], 'K'),
+  R('Rode K30', 'Violet klister (K30)', '#8A4FC0', [-3, 1], 'K'),
+  R('Rode K40', 'Rossa klister (K40)', '#D6403A', [-2, 4], 'K'),
+  R('Rode K52', 'Silver Extra klister (K52)', '#B6BEC8', [0, 4], 'K'),
+];
+export const RODE_BASEKLISTER = R('Rode K90', 'Chola binderklister (K90)', '#6B4E2E', [0, 0], 'K', 'Binder under andre klistere');
+export const RODE_UNIVERSAL = R('Rode K76', 'Multigrade klister (K76)', '#D9B84A', [-6, 6], 'K', 'Universal ved skiftende føre');
+export const RODE_GLIDER: Produkt[] = [
+  R('Rode R20', 'R20 blå', '#2F6FD0', [-18, -8], 'G'),
+  R('Rode R30', 'R30 fiolett', '#7A3FB0', [-10, -3], 'G'),
+  R('Rode R40', 'R40 rød', '#D6403A', [-5, 0], 'G'),
+  R('Rode R50', 'R50 gul', '#F2CF3A', [-1, 10], 'G'),
+];
+
+// Ski-Go (Ski-Go-katalogen, nordicx.com, skiwax.ca). XC-linja er fluorfri.
+export const SKIGO_HARDVOKS: Produkt[] = [
+  S('Skigo XC grønn', 'XC kickwax grønn', '#3DA35D', [-20, -7], 'V'),
+  S('Skigo XC blå', 'XC kickwax blå', '#2F6FD0', [-10, -3], 'V'),
+  S('Skigo XC fiolett', 'XC kickwax fiolett', '#8A4FC0', [-9, -1], 'V'),
+  S('Skigo XC rød', 'XC kickwax rød', '#D6403A', [-2, 0], 'V'),
+  S('Skigo XC oransje', 'XC kickwax oransje', '#F08A2E', [-2, 3], 'V'),
+  S('Skigo XC gul', 'XC kickwax gul', '#F2CF3A', [-1, 5], 'V'),
+];
+export const SKIGO_BINDER = S('Skigo XC Base', 'XC kickwax base', '#3DA35D', [0, 0], 'V', 'Binder, temperaturområde er ikke oppgitt', 'binder');
+export const SKIGO_KLISTER: Produkt[] = [
+  S('Skigo XC klister blå', 'XC klister blå', '#2F6FD0', [-10, -2], 'K'),
+  S('Skigo XC klister fiolett', 'XC klister fiolett', '#8A4FC0', [-4, 3], 'K'),
+  S('Skigo XC klister sølv', 'XC klister sølv', '#B6BEC8', [-1, 3], 'K'),
+  S('Skigo XC klister rød', 'XC klister rød', '#D6403A', [1, 5], 'K'),
+  S('Skigo XC klister oransje', 'XC klister oransje', '#F08A2E', [3, 10], 'K'),
+];
+export const SKIGO_UNIVERSAL = S('Skigo XC klister universal', 'XC klister universal', '#D9B84A', [-4, 3], 'K', 'Universal ved skiftende føre');
+// Glider XC (paraffin, fluorfri). Fiolett og grønn XC-glider mangler oppgitt område og er ikke med.
+export const SKIGO_GLIDER: Produkt[] = [
+  S('Skigo XC glider blå', 'XC glider blå', '#2F6FD0', [-13, -3], 'G', 'Produktsiden oppgir både −3…−13 og −3…−10 °C'),
+  S('Skigo XC glider rød', 'XC glider rød', '#D6403A', [-5, -1], 'G'),
+  S('Skigo XC glider gul', 'XC glider gul', '#F2CF3A', [-1, 20], 'G'),
+];
+
+/** Et merkes smøresystem: produktlistene regelmotoren bruker, og hvilke produkter som fyller hvilke roller. Mangler en rolle, hopper motoren over det laget. */
+export type Smøresystem = {
+  id: MerkeId;
+  navn: string;
+  /** Kaldest først */
+  hardvoks: Produkt[];
+  /** Kaldest først */
+  klister: Produkt[];
+  /** Kaldest først */
+  glider: Produkt[];
+  binder?: { mild: Produkt; skarp: Produkt };
+  baseKlister?: Produkt;
+  isKlister?: Produkt;
+  universalVarm?: Produkt;
+  universalKald?: Produkt;
+  sluddKald?: Produkt;
+  sluddVarm?: Produkt;
+  /** Indekser i `klister` for mellomlag (kald, mild). Mangler = ingen mellomlag */
+  mellomKlister?: [number, number];
+  /** Klister som brukes som ett tykt lag alene, uten mellomlag */
+  utenMellomlag: string[];
+  ising: string;
+  kilde: string;
+  /** Områdene som vises i temperaturoversikten */
+  oversikt: { tittel: string; liste: Produkt[] }[];
+};
+
+export const SWIX: Smøresystem = {
+  id: 'swix', navn: 'Swix',
+  hardvoks: HARDVOKS, klister: KLISTER, glider: GLIDER,
+  binder: { mild: BINDER[0], skarp: BINDER[1] },
+  baseKlister: BASEKLISTER, isKlister: KLISTER[0],
+  universalVarm: KLISTER_ANDRE[3], universalKald: KLISTER_ANDRE[2],
+  sluddKald: KLISTER_ANDRE[0], sluddVarm: KLISTER_ANDRE[4],
+  mellomKlister: [1, 2], utenMellomlag: ['KX45N', 'KX35N'],
+  ising: 'Swix anbefaler minst tre tynne lag hardvoks over klisteren (VP40–VP55, litt hardere enn temperaturen tilsier).',
+  kilde: 'swixsport.com, kontrollert 3. nov 2026.',
+  oversikt: [
+    { tittel: 'Hardvoks VP (Pro)', liste: HARDVOKS },
+    { tittel: 'Hardvoks V', liste: V_LINJE },
+    { tittel: 'Binder og baseklister', liste: [...BINDER, BASEKLISTER] },
+    { tittel: 'Klister', liste: KLISTER },
+    { tittel: 'Andre klistere', liste: KLISTER_ANDRE },
+    { tittel: 'Glidevoks (skøyting)', liste: GLIDER },
+  ],
+};
+
+export const TOKO: Smøresystem = {
+  id: 'toko', navn: 'Toko',
+  hardvoks: TOKO_HARDVOKS, klister: TOKO_KLISTER, glider: TOKO_GLIDER,
+  binder: { mild: TOKO_BINDER, skarp: TOKO_BINDER },
+  baseKlister: TOKO_BASEKLISTER, isKlister: TOKO_KLISTER[0],
+  universalVarm: TOKO_UNIVERSAL, universalKald: TOKO_UNIVERSAL,
+  utenMellomlag: [],
+  ising: 'Legg minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
+  kilde: 'toko.ch og forhandlere, hentet 3. nov 2026. Ikke kontrollert mot etikett.',
+  oversikt: [
+    { tittel: 'Hardvoks (GripWax)', liste: [...TOKO_HARDVOKS, TOKO_BINDER] },
+    { tittel: 'Klister', liste: [...TOKO_KLISTER, TOKO_BASEKLISTER, TOKO_UNIVERSAL] },
+    { tittel: 'Glidevoks Performance (fluorfri)', liste: TOKO_GLIDER },
+  ],
+};
+
+export const RODE: Smøresystem = {
+  id: 'rode', navn: 'Rode',
+  hardvoks: RODE_HARDVOKS, klister: RODE_KLISTER, glider: RODE_GLIDER,
+  baseKlister: RODE_BASEKLISTER,
+  universalVarm: RODE_UNIVERSAL, universalKald: RODE_UNIVERSAL,
+  utenMellomlag: [],
+  ising: 'Legg minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
+  kilde: 'skiwax.ca (Rode-oversikt og produktsider), hentet 3. nov 2026. Ikke kontrollert mot etikett.',
+  oversikt: [
+    { tittel: 'Hardvoks (P-serien)', liste: [...RODE_HARDVOKS, ...RODE_ANDRE.filter((p) => p.linje === 'V')] },
+    { tittel: 'Klister (K-serien)', liste: [...RODE_KLISTER, ...RODE_ANDRE.filter((p) => p.linje === 'K'), RODE_BASEKLISTER, RODE_UNIVERSAL] },
+    { tittel: 'Glidevoks R-serien (fluorfri)', liste: RODE_GLIDER },
+  ],
+};
+
+export const SKIGO: Smøresystem = {
+  id: 'skigo', navn: 'Ski Go',
+  hardvoks: SKIGO_HARDVOKS, klister: SKIGO_KLISTER, glider: SKIGO_GLIDER,
+  binder: { mild: SKIGO_BINDER, skarp: SKIGO_BINDER },
+  universalVarm: SKIGO_UNIVERSAL, universalKald: SKIGO_UNIVERSAL,
+  utenMellomlag: [],
+  ising: 'Legg minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
+  kilde: 'Ski-Go-katalogen (skigo.se), nordicx.com og skiwax.ca, hentet 3. nov 2026. Ikke kontrollert mot etikett.',
+  oversikt: [
+    { tittel: 'Hardvoks (XC kickwax)', liste: [...SKIGO_HARDVOKS, SKIGO_BINDER] },
+    { tittel: 'Klister (XC)', liste: [...SKIGO_KLISTER, SKIGO_UNIVERSAL] },
+    { tittel: 'Glidevoks XC (fluorfri)', liste: SKIGO_GLIDER },
+  ],
+};
+
+export const SYSTEMER: Record<MerkeId, Smøresystem> = { swix: SWIX, toko: TOKO, rode: RODE, skigo: SKIGO };
+export const MERKE_IDER = Object.keys(SYSTEMER) as MerkeId[];
+export const merkeAv = (p: Produkt): MerkeId => p.merke ?? 'swix';
+
+const SWIX_ALLE: Produkt[] = [...HARDVOKS, ...V_LINJE, ...BINDER, ...KLISTER, ...KLISTER_ANDRE, BASEKLISTER, ...GLIDER];
+/** Alle produkter på tvers av merker. Navnene er unike. */
+export const ALLE_PRODUKTER: Produkt[] = [
+  ...SWIX_ALLE,
+  ...Object.values(SYSTEMER).filter((s) => s.id !== 'swix').flatMap((s) => s.oversikt.flatMap((g) => g.liste)),
+  ...RODE_ANDRE.filter((p) => !Object.values(SYSTEMER).some((s) => s.oversikt.some((g) => g.liste.includes(p)))),
+];
 export const produkt = (navn: string) => ALLE_PRODUKTER.find((p) => p.navn === navn);
+/** Produkter for ett merke (til lagerlisten) */
+export const produkterFor = (id: MerkeId) => ALLE_PRODUKTER.filter((p) => merkeAv(p) === id);
 
 const senter = (r: [number, number]) => (r[0] + r[1]) / 2;
 
@@ -91,22 +286,23 @@ function nærmeste(liste: Produkt[], t: number): number {
   return best;
 }
 
-export const hardvoksFor = (t: number) => nærmeste(HARDVOKS, t);
-export const klisterFor = (t: number) => nærmeste(KLISTER, t);
+export const hardvoksFor = (t: number, sys: Smøresystem = SWIX) => nærmeste(sys.hardvoks, t);
+export const klisterFor = (t: number, sys: Smøresystem = SWIX) => nærmeste(sys.klister, t);
 
 /**
  * Glider for en snøtemperatur. Glidere overlapper; da velges den kaldeste som passer («heller hakket kaldt enn varmt») [Bruker].
  * Utenfor området brukes ytterkantene.
  */
-export function glideFor(t: number): Produkt {
-  const passer = GLIDER.filter((g) => t >= g.omr[0] && t <= g.omr[1]);
+export function glideFor(t: number, sys: Smøresystem = SWIX): Produkt {
+  const G = sys.glider;
+  const passer = G.filter((g) => t >= g.omr[0] && t <= g.omr[1]);
   if (passer.length) return passer.reduce((a, b) => (senter(a.omr) <= senter(b.omr) ? a : b));
-  return t < GLIDER[0].omr[0] ? GLIDER[0] : GLIDER[GLIDER.length - 1];
+  return t < G[0].omr[0] ? G[0] : G[G.length - 1];
 }
 
 export type Kategori = 'hard' | 'binder' | 'klister' | 'glid';
 export function kategori(p: Produkt): Kategori {
   if (p.linje === 'G') return 'glid';
   if (p.linje === 'K') return 'klister';
-  return BINDER.includes(p) ? 'binder' : 'hard';
+  return p.rolle === 'binder' ? 'binder' : 'hard';
 }

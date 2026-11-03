@@ -14,7 +14,7 @@ import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, type Varsel } from '@/data/varsel';
-import { NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
+import { useMerke, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
 import { analyserSnø, produkt, byggSmøring, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
@@ -82,6 +82,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const [valgte, setValgte] = useLagret<string[]>(NØKKEL_VALGTE, TOM_LISTE);
   const [nå] = useState(() => Date.now());
   const [lager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
+  const [sys] = useMerke();
   const [visning, setVisning] = useLagret<'full' | 'enkel'>(NØKKEL_VISNING, 'full');
   const [skipark, setSkipark] = useLagret<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const [varsel, setVarsel] = useState<Varsel | null>(null);
@@ -99,7 +100,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
     const snø = analyserSnø(alle, startTs);
     const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[modus], refH: område.vær.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
-    const perStil = Object.fromEntries((['klassisk', 'skoyting', 'felle', 'rubb'] as Stil[]).map((st) => [st, tilpassTilLager(byggSmøring(st, tur, snø, seksjoner, modus === 'Trening'), lager)])) as Record<Stil, Stabel>;
+    const perStil = Object.fromEntries((['klassisk', 'skoyting', 'felle', 'rubb'] as Stil[]).map((st) => [st, tilpassTilLager(byggSmøring(st, tur, snø, seksjoner, modus === 'Trening', sys), lager)])) as Record<Stil, Stabel>;
     const stabel = perStil[stil];
     const farger = tur.seksjoner.map((s) => tempFarge(s.tEff));
     const segmenter = seksjoner.map((s, i) => ({
@@ -113,10 +114,10 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
     const hs = løype.punkter.map((p) => p[2]);
     const opp = løype.punkter.slice(1).reduce((s, p, i) => s + Math.max(0, p[2] - løype.punkter[i][2]), 0);
     const alternativer = stil === 'klassisk'
-      ? byggAlternativer(skipark.map((x) => x.stil), tur, snø, seksjoner, stabel, modus === 'Trening').map((a) => ({ ...a, stabel: tilpassTilLager(a.stabel, lager) }))
+      ? byggAlternativer(skipark.map((x) => x.stil), tur, snø, seksjoner, stabel, modus === 'Trening', sys).map((a) => ({ ...a, stabel: tilpassTilLager(a.stabel, lager) }))
       : [];
     return { seksjoner, snø, tur, stabel, perStil, alternativer, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
-  }, [løype, modus, startTime, dagIdx, varsel, stil, lager, skipark, område, TIMER]);
+  }, [løype, modus, startTime, dagIdx, varsel, stil, lager, skipark, område, TIMER, sys]);
   const vis = r.stabel;
   const sammeDag = (ts: number) => new Date(ts).toDateString() === new Date(nå).toDateString();
   const lagLik = (a: { rolle: string; produkt: string }[], b: Stabel) => JSON.stringify(a) === JSON.stringify(b.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
@@ -295,7 +296,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
             </View>
           ))}
           <ThemedText type="small" themeColor="textSecondary">
-            Utkast: temperaturområdene er hentet fra Swix, men tersklene i reglene er foreløpige og justeres mot erfaring.
+            Utkast: temperaturområdene er hentet fra produsentene ({sys.navn}), men tersklene i reglene er foreløpige og justeres mot erfaring.
           </ThemedText>
         </Kort>
 
@@ -336,8 +337,8 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
         {/* Temperaturoversikt */}
         <Kort>
           <Text style={[styles.h2, { color: theme.text }]}>Voks og klister</Text>
-          <ThemedText type="small" themeColor="textSecondary">Hva hvert produkt fungerer på, med Swix’ fargekoder.</ThemedText>
-          <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={vis.lag.map((l) => l.produkt)} />
+          <ThemedText type="small" themeColor="textSecondary">Hva hvert produkt fungerer på, med {sys.navn}s fargekoder.</ThemedText>
+          <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={vis.lag.map((l) => l.produkt)} sys={sys} />
         </Kort>
 
         {/* Feilsøking */}

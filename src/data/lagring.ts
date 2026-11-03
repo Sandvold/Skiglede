@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import type { Smøring, Stil } from '@/engine';
+import { MERKE_IDER, SYSTEMER, type MerkeId, type Smøresystem, type Smøring, type Stil } from '@/engine';
 
 // Brukerdata (smørelager og skipark) lagres foreløpig lokalt i nettleseren, per enhet. Uten innlogging er det ikke delt mellom enheter.
 // Kan senere byttes mot konto og database (premium) uten å røre skjermene, siden alt går gjennom useLagret.
@@ -50,3 +50,11 @@ export const NØKKEL_VISNING = 'skiglede.visning';
 export const NØKKEL_VALGTE = 'skiglede.valgte';
 export const NØKKEL_SKIPARK = 'skiglede.skipark';
 export const TOM_LISTE: never[] = [];
+export const NØKKEL_MERKE = 'skiglede.merke';
+
+/** Valgt smøremerke (Swix er standard). Ugyldig lagret verdi gir Swix. */
+export function useMerke(): [Smøresystem, (id: MerkeId) => void] {
+  const [id, sett] = useLagret<string>(NØKKEL_MERKE, 'swix');
+  const gyldig = (MERKE_IDER as string[]).includes(id) ? (id as MerkeId) : 'swix';
+  return [SYSTEMER[gyldig], sett];
+}

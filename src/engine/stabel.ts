@@ -1,4 +1,4 @@
-import { HARDVOKS, KLISTER, glideFor, hardvoksFor, klisterFor, produkt } from './tabeller';
+import { SWIX, glideFor, hardvoksFor, klisterFor, type Smøresystem } from './tabeller';
 import type { Lag, Seksjon, SnøAnalyse, Stabel, Stil, Tur } from './typer';
 
 // Tidsgrenser for dekketrinn [Forslag, åpent punkt 2]
@@ -11,7 +11,8 @@ const persentil = (v: number[], p: number) => {
 };
 
 /** lett = Trening: færre lag og høyst ett dekketrinn. */
-export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false): Stabel {
+export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false, sys: Smøresystem = SWIX): Stabel {
+  const HARDVOKS = sys.hardvoks;
   const t = tur.seksjoner.map((x) => x.tEff);
   const kald = persentil(t, 0.1);
   const midt = persentil(t, 0.5);
@@ -23,11 +24,11 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   const advarsler = [...snø.advarsler];
 
   const klisterFøre = snø.type === 'omdannet' && (snø.skarphet >= 50 || tur.tMaks >= 0.5);
-  if (klisterFøre) return klisterStabel(tur, snø, { kald, midt, varm }, begrunnelse, advarsler, lett);
+  if (klisterFøre) return klisterStabel(tur, snø, { kald, midt, varm }, begrunnelse, advarsler, lett, sys);
 
   // ---- Hardvoks ----
-  const dag = hardvoksFor(varm);
-  const kaldIdx = hardvoksFor(kald);
+  const dag = hardvoksFor(varm, sys);
+  const kaldIdx = hardvoksFor(kald, sys);
   const dagVoks = HARDVOKS[dag];
   const [lo] = dagVoks.omr;
   // Kaldt parti før det blir varmt: sammenhengende fra start til første seksjon over underkanten til dagens voks
@@ -41,10 +42,13 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   }
   const blirVarmt = iKaldt > 0 && iKaldt < tur.seksjoner.length;
 
-  const binder = snø.skarphet >= 50 || lengdeKm > 15 || tur.tMaks >= 0 ? 'VG35' : 'VG30';
-  begrunnelse.push(`Binder ${binder}: ${binder === 'VG35' ? 'skarp/omdannet snø, lang tur eller nær 0 °C' : 'ikke skarp snø'}.`);
-
-  const lag: Lag[] = [{ rolle: 'Binder', produkt: binder, antall: lett ? '1–2 lag' : '2 lag', merknad: 'Kork inn mellom hvert lag' }];
+  const lag: Lag[] = [];
+  if (sys.binder) {
+    const skarp = snø.skarphet >= 50 || lengdeKm > 15 || tur.tMaks >= 0;
+    const binder = skarp ? sys.binder.skarp : sys.binder.mild;
+    begrunnelse.push(`Binder ${binder.navn}: ${skarp ? 'skarp/omdannet snø, lang tur eller nær 0 °C' : 'ikke skarp snø'}.`);
+    lag.push({ rolle: 'Binder', produkt: binder.navn, antall: lett ? '1–2 lag' : '2 lag', merknad: 'Kork inn mellom hvert lag' });
+  }
   // Base fra kaldt til varmt (maks to mellomtrinn)
   const mellom: number[] = [];
   if (!lett) for (let i = Math.min(kaldIdx, dag); i < dag && mellom.length < 2; i++) mellom.push(i);
@@ -70,27 +74,31 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   return { type: 'hardvoks', lag, begrunnelse, advarsler };
 }
 
-function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: number; varm: number }, begrunnelse: string[], advarsler: string[], lett: boolean): Stabel {
+function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: number; varm: number }, begrunnelse: string[], advarsler: string[], lett: boolean, sys: Smøresystem): Stabel {
+  const KLISTER = sys.klister;
   // Swix' klisterguide: ett tynt lag baseklister, ett mellomlag, ett tykt dagslag (tykkere enn lagene under til sammen).
   // Isklister (KX30) legges mellom ved skarp/hard bane. Maks fire lag totalt (brukerens erfaring: sjelden mer enn 3–4).
   // Erfaring (bruker): KX-klistrene brukes i veldig stabilt vær. Universal (K22/K21S) er mest brukt totalt og passer ved
   // skiftende temperatur. KN33/KN44 (Nero) brukes ved sludd og vekslende forhold.
   const skiftende = tur.sludd || tur.variasjon >= 4 || tur.tMaks - tur.tMin >= 5;
-  const dagNavn = tur.sludd ? (T.varm >= -0.5 ? 'KN44' : 'KN33') : skiftende ? (T.varm >= -1 ? 'K22' : 'K21S') : null;
-  const dag = dagNavn ? produkt(dagNavn)! : KLISTER[klisterFor(T.varm)];
+  const universal = T.varm >= -1 ? sys.universalVarm : sys.universalKald;
+  const slud = T.varm >= -0.5 ? sys.sluddVarm : sys.sluddKald;
+  const dagP = tur.sludd ? (slud ?? universal) : skiftende ? universal : undefined;
+  const dag = dagP ?? KLISTER[klisterFor(T.varm, sys)];
   const hardBane = snø.skarphet >= 70 || tur.tMin < -3;
-  // Mellomlag bare med KX-klister utenom KX35N/KX45N; universal og Nero brukes som ett tykt lag.
-  const mellom = dagNavn || dag.navn === 'KX45N' || dag.navn === 'KX35N' ? null : KLISTER[T.varm < -3 ? 1 : 2];
-  const lag: Lag[] = [{ rolle: 'Baseklister', produkt: 'KB20C', antall: '1 lag', merknad: 'Svært tynt, bare over det slipte området' }];
-  if (hardBane && dag.navn !== 'KX30') lag.push({ rolle: 'Isklister', produkt: 'KX30', antall: '1 lag', merknad: 'Hard/isete bane: gir feste under dagens klister' });
+  // Mellomlag bare med vanlig klister som ikke står i utenMellomlag; universal og sludd-klister brukes som ett tykt lag.
+  const mellom = dagP || sys.utenMellomlag.includes(dag.navn) || !sys.mellomKlister ? null : KLISTER[sys.mellomKlister[T.varm < -3 ? 0 : 1]];
+  const lag: Lag[] = [];
+  if (sys.baseKlister) lag.push({ rolle: 'Baseklister', produkt: sys.baseKlister.navn, antall: '1 lag', merknad: 'Svært tynt, bare over det slipte området' });
+  if (hardBane && sys.isKlister && dag.navn !== sys.isKlister.navn) lag.push({ rolle: 'Isklister', produkt: sys.isKlister.navn, antall: '1 lag', merknad: 'Hard/isete bane: gir feste under dagens klister' });
   if (mellom && !lett) lag.push({ rolle: 'Mellomlag', produkt: mellom.navn, antall: '1 lag', merknad: 'Fiskebeinsmønster, gni jevnt. Hindrer at dagens klister vandrer bakover' });
   lag.push({ rolle: 'Dagens klister', produkt: dag.navn, antall: '1 tykt lag', merknad: 'Tykkere enn lagene under til sammen' });
   begrunnelse.push(
     tur.sludd
-      ? 'Sludd/bløt snø rundt turen: Nero-klister (KN33 kaldere, KN44 varmere).'
+      ? `Sludd/bløt snø rundt turen: ${dagP === slud && slud ? 'sludd-klister' : 'universalklister'} (${dag.navn}).`
       : skiftende
         ? `Skiftende vær (${tur.variasjon.toFixed(1)} °C utslag i lufta, ${(tur.tMaks - tur.tMin).toFixed(1)} °C langs løypa): Universal-klister.`
-        : 'Stabilt vær: vanlig KX-klister.'
+        : 'Stabilt vær: vanlig klister.'
   );
   begrunnelse.push(
     `Klister: omdannet snø, skarphet ${Math.round(snø.skarphet)} og varmest ${tur.tMaks.toFixed(1)} °C. Dagens klister ${dag.navn} (${dag.farge}) for ${T.varm.toFixed(1)} °C. ${lag.length} lag totalt (maks 4).`
@@ -98,15 +106,15 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   if (hardBane) begrunnelse.push(`Isklister: ${snø.skarphet >= 70 ? `skarphet ${Math.round(snø.skarphet)} ≥ 70` : `kaldeste del ${tur.tMin.toFixed(1)} °C`} gir hard bane.`);
   if (lett) begrunnelse.push('Trening: uten mellomlag.');
   if (tur.tMin < -2 && tur.tMaks > 0) {
-    advarsler.push('Isingsfare når temperaturen svinger rundt 0: Swix anbefaler minst tre tynne lag hardvoks over klisteren (VP40–VP55, litt hardere enn temperaturen tilsier). Unntak, ikke standard.');
+    advarsler.push(`Isingsfare når temperaturen svinger rundt 0: ${sys.ising} Unntak, ikke standard.`);
   }
   return { type: 'klister', lag, begrunnelse, advarsler };
 }
 
 /** Skøyting: bare glider, valgt etter snøtemperaturen (snitt langs turen). Temperatur er hovedsaken [Bruker]. */
-export function byggGlider(tur: Tur): Stabel {
+export function byggGlider(tur: Tur, sys: Smøresystem = SWIX): Stabel {
   const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
-  const g = glideFor(snitt);
+  const g = glideFor(snitt, sys);
   const begrunnelse = [
     `Skøyting: bare glider. Snøtemperatur snitt ${snitt.toFixed(1)} °C (kaldest ${tur.tMin.toFixed(1)}, varmest ${tur.tMaks.toFixed(1)}). ${g.navn} (${g.farge}) passer ${g.omr[0]} til ${g.omr[1]} °C.`,
   ];
@@ -125,19 +133,19 @@ export function byggGlider(tur: Tur): Stabel {
 /** Rubbski: bare sludd, aldri ved fare for ordentlig minus [Bruker; −2 °C er Forslag]. */
 export const RUBB = { minLuft: -2 };
 
-function glidesone(tur: Tur): Lag {
+function glidesone(tur: Tur, sys: Smøresystem): Lag {
   const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
-  const g = glideFor(snitt);
+  const g = glideFor(snitt, sys);
   return { rolle: 'Glidesone (foran og bak)', produkt: g.navn, antall: '1 lag', merknad: `Passer ${g.omr[0]} til ${g.omr[1]} °C. Ikke på festesonen.` };
 }
 
 /** Felleski: fungerer alltid, men aldri perfekt, og glir alltid [Bruker]. Ingen festevoks eller klister. */
-export function byggFelle(tur: Tur): Stabel {
+export function byggFelle(tur: Tur, sys: Smøresystem = SWIX): Stabel {
   return {
     type: 'felle',
     lag: [
       { rolle: 'Festesone', produkt: 'Felle', antall: 'Ingen smøring', merknad: 'Ingen festevoks eller klister. Hold fella ren og tørr' },
-      glidesone(tur),
+      glidesone(tur, sys),
     ],
     begrunnelse: [
       'Felleski fungerer i alle føre, men gir aldri perfekt feste eller glid: et kompromiss som slår feil smøring, men ikke riktig smøring.',
@@ -152,7 +160,7 @@ export function byggFelle(tur: Tur): Stabel {
  * Rubbski: bare på sluddføre, og aldri når det er fare for ordentlig minus (da iser rubben).
  * Passer det ikke, frarådes den og vanlig klassisk smøring foreslås som alternativ.
  */
-export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett: boolean): Stabel {
+export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett: boolean, sys: Smøresystem = SWIX): Stabel {
   const grunner: string[] = [];
   if (!tur.sludd) grunner.push('Rubb brukes bare på sluddføre (nedbør rundt 0 °C). Det er ikke meldt sludd rundt turen.');
   const kaldest = Math.min(tur.luftMin, tur.tMin);
@@ -166,14 +174,14 @@ export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett
       begrunnelse: ['Rubbski passer ikke i dag. Vanlig klassisk smøring er foreslått i stedet.'],
       advarsler: grunner,
       egnet: false,
-      alternativ: byggStabel(tur, snø, seksjoner, lett),
+      alternativ: byggStabel(tur, snø, seksjoner, lett, sys),
     };
   }
   return {
     type: 'rubb',
     lag: [
       { rolle: 'Festesone', produkt: 'Rubb', antall: 'Ingen smøring', merknad: 'Børst opp med sandpapir (grovt midt under, finere ytterst). Ingen festevoks eller klister' },
-      glidesone(tur),
+      glidesone(tur, sys),
     ],
     begrunnelse: [`Sluddføre rundt 0 °C uten fare for ordentlig minus (lufta ned til ${tur.luftMin.toFixed(1)} °C): rubb passer.`],
     advarsler: tur.tMaks > 3 ? ['Over +3 °C og blankt: rubben kan bli for glatt og klister er da bedre.'] : [],
@@ -182,11 +190,11 @@ export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett
 }
 
 /** Samler alle skityper. */
-export function byggSmøring(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false): Stabel {
-  if (stil === 'skoyting') return byggGlider(tur);
-  if (stil === 'felle') return byggFelle(tur);
-  if (stil === 'rubb') return byggRubb(tur, snø, seksjoner, lett);
-  return byggStabel(tur, snø, seksjoner, lett);
+export function byggSmøring(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false, sys: Smøresystem = SWIX): Stabel {
+  if (stil === 'skoyting') return byggGlider(tur, sys);
+  if (stil === 'felle') return byggFelle(tur, sys);
+  if (stil === 'rubb') return byggRubb(tur, snø, seksjoner, lett, sys);
+  return byggStabel(tur, snø, seksjoner, lett, sys);
 }
 
 const ENKEL_ROLLER = new Set(['Binder', 'Baseklister', 'Dagens voks', 'Dagens klister', 'Glider', 'Festesone', 'Glidesone (foran og bak)']);
@@ -211,15 +219,15 @@ export function utfordrendeGrunn(tur: Tur, stabel: Stabel): string | null {
  * rubbski når den passer (sluddføre uten fare for ordentlig minus) [Bruker].
  * `eier` er skityper brukeren har i skiparken.
  */
-export function byggAlternativer(eier: Stil[], tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], hoved: Stabel, lett = false): Alternativ[] {
+export function byggAlternativer(eier: Stil[], tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], hoved: Stabel, lett = false, sys: Smøresystem = SWIX): Alternativ[] {
   const ut: Alternativ[] = [];
   if (eier.includes('rubb')) {
-    const rubb = byggRubb(tur, snø, seksjoner, lett);
+    const rubb = byggRubb(tur, snø, seksjoner, lett, sys);
     if (rubb.egnet) ut.push({ stil: 'rubb', stabel: rubb, grunn: 'Sluddføre uten fare for ordentlig minus: rubbski passer i dag.' });
   }
   if (eier.includes('felle')) {
     const grunn = utfordrendeGrunn(tur, hoved);
-    if (grunn) ut.push({ stil: 'felle', stabel: byggFelle(tur), grunn: `Felleski er et trygt valg i dag: ${grunn}.` });
+    if (grunn) ut.push({ stil: 'felle', stabel: byggFelle(tur, sys), grunn: `Felleski er et trygt valg i dag: ${grunn}.` });
   }
   return ut;
 }

@@ -1,4 +1,4 @@
-import { ALLE_PRODUKTER, kategori, produkt, type Produkt } from './tabeller';
+import { ALLE_PRODUKTER, kategori, merkeAv, produkt, type Produkt } from './tabeller';
 import type { Stabel } from './typer';
 
 const senter = (p: Produkt) => (p.omr[0] + p.omr[1]) / 2;
@@ -7,7 +7,9 @@ const senter = (p: Produkt) => (p.omr[0] + p.omr[1]) / 2;
 export function alternativFraLager(navn: string, lager: string[]): Produkt | undefined {
   const p = produkt(navn);
   if (!p) return undefined;
-  const kandidater = lager.map(produkt).filter((x): x is Produkt => !!x && kategori(x) === kategori(p));
+  const like = lager.map(produkt).filter((x): x is Produkt => !!x && kategori(x) === kategori(p));
+  // Samme merke først; bytter bare til annet merke når lageret ikke har noe tilsvarende fra samme merke
+  const kandidater = like.some((x) => merkeAv(x) === merkeAv(p)) ? like.filter((x) => merkeAv(x) === merkeAv(p)) : like;
   if (!kandidater.length) return undefined;
   const avst = (x: Produkt) => Math.abs(senter(x) - senter(p));
   return kandidater.reduce((a, b) => (avst(b) < avst(a) || (avst(b) === avst(a) && senter(b) < senter(a)) ? b : a));

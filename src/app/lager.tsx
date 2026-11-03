@@ -6,20 +6,14 @@ import { tekstPå } from '@/components/ski/oversikt';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { NØKKEL_LAGER, TOM_LISTE, useLagret } from '@/data/lagring';
-import { BASEKLISTER, BINDER, GLIDER, HARDVOKS, KLISTER, KLISTER_ANDRE, V_LINJE, type Produkt } from '@/engine';
+import { useMerke } from '@/data/lagring';
+import { type Produkt } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
-
-const GRUPPER: { tittel: string; liste: Produkt[] }[] = [
-  { tittel: 'Hardvoks VP (Pro)', liste: HARDVOKS },
-  { tittel: 'Hardvoks V', liste: V_LINJE },
-  { tittel: 'Binder og baseklister', liste: [...BINDER, BASEKLISTER] },
-  { tittel: 'Klister', liste: KLISTER },
-  { tittel: 'Andre klistere', liste: KLISTER_ANDRE },
-  { tittel: 'Glidevoks (skøyting)', liste: GLIDER },
-];
 
 export default function Lager() {
   const theme = useTheme();
+  const [sys] = useMerke();
+  const GRUPPER = sys.oversikt;
   const [lager, setLager] = useLagret<string[]>(NØKKEL_LAGER, TOM_LISTE);
   const har = (n: string) => lager.includes(n);
   const bytt = (n: string) => setLager(har(n) ? lager.filter((x) => x !== n) : [...lager, n]);
@@ -31,12 +25,12 @@ export default function Lager() {
       <View style={styles.innhold}>
         <Text style={[styles.h1, { color: theme.text }]}>Smørelager</Text>
         <ThemedText themeColor="textSecondary">
-          Kryss av det du har. Når lageret er fylt ut, foreslår Skiglede bare det du eier, og bytter det som mangler mot nærmeste du har. Tomt lager betyr at alt foreslås.
+          Kryss av det du har for valgt merke (bytt merke øverst). Når lageret er fylt ut, foreslår Skiglede bare det du eier, og bytter det som mangler mot nærmeste du har. Tomt lager betyr at alt foreslås.
         </ThemedText>
         <View style={styles.rad}>
-          <Chip aktiv={false} onPress={() => setLager(GRUPPER.flatMap((g) => g.liste.map((p) => p.navn)))}>Velg alle</Chip>
-          <Chip aktiv={false} onPress={() => setLager([])}>Tøm</Chip>
-          <ThemedText type="smallBold" themeColor="textSecondary">{lager.length} produkter</ThemedText>
+          <Chip aktiv={false} onPress={() => setLager([...new Set([...lager, ...GRUPPER.flatMap((g) => g.liste.map((p) => p.navn))])])}>{`Velg alle ${sys.navn}`}</Chip>
+          <Chip aktiv={false} onPress={() => setLager([])}>Tøm alt</Chip>
+          <ThemedText type="smallBold" themeColor="textSecondary">{lager.length} produkter totalt</ThemedText>
         </View>
         {GRUPPER.map((g) => (
           <Kort key={g.tittel}>
@@ -60,7 +54,7 @@ export default function Lager() {
             ))}
           </Kort>
         ))}
-        <ThemedText type="small" themeColor="textSecondary">Lageret lagres på denne enheten. Innlogging og synk mellom enheter kommer senere.</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">{sys.kilde} Lageret lagres på denne enheten. Innlogging og synk mellom enheter kommer senere.</ThemedText>
       </View>
     </ScrollView>
   );

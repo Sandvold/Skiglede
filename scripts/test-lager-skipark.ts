@@ -127,3 +127,33 @@ sjekk('forenklet rører ikke originalen', full.lag.length, 4);
 
 if (feil) { console.error(`${feil} feil`); process.exit(1); }
 console.log('Alle sjekker OK');
+
+// ---- Merker ----
+import { MERKE_IDER, SYSTEMER, ALLE_PRODUKTER, alternativFraLager, glideFor as gF, hardvoksFor as hF, klisterFor as kF, produkt as pr, type Smøresystem } from '../src/engine';
+const kjørMerke = (stil: 'klassisk' | 'skoyting', temp: number, sys: Smøresystem, fuktig = false) => {
+  const t = døgn(() => ({ temp, nedbor: fuktig ? 0.8 : 0 }));
+  const sn = analyserSnø(t, start);
+  const tur = planTur({ seksjoner: sek, timer: t.filter((x) => x.ts >= start - 3 * 3600_000), startTs: start, tempoKmt: 5, refH: 838 });
+  return byggSmøring(stil, tur, sn, sek, false, sys);
+};
+sjekk('produktnavn er unike på tvers av merker', new Set(ALLE_PRODUKTER.map((p) => p.navn)).size, ALLE_PRODUKTER.length);
+for (const id of MERKE_IDER) {
+  const s = SYSTEMER[id];
+  const sortert = (l: { omr: [number, number] }[]) => l.every((p, i) => i === 0 || p.omr[0] + p.omr[1] >= l[i - 1].omr[0] + l[i - 1].omr[1]);
+  sjekk(`${id}: hardvoks sortert kaldt til varmt`, sortert(s.hardvoks), true);
+  sjekk(`${id}: klister sortert kaldt til varmt`, sortert(s.klister), true);
+  sjekk(`${id}: glider sortert kaldt til varmt`, sortert(s.glider), true);
+  sjekk(`${id}: alle oversiktsprodukter finnes via produkt()`, s.oversikt.every((g) => g.liste.every((p) => pr(p.navn) === p)), true);
+  for (const t of [-25, -12, -6, -2, 0.5, 4]) {
+    for (const [stil, fuktig] of [['klassisk', false], ['klassisk', true], ['skoyting', false]] as const) {
+      const st = kjørMerke(stil, t, s, fuktig);
+      sjekk(`${id}: ${stil}${fuktig ? ' fuktig' : ''} ${t} °C gir lag av eget merke`, st.lag.length > 0 && st.lag.every((l) => (pr(l.produkt)?.merke ?? 'swix') === id), true);
+    }
+  }
+}
+sjekk('Toko −5: rød', SYSTEMER.toko.hardvoks[hF(-5, SYSTEMER.toko)].navn, 'Toko Rød');
+sjekk('Rode 2 °C: P50', SYSTEMER.rode.hardvoks[hF(2, SYSTEMER.rode)].navn, 'Rode P50');
+sjekk('Ski Go −15 glider: blå', gF(-15, SYSTEMER.skigo).navn, 'Skigo XC glider blå');
+sjekk('klisterFor gir gyldig produkt for alle merker', MERKE_IDER.every((id) => !!SYSTEMER[id].klister[kF(1, SYSTEMER[id])]), true);
+sjekk('lager prefererer samme merke', alternativFraLager('Toko Rød', ['Rode P40', 'Toko Gul'])?.navn, 'Toko Gul');
+console.log('Merketester ferdig');

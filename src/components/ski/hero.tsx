@@ -4,6 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { OMRÅDE_IDER, OMRÅDER, useOmråde } from '@/data/omrader';
+import { useMerke } from '@/data/lagring';
+import { MERKE_IDER, SYSTEMER } from '@/engine';
 
 const MENY = [
   { href: '/', tekst: 'Løyper' },
@@ -16,6 +18,7 @@ export function Hero() {
   const sti = usePathname();
   const router = useRouter();
   const [område, setOmråde] = useOmråde();
+  const [merke, setMerke] = useMerke();
   return (
     <View style={[styles.hero, { backgroundColor: theme.hero }]}>
       {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
@@ -23,7 +26,7 @@ export function Hero() {
       ))}
       <View style={styles.innhold}>
         <Text style={styles.tittel}>Skiglede</Text>
-        <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn} · Swix</Text>
+        <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn} · {merke.navn}</Text>
         <View style={styles.meny} accessibilityRole="radiogroup">
           <Text style={{ color: '#BFDDF7', fontSize: 14, alignSelf: 'center' }}>Hvor er du?</Text>
           {OMRÅDE_IDER.map((id) => {
@@ -31,6 +34,17 @@ export function Hero() {
             return (
               <Pressable key={id} accessibilityRole="radio" accessibilityState={{ selected: aktiv }} onPress={() => setOmråde(id)} style={[styles.menyKnapp, { backgroundColor: aktiv ? '#FFFFFF' : 'rgba(255,255,255,0.14)' }]}>
                 <Text style={{ color: aktiv ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 14 }}>{OMRÅDER[id].navn}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.meny} accessibilityRole="radiogroup">
+          <Text style={{ color: '#BFDDF7', fontSize: 14, alignSelf: 'center' }}>Smøremerke</Text>
+          {MERKE_IDER.map((id) => {
+            const aktiv = merke.id === id;
+            return (
+              <Pressable key={id} accessibilityRole="radio" accessibilityState={{ selected: aktiv }} onPress={() => setMerke(id)} style={[styles.menyKnapp, { backgroundColor: aktiv ? '#FFFFFF' : 'rgba(255,255,255,0.14)' }]}>
+                <Text style={{ color: aktiv ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 14 }}>{SYSTEMER[id].navn}</Text>
               </Pressable>
             );
           })}
@@ -53,7 +67,7 @@ export function Hero() {
 }
 
 const styles = StyleSheet.create({
-  hero: { width: '100%', minHeight: 300, paddingTop: 24, paddingBottom: 36, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  hero: { width: '100%', minHeight: 340, paddingTop: 24, paddingBottom: 48, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
   innhold: { width: '100%', maxWidth: MaxContentWidth, paddingHorizontal: Spacing.three, paddingBottom: 34 },
   tittel: { color: '#FFFFFF', fontSize: 52, fontWeight: '800', letterSpacing: -1 },
   under: { color: '#BFDDF7', fontSize: 17, marginTop: 4 },

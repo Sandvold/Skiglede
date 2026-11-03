@@ -116,3 +116,11 @@ Løypa deles i biter på 250 m med egen snøtemperatur. Kaldeste og varmeste tem
 
 ### Utvide turen med flere løyper [Bruker]
 Velger man en løype, kan man legge til løyper som starter ved samme sted (startpunktene innen 300 m, `tilhørende` i `data/rute.ts`): Galten og Lundane, Rørvikåsen og Ny Lysløype, Hovden fjellpark og Hovden lysløype, Auversvatn og Remestøylsflotti. Turen blir hovedløypa, så hver valgt ekstra løype, og tilbake til start (`byggRute`; rett kobling hvis startene ikke er identiske). Avstander og terrengdata forskyves, og smøringen regnes for hele turen. Løyper som bare krysser hverandre midt i løypa er ikke med ennå.
+
+## Smøremerker (Swix, Toko, Rode, Ski Go)
+
+Valgt merke (chips i toppen, lagret som `skiglede.merke`) styrer hvilke produkter motoren bruker. Hvert merke er et `Smøresystem` i `src/engine/tabeller.ts` med hardvoks, klister, glider og valgfrie roller (binder, baseklister, isklister, universal, sludd, mellomlag). Reglene (lagoppbygging, dekke, persentiler, klisterlogikk) er like for alle merker; mangler et merke en rolle, hoppes laget over (f.eks. ingen mellomlag eller isklister for Toko/Rode/Ski Go).
+- Swix = det opprinnelige systemet (VP/V/KX/KN/K22/glidere), kontrollert mot swixsport.com.
+- Toko, Rode, Ski Go: fluorfrie produkter, hentet 3. nov 2026 fra produsent/forhandler (Toko: toko.ch; Rode: skiwax.ca; Ski Go: katalog, nordicx.com). Temperaturområdene er IKKE kontrollert mot etikett. Rode K-serien og Ski Go klister har uklare områder hos ulike kilder (Ski Go glider blå oppgis både −3…−13 og −3…−10).
+- Produktnavn er unike på tvers av merker (f.eks. «Toko Rød»), slik at smørelager og skipark virker uendret. Lagertilpasning bytter først til samme merke.
+- Å legge til et nytt merke: lag produktlistene og et `Smøresystem`, legg det i `SYSTEMER`. Tester i `scripts/test-lager-skipark.ts` sjekker alle merker automatisk.
