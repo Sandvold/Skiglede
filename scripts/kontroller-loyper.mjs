@@ -1,4 +1,4 @@
-// Regelkontroll for src/data/trails.json. Kjøres før hvert bygg (se netlify.toml) og feiler ved brudd.
+// Regelkontroll for src/data/trails.json og trails-oslo.json. Kjøres før hvert bygg (se netlify.toml) og feiler ved brudd.
 //   node scripts/kontroller-loyper.mjs
 // Regler:
 //  1. Start og slutt er samme punkt (maks 15 m) og samme høyde (maks 1 m).
@@ -10,8 +10,7 @@
 //  7. Lengde 3–25 km (advarsel utenfor, ikke feil). Se docs/loypevalg.md.
 import { readFileSync } from 'node:fs';
 
-const fil = new URL('../src/data/trails.json', import.meta.url);
-const trails = JSON.parse(readFileSync(fil, 'utf8'));
+const trails = ['trails.json', 'trails-oslo.json'].flatMap((f) => JSON.parse(readFileSync(new URL(`../src/data/${f}`, import.meta.url), 'utf8')));
 const m = (a, b) => Math.hypot((a[0] - b[0]) * 111000 * Math.cos((59.5 * Math.PI) / 180), (a[1] - b[1]) * 111000);
 const feil = [];
 const advarsler = [];
