@@ -70,4 +70,6 @@ Klister (fra produktlister): KX30 −12…0; KX35 +1…−4; KX40S −4…+2; KX
 - `stabel.ts`: hardvoks (binder → base → dagens voks → dekke) eller klister (baseklister → isklister → mellomlag → dagens klister). Klister når snøen er omdannet og skarphet ≥ 50 eller varmest ≥ +0,5 °C.
 - Turdagen bruker observert vær 2. november som stand-in for prognose til Yr er koblet på.
 
-**[Åpent 8] Dekketrinn:** punkt 7.1 sier at antall trinn avhenger av tiden i *varmere* føre. Kristoffers eksempel (7–8 km kaldt før det blir varmere, da to) tilsier at det er varigheten i det *kalde* partiet. Motoren bruker det siste: under 1 t kaldt = ett trinn, 2 t eller mer = to. Må bekreftes.
+**Dekketrinn (avklart 3. nov):** antall trinn styres av lengde og tid i det kalde partiet før det blir varmt, ikke tiden i varmt føre. Motoren måler det sammenhengende kalde partiet fra start (under underkanten til dagens voks): ett trinn som standard, to trinn fra 6 km eller 90 min [Forslag, tallene skal justeres].
+
+**Trening vs tur (avklart 3. nov):** Trening får mindre smøring: færre og tynnere lag, ingen mellomtrinn i basen, høyst ett dekketrinn, og færre mellomlag klister.

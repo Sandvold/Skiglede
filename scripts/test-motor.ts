@@ -12,7 +12,7 @@ for (const t of trails as any[]) {
   const dag = timer.filter((x) => x.ts >= Date.parse('2026-11-02T00:00:00Z') && x.ts <= Date.parse('2026-11-03T00:00:00Z'));
   for (const tempo of [5, 9]) {
     const tur = planTur({ seksjoner: sek, timer: dag, startTs: Date.parse('2026-11-02T09:00:00Z'), tempoKmt: tempo, refH: vaer.referansehoyde_m });
-    const st = byggStabel(tur, snø, sek);
+    const st = byggStabel(tur, snø, sek, tempo === 9);
     console.log(`\n${t.navn} ${tempo} km/t: ${sek.length} seksj, T ${tur.tMin.toFixed(1)}..${tur.tMaks.toFixed(1)} -> ${st.type}`);
     console.log(st.lag.map((l) => `${l.rolle}:${l.produkt}(${l.antall})`).join(' | '));
   }

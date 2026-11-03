@@ -73,7 +73,7 @@ export default function Hjem() {
     const startTs = Date.parse(`2026-11-02T${String(startTime - 1).padStart(2, '0')}:00:00Z`);
     const snø = analyserSnø(TIMER, startTs);
     const tur = planTur({ seksjoner, timer: DAG_TIMER, startTs, tempoKmt: TEMPO[modus], refH: vaerData.referansehoyde_m });
-    const stabel = byggStabel(tur, snø, seksjoner);
+    const stabel = byggStabel(tur, snø, seksjoner, modus === 'Trening');
     const farger = tur.seksjoner.map((s) => tempFarge(s.tEff));
     const segmenter = seksjoner.map((s, i) => ({
       pts: løype.punkter.filter((p) => p[3] >= s.startM && p[3] <= s.endM).map((p) => [p[0], p[1]] as [number, number]),
