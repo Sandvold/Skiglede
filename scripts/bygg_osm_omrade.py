@@ -55,12 +55,16 @@ class Rutenett(br.Nett):
         for i, q in enumerate(self.noder):
             self.rutenett.setdefault((int(q[0] // 50), int(q[1] // 50)), []).append(i)
         for e in [i for i in self.adj if len(self.adj[i]) == 1]:
-            best = self.nær(self.noder[e], br.KOBLE_M, utenom={e} | set(self.adj[e]))
+            best = self.nær(self.noder[e], self.koble_m, utenom={e} | set(self.adj[e]))
             if best is not None:
                 self.kant(e, best)
         self.fjern_smaa()
 
-    def fjern_smaa(self, min_noder=300):
+    min_noder = 300
+    koble_m = br.KOBLE_M
+
+    def fjern_smaa(self, min_noder=None):
+        min_noder = self.min_noder if min_noder is None else min_noder
         """Dropper løse biter som ikke henger sammen med et større nett."""
         sett = set()
         for i in self.adj:
@@ -136,7 +140,7 @@ def komponent(nett, s):
 
 
 def id_av(navn):
-    s = unicodedata.normalize("NFKD", navn.lower().replace("ø", "o").replace("å", "a").replace("æ", "e"))
+    s = unicodedata.normalize("NFKD", navn.lower().replace("ø", "o").replace("å", "a").replace("æ", "ae"))
     s = "".join(c if c.isalnum() else "-" for c in s if ord(c) < 128)
     return "-".join(x for x in s.split("-") if x)
 
