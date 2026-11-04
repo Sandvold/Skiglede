@@ -25,7 +25,11 @@ export type SnøType = 'ny' | 'omdannet';
 
 export type DagsRad = { dato: string; maks: number; natt: number | null; syklus: number };
 
+/** Sist kjente snøstatus, lagres av appen så skorpa huskes etter at beviset er eldre enn værvinduet. */
+export type SnøStatus = { type: SnøType; skarphet: number; /** tidspunkt (ms) statusen sist ble bekreftet */ ts: number };
+
 export type SnøAnalyse = {
+  status: SnøStatus;
   type: SnøType;
   skarphet: number; // 0-100
   sykluser: number; // vektet sum

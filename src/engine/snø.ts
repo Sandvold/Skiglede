@@ -1,4 +1,4 @@
-import type { DagsRad, SnøAnalyse, Vær } from './typer';
+import type { DagsRad, SnøAnalyse, SnøStatus, Vær } from './typer';
 
 const DAG = 86_400_000;
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
@@ -8,8 +8,8 @@ export const SNØ = {
   tineGrense: 1, // dagen regnes som «mild» ved maks >= +1 °C
   frostFull: 6, // natt på -6 °C eller kaldere gir full skarphet
   sykluserForFull: 2.5, // vektet sum som gir indeks 100
-  dager: 30, // [Bruker] skorpa varer til det snør igjen: ingen alder gjør snøen mindre skarp, så vi ser 30 døgn tilbake
-  vekter: [1, 1, 1, 0.6, 0.6, 0.6, 0.6, ...Array(23).fill(0.3)], // nyeste dag først; bare skarphetsindeksen veies etter alder, ikke om snøen er omdannet
+  dager: 14, // vær-vinduet. Skorpa varer likevel til det snør igjen [Bruker]: forrige status (omdannet/ny) huskes av appen når beviset går ut av vinduet
+  vekter: [1, 1, 1, 0.6, 0.6, 0.6, 0.6, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3], // nyeste dag først; bare skarphetsindeksen veies etter alder
   begravMm: 5, // [Bruker] 5 cm nysnø (≈ 5 mm nedbør) oppå uansett lag er helt ny snø: da starter tellingen på skarphet på nytt. Bare nysnø nullstiller, alder gjør det ikke.
   regnMm: 2, // regn på snø siste 7 d som gir skare ved frost (research: lavere enn før)
   minSum: 0.8, // uvektet tine/frys-sum under dette er ikke nok til å kalle snøen omdannet: én svak mild dag er ikke omdanning, men to moderate eller én sterk er det [Forslag]
@@ -19,8 +19,12 @@ export const SNØ = {
   snødekkeVarsel: 3, // snitt-temp siste 7 døgn over dette gir advarsel
 };
 
-/** Analyserer de siste 30 døgnene fram til `nå`. Dag = UTC-døgn, mild dag = maks kl. 08-16 UTC. */
-export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
+/** Analyserer de siste 14 døgnene fram til `nå`. Dag = UTC-døgn, mild dag = maks kl. 08-16 UTC. */
+/**
+ * `forrige` er sist kjente snøstatus (lagres av appen). Er snøen omdannet og det ikke har snødd 5 cm eller mer siden,
+ * er den fortsatt omdannet selv om beviset (tine/frys, regn) er eldre enn værvinduet [Bruker]. Bare ny snø nullstiller, alder gjør det ikke.
+ */
+export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | null): SnøAnalyse {
   const h = timer.filter((x) => x.ts <= nå && x.ts > nå - SNØ.dager * DAG);
   const dagNr = (ts: number) => Math.floor(ts / DAG);
   const siste = dagNr(nå);
@@ -75,6 +79,8 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
   const milde = sju.filter(etterBury).filter((x) => x.temp > 1 && x.sw > 200_000 && (x.vind < SNØ.vindIngenSmelting || x.temp > SNØ.vindMaksT)).length; // vind ved svak plussgrad: ingen smelting
 
   let skarphet = 100 * clamp(sum / SNØ.sykluserForFull, 0, 1);
+  let beholdt = false;
+  const snøSiden = (ts: number) => h.filter((x) => x.ts > ts && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
   let type: SnøAnalyse['type'] = 'ny';
   // [Bruker] Omdannet/skarp snø blir ikke mindre skarp med alderen: den varer til det snør igjen (≥ 5 cm). Derfor teller uvektet sum.
   const omdannetTegn = sumUvektet >= SNØ.minSum || regn7 >= SNØ.regnMm || milde >= 6;
@@ -84,8 +90,13 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
   } else if (omdannetTegn) {
     type = 'omdannet';
     forklaring.push(`Omdannet snø: tine/frys-sum ${sumUvektet.toFixed(2)} (uten aldersvekt), regn siste 7 d ${regn7.toFixed(1)} mm, ${milde} milde soltimer siste 7 d.`);
+  } else if (forrige?.type === 'omdannet' && snøSiden(forrige.ts) < SNØ.begravMm) {
+    type = 'omdannet';
+    skarphet = Math.max(skarphet, forrige.skarphet);
+    beholdt = true;
+    forklaring.push(`Snøen var omdannet ${new Date(forrige.ts).toISOString().slice(0, 10)}, og det har ikke kommet 5 cm nysnø siden (${snøSiden(forrige.ts).toFixed(1)} mm): fortsatt skarp.`);
   } else {
-    forklaring.push('Ingen tegn til omdanning siste 30 døgn: bruker nysnø-kolonnen.');
+    forklaring.push('Ingen tegn til omdanning siste 14 døgn: bruker nysnø-kolonnen.');
   }
   forklaring.push(`Skarphetsindeks ${Math.round(skarphet)} av 100 (frostdybde natt × milde dager, nyeste dager veier mest).`);
 
@@ -93,5 +104,7 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
   if (snittTemp7 > SNØ.snødekkeVarsel) {
     advarsler.push(`Snitt ${snittTemp7.toFixed(1)} °C siste 7 døgn: mye mildvær og regn. Motoren forutsetter snødekke, sjekk at det finnes snø i løypa.`);
   }
-  return { type, skarphet, sykluser: sum, snøfall48, nysnøOppå: nysnøOppå ?? 0, regn7, snittTemp7, dager, forklaring, advarsler };
+  // Status som appen kan lagre. Tidspunktet står stille mens statusen bare er beholdt, så snø etter det summeres riktig.
+  const status: SnøStatus = { type, skarphet, ts: beholdt && forrige ? forrige.ts : type === 'ny' && !(tBury !== null) && forrige?.type === 'ny' ? forrige.ts : nå };
+  return { status, type, skarphet, sykluser: sum, snøfall48, nysnøOppå: nysnøOppå ?? 0, regn7, snittTemp7, dager, forklaring, advarsler };
 }

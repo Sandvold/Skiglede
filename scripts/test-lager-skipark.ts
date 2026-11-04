@@ -276,5 +276,11 @@ sjekk('klister under 0 °C får voksdekke', stKl.type === 'klister' && stKl.lag.
 sjekk('voksdekke: 2–3 lag', stKl.lag.find((l) => l.rolle.startsWith('Voksdekke'))?.antall, '2–3 lag');
 // Skorpa varer til det snør igjen: 25 døgn gammel skorpe er fortsatt omdannet
 const lang = Array.from({ length: 24 * 31 }, (_, i): Vær => { const ts = start - 30 * 86400_000 + i * 3600_000; const d = (start - ts) / 86400_000; const h = new Date(ts).getUTCHours(); const mild = d > 21 && d < 25; return { ts, temp: mild ? (h >= 8 && h <= 16 ? 4 : -9) : -6, nedbor: 0, rh: 0.8, vind: 1, sw: mild && h >= 8 && h <= 16 ? 500_000 : 0 }; });
-sjekk('25 døgn gammel skorpe uten ny snø er fortsatt omdannet', analyserSnø(lang, start).type, 'omdannet');
+sjekk('uten lagret status ser vinduet (14 d) ingen skorpe', analyserSnø(lang, start).type, 'ny');
+const statusO = { type: 'omdannet' as const, skarphet: 80, ts: start - 20 * 86400_000 };
+sjekk('lagret omdannet status varer til det snør igjen', analyserSnø(lang, start, statusO).type, 'omdannet');
+sjekk('beholdt status har uendret tidspunkt', analyserSnø(lang, start, statusO).status.ts, statusO.ts);
+const langSnø = lang.map((x) => (x.ts > start - 5 * 86400_000 && x.ts < start - 5 * 86400_000 + 3 * 3600_000 ? { ...x, nedbor: 3, temp: -4 } : x));
+sjekk('5 cm nysnø etter lagret status nullstiller', analyserSnø(langSnø, start, statusO).type, 'ny');
+sjekk('lagret status ny påvirker ikke', analyserSnø(lang, start, { type: 'ny', skarphet: 0, ts: start - 20 * 86400_000 }).type, 'ny');
 console.log('Kontrollfunn-tester ferdig');

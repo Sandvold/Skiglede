@@ -16,7 +16,7 @@ import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
-import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, vurderPåfylling, type Punkt, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
+import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
 const løyperI = (o: Område) => o.løyper as unknown as Løype[];
 const timerI = (o: Område): Vær[] => o.vær.timer.map((r) => ({
@@ -117,6 +117,17 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [område.id]);
 
+  // Sist kjente snøstatus (omdannet/ny) lagres per område, så skorpa huskes selv om beviset er eldre enn værvinduet [Bruker].
+  const [snøStatus, setSnøStatus] = useLagret<SnøStatus | null>(`skiglede.snostatus.${område.id}`, null);
+  useEffect(() => {
+    const nåTs = Date.now();
+    const sisteH = TIMER[TIMER.length - 1].ts;
+    const observert = [...TIMER, ...(varsel ? varsel.timer.filter((t) => t.ts > sisteH) : [])].filter((t) => t.ts <= nåTs);
+    const ny = analyserSnø(observert, nåTs, snøStatus).status;
+    if (!snøStatus || ny.type !== snøStatus.type || Math.abs(ny.ts - snøStatus.ts) > 3600_000) setSnøStatus(ny); // ikke skriv oftere enn hver time
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [TIMER, varsel, snøStatus]);
+
   const r = useMemo(() => {
     const seksjoner = lagSeksjoner(løype.punkter);
     const dato = varsel ? osloDato(dagIdx) : RESERVE_DATO;
@@ -124,7 +135,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
     // Observert historikk, så Yr-varselet fra der historikken slutter.
     const sisteHist = TIMER[TIMER.length - 1].ts;
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
-    const snø = analyserSnø(alle, startTs);
+    const snø = analyserSnø(alle, startTs, snøStatus);
     const turFor = (s: 'klassisk' | 'skoyting') => planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[s][modus], refH: område.vær.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
     const turK = turFor('klassisk');
     const turS = stil === 'skoyting' ? turFor('skoyting') : null;
@@ -147,7 +158,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
       ? byggAlternativer(skipark.map((x) => x.stil), turK, snø, seksjoner, stabel, modus === 'Trening', glideSystemFraLager(lagerBruk))
       : [];
     return { dato, startTs, sisteHist, seksjoner, snø, tur, stabel, perStil, alternativer, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
-  }, [løype, modus, startTime, dagIdx, varsel, stil, lagerBruk, skipark, område, TIMER, sys]);
+  }, [løype, modus, startTime, dagIdx, varsel, stil, lagerBruk, skipark, område, TIMER, sys, snøStatus]);
   const vis = r.stabel;
   const enkel = visning === 'enkel';
   const lagLik = (a: { rolle: string; produkt: string }[], b: Stabel) => JSON.stringify(a) === JSON.stringify(b.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
