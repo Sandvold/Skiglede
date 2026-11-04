@@ -20,6 +20,9 @@ export const SNØ = {
   begravMm: 5, // [Bruker] 5 cm nysnø (≈ 5 mm nedbør) oppå uansett lag er helt ny snø: da starter tellingen på skarphet på nytt. Bare nysnø nullstiller, alder gjør det ikke.
   regnMm: 2, // regn på snø siste 7 d som gir skare ved frost (research: lavere enn før)
   minSum: 0.8, // uvektet tine/frys-sum under dette er ikke nok til å kalle snøen omdannet: én svak mild dag er ikke omdanning, men to moderate eller én sterk er det [Forslag]
+  tørrRh: 0.75, // [Bruker] vindkjøling (fordampning) gjelder bare i tørr luft: full ved relativ fuktighet ≤ 0,75 [Forslag]
+  fuktigRh: 0.9, // ved ≥ 0,9 gir vinden ingen kjøling (kilder: vind øker smeltingen i fuktig luft over 0 °C)
+  vindMåneder: [11, 12, 1, 2], // [Bruker] bare tidlig i sesongen (f.eks. vinterferien uke 7–8); utover våren sterkere sol og mer fuktig luft
   vindStille: 3, // under dette (m/s, snitt kl. 08-16 UTC) har vinden ingen effekt på smelting
   vindIngenSmelting: 5, // ved dette og over er det nesten ingen smelting når det bare er svakt over null
   vindMaksT: 4, // over denne maks-temperaturen (°C) tiner det uansett, så vinden dempes ikke
@@ -54,7 +57,12 @@ export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | 
     if (nattMin !== null) {
       const vind = dagTimer.reduce((a, x) => a + x.vind, 0) / dagTimer.length;
       // 1) Lufttemperatur: tining vokser gradvis fra 0 °C (full ved +3). Vind ved 1–2 °C gir fordampning og kjøling i stedet for smelting [Bruker]; forsvinner ved høyere temperatur.
-      const vindDemp = clamp((SNØ.vindIngenSmelting - vind) / (SNØ.vindIngenSmelting - SNØ.vindStille), 0, 1);
+      const rh = dagTimer.reduce((a, x) => a + x.rh, 0) / dagTimer.length;
+      const måned = new Date(d * DAG).getUTCMonth() + 1;
+      const tørr = SNØ.vindMåneder.includes(måned) ? clamp((SNØ.fuktigRh - rh) / (SNØ.fuktigRh - SNØ.tørrRh), 0, 1) : 0;
+      // «vindDemp» er egentlig stille-faktoren (1 = ingen vindkjøling). Vindkjølingen (1 − stille) gjelder bare i tørr luft tidlig i sesongen.
+      const stille = clamp((SNØ.vindIngenSmelting - vind) / (SNØ.vindIngenSmelting - SNØ.vindStille), 0, 1);
+      const vindDemp = 1 - (1 - stille) * tørr;
       const tempFri = clamp((maks - (SNØ.vindMaksT - 2)) / 2, 0, 1); // 0 ved ≤2 °C, 1 ved ≥4 °C
       const f = vindDemp + (1 - vindDemp) * tempFri;
       const tempSmelt = clamp(maks / SNØ.tempFull, 0, 1) * f;

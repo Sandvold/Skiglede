@@ -284,8 +284,9 @@ const langSnø = lang.map((x) => (x.ts > start - 5 * 86400_000 && x.ts < start -
 sjekk('5 cm nysnø etter lagret status nullstiller', analyserSnø(langSnø, start, statusO).type, 'ny');
 sjekk('lagret status ny påvirker ikke', analyserSnø(lang, start, { type: 'ny', skarphet: 0, ts: start - 20 * 86400_000 }).type, 'ny');
 // Smelting: +1 med vind tiner ikke; solskorpe ved minus med sterk sol; sterk vind kjøler bort sola
-const dagMed = (maks: number, vind: number, sw: number) => serie((ts, d, h) => (d > 4 && d < 8 ? { temp: h >= 8 && h <= 16 ? maks : -9, vind, sw: h >= 8 && h <= 16 ? sw : 0 } : { temp: -6, vind }));
+const dagMed = (maks: number, vind: number, sw: number, rh = 0.7) => serie((ts, d, h) => (d > 4 && d < 8 ? { temp: h >= 8 && h <= 16 ? maks : -9, vind, rh, sw: h >= 8 && h <= 16 ? sw : 0 } : { temp: -6, vind, rh }));
 sjekk('+1 °C med 4 m/s vind og lite sol tiner ikke (feb)', analyserSnø(dagMed(1, 4, 300_000), start).type, 'ny');
+sjekk('+1 °C med 4 m/s vind i FUKTIG luft (0,95) tiner (vind øker smelting)', analyserSnø(dagMed(1, 4, 300_000, 0.95), start).type, 'omdannet');
 sjekk('+4 °C uten vind gir skorpe', analyserSnø(dagMed(4, 1, 500_000), start).type, 'omdannet');
 sjekk('solskorpe: −2 °C, 600 W/m², stille = omdannet', analyserSnø(dagMed(-2, 1, 2_160_000), start).type, 'omdannet');
 sjekk('solskorpe kjøles bort av 9 m/s vind', analyserSnø(dagMed(-2, 9, 2_160_000), start).type, 'ny');
