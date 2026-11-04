@@ -12,6 +12,8 @@ export const LAG = { kald: 6, langTur: 8, langTurKm: 30, rundt0: 4, rundt0Fra: -
 export const MAKS_LAG = LAG.langTur; // absolutt øvre grense
 export const lagGrense = (varm: number, lengdeKm: number) => (varm >= LAG.rundt0Fra ? LAG.rundt0 : lengdeKm >= LAG.langTurKm ? LAG.langTur : LAG.kald);
 /** Klister brukes bare når snøen er omdannet/skarp (snøtype styrer). Kaldere enn dette brukes hardvoks med binder [Bruker, Nystad: kaldføre er −8 °C og kaldere]. */
+/** Skarphet (0–100) som regnes som «veldig hard omdannet snø» der isklister (KX30) legges under dagens klister. */
+export const KLISTER_ISHARD = 90;
 export const KLISTER_KALDGRENSE = -8;
 /** Et produkt regnes som utenfor området når temperaturen er mer enn dette (°C) utenfor det oppgitte området. Kald side tåles mer (fluorfri voks går ofte kaldere enn etiketten), varm side gir ising/baller. */
 const TOLERANSE_VARM = 1;
@@ -137,11 +139,15 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   const universal = T.varm >= -1 ? sys.universalVarm : sys.universalKald;
   const slud = T.varm >= -0.5 ? sys.sluddVarm : sys.sluddKald;
   const dagP = tur.sludd ? (slud ?? universal) : skiftende ? universal : undefined;
-  const dag = dagP ?? KLISTER[klisterFor(T.varm, sys)];
-  const hardBane = snø.skarphet >= 70 || tur.tMin < -3;
+  // [Bruker] KX30 (blå isklister) brukes som dagens klister på omdannet snø under 0 °C, med voksdekke over (gjerne Blå Extra). Ikke ved sludd eller skiftende vær.
+  const isK = sys.isKlister;
+  const kaldDekke = !!isK && !tur.sludd && !skiftende && tur.tMaks <= 0.5 && T.varm >= isK.omr[0] - 1 && T.varm <= isK.omr[1] + 1;
+  const dag = dagP ?? (kaldDekke ? isK! : KLISTER[klisterFor(T.varm, sys)]);
+  // KX30 (blå is) er sjelden [Bruker]: bare på veldig hard omdannet snø, som lag under dagens klister. Ellers er vanlig mellomlag (KX35N/KX45N) standard.
+  const hardBane = snø.skarphet >= KLISTER_ISHARD;
   // Mellomlag bare med vanlig klister som ikke står i utenMellomlag; universal og sludd-klister brukes som ett tykt lag.
   const mellomNavn = sys.mellomKlister?.[T.varm < -3 ? 0 : 1];
-  const mellom = dagP || sys.utenMellomlag.includes(dag.navn) || !mellomNavn ? null : KLISTER.find((k) => k.navn === mellomNavn) ?? null;
+  const mellom = dagP || kaldDekke || sys.utenMellomlag.includes(dag.navn) || !mellomNavn ? null : KLISTER.find((k) => k.navn === mellomNavn) ?? null;
   const lag: Lag[] = [];
   const gl = glidesone(tur, sys);
   if (gl) lag.push(gl);
@@ -149,7 +155,7 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   // Høyst 3 lag klister totalt [Bruker]: baseklister + (isklister på hard bane, ellers mellomlag) + dagens
   const plass = LAG.klister - (sys.baseKlister ? 1 : 0) - 1;
   const medIs = hardBane && !!sys.isKlister && dag.navn !== sys.isKlister.navn && plass >= 1;
-  if (medIs) lag.push({ rolle: 'Isklister', produkt: sys.isKlister!.navn, antall: '1 lag', merknad: 'Hard/isete bane: gir feste under dagens klister' });
+  if (medIs) lag.push({ rolle: 'Isklister', produkt: sys.isKlister!.navn, antall: '1 lag', merknad: 'Veldig hard omdannet snø (sjelden): legges under dagens klister' });
   if (mellom && !lett && !medIs && plass >= 1) lag.push({ rolle: 'Mellomlag', produkt: mellom.navn, antall: '1 lag', merknad: 'Fiskebeinsmønster, gni jevnt. Hindrer at dagens klister vandrer bakover' });
   lag.push({ rolle: 'Dagens klister', produkt: dag.navn, antall: '1 tykt lag', merknad: 'Tykkere enn lagene under til sammen' });
   // Klister med dekke [Solid: Swix, NSF, Dæhlie]: tynt klister + 2–3 lag hardvoks over når snøen er under 0 °C eller det kan ligge nysnø i sporet.
@@ -175,7 +181,7 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   );
   const ute = utenfor(dag, T.varm, 'varm del av løypa');
   if (ute) advarsler.push(ute);
-  if (medIs) begrunnelse.push(`Isklister: ${snø.skarphet >= 70 ? `skarphet ${Math.round(snø.skarphet)} ≥ 70` : `kaldeste del ${tur.tMin.toFixed(1)} °C`} gir hard bane.`);
+  if (medIs) begrunnelse.push(`Isklister: skarphet ${Math.round(snø.skarphet)} ≥ ${KLISTER_ISHARD} gir veldig hard omdannet snø.`);
   if (lett) begrunnelse.push('Trening: uten mellomlag.');
   if (tur.tMin < -2 && tur.tMaks > 0 && !lag.some((l) => l.rolle.startsWith('Voksdekke'))) {
     advarsler.push(`Isingsfare når temperaturen svinger rundt 0 °C. Valgfritt tiltak: ${sys.ising}`);

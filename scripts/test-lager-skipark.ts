@@ -273,6 +273,7 @@ sjekk('dobbelt område: ny og gammel snø gir ulik voks', dagVoksNavn(sNyK) !== 
 // Klister med dekke
 const stKl = byggSmøring('klassisk', tur5(kald), analyserSnø(kald, start), sek);
 sjekk('klister under 0 °C får voksdekke', stKl.type === 'klister' && stKl.lag.some((l) => l.rolle.startsWith('Voksdekke')), true);
+sjekk('kald omdannet snø: KX30 som dagens klister', stKl.lag.find((l) => l.rolle === 'Dagens klister')?.produkt, 'KX30');
 sjekk('voksdekke: 2–3 lag', stKl.lag.find((l) => l.rolle.startsWith('Voksdekke'))?.antall, '2–3 lag');
 // Skorpa varer til det snør igjen: 25 døgn gammel skorpe er fortsatt omdannet
 const lang = Array.from({ length: 24 * 31 }, (_, i): Vær => { const ts = start - 30 * 86400_000 + i * 3600_000; const d = (start - ts) / 86400_000; const h = new Date(ts).getUTCHours(); const mild = d > 21 && d < 25; return { ts, temp: mild ? (h >= 8 && h <= 16 ? 4 : -9) : -6, nedbor: 0, rh: 0.8, vind: 1, sw: mild && h >= 8 && h <= 16 ? 500_000 : 0 }; });
