@@ -114,7 +114,9 @@ export function byggMedLager(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner:
   const mål = dagens(ideal);
   const mitt = dagens(st);
   const advarsler = [...st.advarsler];
-  if (mål && mitt && mål !== mitt) advarsler.push(`Anbefalt er ${mål}, men du har den ikke: bruker ${mitt} i stedet.`);
+  // [Bruker] KX30 og KX35N fungerer nesten likt: bytte mellom dem gir ingen advarsel.
+  const lik = (x: string, y: string) => [x, y].every((n) => n === 'KX30' || n === 'KX35N');
+  if (mål && mitt && mål !== mitt && !lik(mål, mitt)) advarsler.push(`Anbefalt er ${mål}, men du har den ikke: bruker ${mitt} i stedet.`);
   const begrunnelse = [...st.begrunnelse, `Smøringen er bygget av ${primær.sys.navn}-produktene i smørelageret ditt (ett merke, slik at lagene henger sammen).`];
   return { ...st, advarsler, begrunnelse, alternativer: alt.length ? alt : undefined };
 }

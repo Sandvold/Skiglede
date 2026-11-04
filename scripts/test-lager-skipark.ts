@@ -292,4 +292,7 @@ sjekk('+4 °C uten vind gir skorpe', analyserSnø(dagMed(4, 1, 500_000), start).
 sjekk('solskorpe: −2 °C, 600 W/m², stille = omdannet', analyserSnø(dagMed(-2, 1, 2_160_000), start).type, 'omdannet');
 sjekk('solskorpe kjøles bort av 9 m/s vind', analyserSnø(dagMed(-2, 9, 2_160_000), start).type, 'ny');
 sjekk('−6 °C med sol gir ingen solskorpe', analyserSnø(dagMed(-6, 1, 2_160_000), start).type, 'ny');
+// KX30 og KX35N er byttbare
+const stKX = byggMedLager('klassisk', tur5(kald), analyserSnø(kald, start), sek, false, ['KB20C', 'KX35N']);
+sjekk('KX35N i stedet for KX30: brukes uten advarsel', stKX.lag.some((l) => l.produkt === 'KX35N') && !stKX.advarsler.some((a) => a.includes('KX30')), true);
 console.log('Kontrollfunn-tester ferdig');
