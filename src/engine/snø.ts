@@ -5,7 +5,14 @@ const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
 
 // Alle terskler her er [Forslag] og skal justeres mot Kristoffers erfaring (åpent punkt 1).
 export const SNØ = {
-  tineGrense: 1, // dagen regnes som «mild» ved maks >= +1 °C
+  tempFull: 3, // [Forslag] tining fra 0 °C, full effekt ved +3 °C (Swix: ved 0 °C holder snøen 0 °C, og vanninnholdet øker bare med varme over)
+  solFra: 150, // W/m² innstråling der solskorpe begynner å dannes
+  solFull: 300, // W/m² der solskorpa er full (lab: skorpe ved ≥ 200 W/m² absorbert; gammel snø absorberer ca. halvparten)
+  minSmelt: 0.25, // en dag teller som ekte tine/frys-syklus for «omdannet» bare med minst så mye smelting; svake dager (litt over 0 med vind) bidrar bare til skarphetsindeksen
+  solVekt: 0.7, // solskorpe er tynnere (1–2 mm) enn en ordentlig tine/frys-skorpe
+  solMinTemp: -3, // solskorpe dannes ned til ca. −3 °C lufttemperatur
+  solVindFra: 6, // m/s der vind begynner å kjøle bort solvarmen
+  solVindBredde: 4,
   frostFull: 6, // natt på -6 °C eller kaldere gir full skarphet
   sykluserForFull: 2.5, // vektet sum som gir indeks 100
   dager: 14, // vær-vinduet. Skorpa varer likevel til det snør igjen [Bruker]: forrige status (omdannet/ny) huskes av appen når beviset går ut av vinduet
@@ -43,15 +50,22 @@ export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | 
     const nattMin = natt.length >= 6 ? Math.min(...natt.map((x) => x.temp)) : null;
     const solMaks = Math.max(...dagTimer.map((x) => x.sw));
     let syklus = 0;
-    if (nattMin !== null && maks >= SNØ.tineGrense) {
-      syklus = clamp(-nattMin / SNØ.frostFull, 0, 1) * (0.7 + 0.3 * clamp(solMaks / 800_000, 0, 1));
-      // Vind ved 1–2 °C gir fordampning og kjøling i stedet for smelting: lite tining og omdanning [Bruker]. Forsvinner ved høyere temperatur.
+    let smeltDag = 0;
+    if (nattMin !== null) {
       const vind = dagTimer.reduce((a, x) => a + x.vind, 0) / dagTimer.length;
+      // 1) Lufttemperatur: tining vokser gradvis fra 0 °C (full ved +3). Vind ved 1–2 °C gir fordampning og kjøling i stedet for smelting [Bruker]; forsvinner ved høyere temperatur.
       const vindDemp = clamp((SNØ.vindIngenSmelting - vind) / (SNØ.vindIngenSmelting - SNØ.vindStille), 0, 1);
       const tempFri = clamp((maks - (SNØ.vindMaksT - 2)) / 2, 0, 1); // 0 ved ≤2 °C, 1 ved ≥4 °C
       const f = vindDemp + (1 - vindDemp) * tempFri;
-      if (f < 0.95) forklaring.push(`${new Date(d * DAG).toISOString().slice(0, 10)}: maks ${maks.toFixed(1)} °C med ${vind.toFixed(1)} m/s vind gir lite smelting (×${f.toFixed(2)}).`);
-      syklus *= f;
+      const tempSmelt = clamp(maks / SNØ.tempFull, 0, 1) * f;
+      // 2) Sol: solskorpe kan dannes også ved minusgrader når sola varmer overflaten (innstråling over ca. 200 W/m², Cambridge/J. Glaciology «Energy balance and formation of sun crust»), men sterk vind kjøler den bort.
+      const solW = solMaks / 3600;
+      const solSmelt = maks >= SNØ.solMinTemp ? SNØ.solVekt * clamp((solW - SNØ.solFra) / (SNØ.solFull - SNØ.solFra), 0, 1) * (1 - clamp((vind - SNØ.solVindFra) / SNØ.solVindBredde, 0, 1)) : 0;
+      const smelt = Math.max(tempSmelt, solSmelt);
+      smeltDag = smelt;
+      syklus = clamp(-nattMin / SNØ.frostFull, 0, 1) * (0.7 + 0.3 * clamp(solMaks / 800_000, 0, 1)) * smelt;
+      const dato = new Date(d * DAG).toISOString().slice(0, 10);
+      if (maks > 0 && smelt < 0.9) forklaring.push(`${dato}: maks ${maks.toFixed(1)} °C, vind ${vind.toFixed(1)} m/s, sol ${Math.round(solW)} W/m² gir ${smelt < 0.05 ? 'nesten ingen' : 'svak'} smelting (×${smelt.toFixed(2)})${solSmelt > tempSmelt ? ' (solskorpe)' : ''}.`);
     }
     // Snø som falt etter denne syklusen ligger oppå skorpa og skjuler den: syklusen teller bare for det som ikke er dekket.
     const snøEtter = h.filter((x) => x.ts >= d * DAG + 17 * 3600_000 && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
@@ -60,7 +74,7 @@ export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | 
     if (syklus > 0 && dekket > 0.05) forklaring.push(`${new Date(d * DAG).toISOString().slice(0, 10)}: skorpa er dekket av ${snøEtter.toFixed(0)} mm snø siden og teller ×${(1 - dekket).toFixed(2)}.`);
     syklus *= 1 - dekket;
     sum += syklus * SNØ.vekter[i];
-    sumUvektet += syklus;
+    if (syklus > 0 && smeltDag >= SNØ.minSmelt) sumUvektet += syklus;
     dager.push({ dato: new Date(d * DAG).toISOString().slice(0, 10), maks, natt: nattMin, syklus });
   }
 
