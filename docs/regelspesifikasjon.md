@@ -132,14 +132,16 @@ Researchen (Swix-guider, Dæhlie/DN, Budstikka, Dinside, norske forhandlere, Bou
 - **Lagantall i festesonen** [Bruker]: kald snø 4–6 lag, over 30 km opptil 8, rundt 0 °C (varm del ≥ −1 °C) 2–4 lag, klister 2–3 lag totalt (`LAG` i `engine/stabel.ts`). Reduseres i rekkefølgen: dekke → 1 lag, base → 1 lag, binder → 1 lag, dagens voks → 3, færre base-trinn, dagens voks → 2, uten dekke. Klister: baseklister + (isklister på hard bane, ellers mellomlag) + dagens.
 - **Klister styres av snøtype** [Solid]: bare omdannet/skarp snø gir klister, og varmeste punkt må være over −12 °C (`KLISTER_KALDGRENSE`; Swix KX30 går til −12). Nysnø gir hardvoks. Kaldere enn −12: hardvoks over binder.
 - **Utenfor produktets område** [Produsent/forhandler]: advarsel ved mer enn 1 °C på varm side (ising, baller) og mer enn 2,5 °C på kald side (fluorfri voks går ofte kaldere enn etiketten).
-- **Snø**: nysnø blir finkornet etter ca. to døgn, raskere nær 0 °C [Produsent, Swix]; appen bruker 48 t, og 24 t når siste døgn har snitt over −1 °C. Nysnø på 5 cm eller mer dekker en gammel skorpe helt (`SNØ.begravMm` 50) [Forslag, ingen kilde har mm-tall]. Regn ≥ 2 mm siste uke, en smelte/frys-syklus eller ≥ 6 milde soltimer gir omdannet snø.
+- **Snø** [Bruker]: 5 cm nysnø (≈ 5 mm nedbør, `SNØ.begravMm`) oppå uansett lag er helt ny snø, og tellingen på skarphet starter på nytt: eldre tine/frys-sykluser, regn og milde timer før dette teller ikke. Bare nysnø nullstiller; alder gjør det ikke. Under 5 cm dekkes skorpa delvis (teller forholdsmessig), og `nysnøOppå` brukes til å avgjøre om klisteret trenger voksdekke. Ellers gir regn ≥ 2 mm siste uke, en tine/frys-syklus eller ≥ 6 milde soltimer omdannet snø.
+- **Swix' doble områder** [Produsent]: VP40, VP45, VP50, V40 og V45 har eget område for gammel snø (1–4 °C kaldere). Er snøen omdannet, brukes `omrGammel` automatisk ved valg av voks og i advarsler (`hardvoksForSnø`). Andre produkter har ett område.
+- **Klister med dekke** [Solid: Swix, NSF-smørere, Dæhlie]: ved klisterføre, når snøen er under 0 °C (varmeste punkt ≤ 0,5 °C) eller det ligger minst 1 cm nysnø oppå, kommer 2–3 tynne lag hardvoks over klisteret (ett trinn hardere enn temperaturen tilsier [Forslag]). Klisteret herdes ca. 5 min først. Ikke i sludd/våt snø. Voksdekket kommer i tillegg til de 2–3 klisterlagene og slites av etter ca. 1–2 mil.
 - **Nattestråling** trekker snøtemperaturen ned 1–2 °C på klar, stille natt (`UTSTRÅLING`) [Forslag, svake kilder].
 - **Glider beholdes** når snøen er innenfor produktets område (`SKIPARK.glideMonn` 0) [Forslag].
 - **Ski-soner** følger landslagets strukturkode: kald ≤ −5 °C, mid −5…0, varm over 0 (`SONER`) [Produsent].
 - **Glidesone** nederst i festestabelen vises som eget lag. Hardvoks i sludd gir snøballe-advarsel.
 - **Tempo** [Bruker]: klassisk 5 km/t tur og 9 trening; skøyting 7 og 11.
 
-Ikke gjort ennå (funn fra researchen): Swix' doble temperaturområder (nysnø/gammel snø) per produkt, «klister med dekke» (sandwich) som eget føre, normalisering av Toko/Rode (snø- vs lufttemperatur, Nord-/Sør-Europa) og etikettkontroll av Ski Go Blå/Violett, Rode P36/P42/P46 og Toko-klister.
+Ikke gjort ennå (funn fra researchen): gammel-snø-område for flere Swix-produkter (bare de fem over er funnet), normalisering av Toko/Rode (snø- vs lufttemperatur, Nord-/Sør-Europa) og etikettkontroll av Ski Go Blå/Violett, Rode P36/P42/P46 og Toko-klister.
 
 ### Prognose og lagring av smøring
 - Siste vellykkede Yr-prognose lagres på enheten med tidspunkt og brukes hvis ny henting feiler. Finnes ingen brukbar prognose (tom eller utløpt), vises ingen smøretips, bare en tydelig advarsel; dagvalget er av.

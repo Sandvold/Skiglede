@@ -3,6 +3,7 @@ import trails from '../src/data/trails.json';
 import { byggRute, tilhørende } from '../src/data/rute';
 import { vektetPersentil } from '../src/engine/tur';
 import { terrengFaktor } from '../src/engine/terreng';
+import type { SnøAnalyse } from '../src/engine/typer';
 import { analyserSnø, byggAlternativer, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
 
 let feil = 0;
@@ -256,4 +257,21 @@ sjekk('kald snø: høyst 6 lag', gr(byggSmøring('klassisk', tur5(serie(() => ({
 const null0 = serie(() => ({ temp: 0.5, sw: 800_000 }));
 const st0 = byggSmøring('klassisk', tur5(null0), analyserSnø(null0, start), sek);
 sjekk('rundt 0: høyst 4 lag', st0.type === 'klister' || gr(st0) <= 4, true);
+// Nysnø-restart (5 cm) uavhengig av alder
+const gammelSnø = serie((ts, d, h) => ({ ...skorpe(ts, d, h), ...(d <= 8 ? { temp: -6 } : {}), ...(d > 6 && d < 6.1 ? { nedbor: 6, temp: -4 } : {}) }));
+sjekk('5 cm nysnø for 6 døgn siden begraver skorpa: ny snø', analyserSnø(gammelSnø, start).type, 'ny');
+const litenSnø = serie((ts, d, h) => ({ ...skorpe(ts, d, h), ...(d <= 8 ? { temp: -6 } : {}), ...(d > 6 && d < 6.1 ? { nedbor: 2, temp: -4 } : {}) }));
+sjekk('2 cm nysnø begraver ikke skorpa', analyserSnø(litenSnø, start).type, 'omdannet');
+sjekk('nysnøOppå registreres', Math.round(analyserSnø(litenSnø, start).nysnøOppå), 4);
+// Swix' doble område: omdannet snø velger fra gammel-snø-kolonnen
+const kaldFri = serie(() => ({ temp: -6.5, rh: 0.95, vind: 6 }));
+const tK = tur5(kaldFri);
+const sNyK: SnøAnalyse = { ...analyserSnø(kaldFri, start), type: 'ny', skarphet: 10 };
+const sGml: SnøAnalyse = { ...sNyK, type: 'omdannet' };
+const dagVoksNavn = (sn: SnøAnalyse) => byggSmøring('klassisk', tK, sn, sek).lag.find((l) => l.rolle === 'Dagens voks')!.produkt;
+sjekk('dobbelt område: ny og gammel snø gir ulik voks', dagVoksNavn(sNyK) !== dagVoksNavn(sGml), true);
+// Klister med dekke
+const stKl = byggSmøring('klassisk', tur5(kald), analyserSnø(kald, start), sek);
+sjekk('klister under 0 °C får voksdekke', stKl.type === 'klister' && stKl.lag.some((l) => l.rolle.startsWith('Voksdekke')), true);
+sjekk('voksdekke: 2–3 lag', stKl.lag.find((l) => l.rolle.startsWith('Voksdekke'))?.antall, '2–3 lag');
 console.log('Kontrollfunn-tester ferdig');

@@ -1,7 +1,7 @@
 // Swix-produkter med temperaturområde og fargekode.
 // Områder: swixsport.com (kick wax- og klister-sidene, kontrollert 3. nov 2026) og Swix' klisterguide.
 // Fargene er tilnærminger til etikettfargene (Swix navngir dem, f.eks. «Pro lys fiolett»), ikke eksakte NCS-verdier.
-// Swix oppgir ett område per voks. Eventuell egen kolonne for omdannet snø er ikke verifisert og brukes ikke.
+// Swix oppgir to områder for VP45, VP40, VP50, V40 og V45: nysnø (omr) og gammel snø (omrGammel). Resten har ett område (research nov 2026, swixsport.com og forhandlere).
 
 export type MerkeId = 'swix' | 'toko' | 'rode' | 'skigo';
 
@@ -11,7 +11,8 @@ export type Produkt = {
   navn: string; // produktkode (unik på tvers av merker)
   farge: string; // Swix' fargenavn
   hex: string; // tilnærmet etikettfarge
-  omr: [number, number]; // [kaldest, varmest] °C
+  omr: [number, number]; // [kaldest, varmest] °C (nysnø/finkornet snø)
+  omrGammel?: [number, number]; // Swix: eget område for gammel/omdannet snø (1–4 °C kaldere). Brukes automatisk når snøen er omdannet.
   linje: 'VP' | 'V' | 'K' | 'G'; // G = glider, K = klister, ellers hardvoks
   merknad?: string;
 };
@@ -19,9 +20,9 @@ export type Produkt = {
 /** VP (Pro): rekkefølge fra kaldest til varmest. Brukes av regelmotoren. */
 export const HARDVOKS: Produkt[] = [
   { navn: 'VP30', farge: 'Pro lyseblå', hex: '#8FC8F0', omr: [-16, -8], linje: 'VP' },
-  { navn: 'VP40', farge: 'Pro blå', hex: '#2F6FD0', omr: [-10, -4], linje: 'VP' },
-  { navn: 'VP45', farge: 'Pro blå/fiolett', hex: '#5B63D6', omr: [-5, -1], linje: 'VP' },
-  { navn: 'VP50', farge: 'Pro lys fiolett', hex: '#B9A6E4', omr: [-3, 0], linje: 'VP' },
+  { navn: 'VP40', farge: 'Pro blå', hex: '#2F6FD0', omr: [-10, -4], omrGammel: [-14, -5], linje: 'VP' },
+  { navn: 'VP45', farge: 'Pro blå/fiolett', hex: '#5B63D6', omr: [-5, -1], omrGammel: [-8, -3], linje: 'VP' },
+  { navn: 'VP50', farge: 'Pro lys fiolett', hex: '#B9A6E4', omr: [-3, 0], omrGammel: [-6, -1], linje: 'VP' },
   { navn: 'VP55', farge: 'Pro fiolett', hex: '#8A4FC0', omr: [-2, 1], linje: 'VP' },
   { navn: 'VP60', farge: 'Pro fiolett/rød', hex: '#B54A8E', omr: [-1, 2], linje: 'VP' },
   { navn: 'VP65', farge: 'Pro svart/rød', hex: '#6B2E3E', omr: [0, 2], linje: 'VP' },
@@ -33,8 +34,8 @@ export const V_LINJE: Produkt[] = [
   { navn: 'V05', farge: 'Polar', hex: '#DCEBF7', omr: [-25, -12], linje: 'V' },
   { navn: 'V20', farge: 'Grønn', hex: '#3DA35D', omr: [-15, -8], linje: 'V' },
   { navn: 'V30', farge: 'Blå', hex: '#3A7FDB', omr: [-10, -2], linje: 'V' },
-  { navn: 'V40', farge: 'Blå Extra', hex: '#1F4FB5', omr: [-7, -1], linje: 'V' },
-  { navn: 'V45', farge: 'Fiolett Special', hex: '#7A3FB0', omr: [-3, 0], linje: 'V' },
+  { navn: 'V40', farge: 'Blå Extra', hex: '#1F4FB5', omr: [-7, -1], omrGammel: [-10, -3], linje: 'V' },
+  { navn: 'V45', farge: 'Fiolett Special', hex: '#7A3FB0', omr: [-3, 0], omrGammel: [-6, -2], linje: 'V' },
   { navn: 'V50', farge: 'Fiolett', hex: '#9B63CF', omr: [0, 0], linje: 'V' },
   { navn: 'V55', farge: 'Rød Special', hex: '#D0383A', omr: [0, 1], linje: 'V' },
   { navn: 'V60', farge: 'Rød/sølv', hex: '#C9A9A9', omr: [0, 3], linje: 'V' },
@@ -287,6 +288,8 @@ function nærmeste(liste: Produkt[], t: number): number {
   return best;
 }
 
+/** Hardvokslisten med riktig område for snøen: gammel/omdannet snø bruker `omrGammel` der Swix oppgir det. */
+export const hardvoksForSnø = (sys: Smøresystem, omdannet: boolean): Produkt[] => (omdannet ? sys.hardvoks.map((p) => (p.omrGammel ? { ...p, omr: p.omrGammel } : p)) : sys.hardvoks);
 export const hardvoksFor = (t: number, sys: Smøresystem = SWIX) => nærmeste(sys.hardvoks, t);
 export const klisterFor = (t: number, sys: Smøresystem = SWIX) => nærmeste(sys.klister, t);
 

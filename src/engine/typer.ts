@@ -30,6 +30,7 @@ export type SnøAnalyse = {
   skarphet: number; // 0-100
   sykluser: number; // vektet sum
   snøfall48: number; // mm (nedbør ved <= 0,5 °C)
+  nysnøOppå: number; // mm snø (≈ cm) som ligger oppå den nyeste skorpa; 1 mm nedbør ≈ 1 cm nysnø
   regn7: number; // mm (nedbør ved > 0,5 °C)
   snittTemp7: number;
   dager: DagsRad[];

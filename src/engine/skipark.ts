@@ -23,7 +23,7 @@ function hoved(lag: { rolle: string; produkt: string }[]) {
 /** Øverste lag som er voks eller klister (ikke binder/baseklister): det nye laget legges oppå dette. */
 function topp(lag: { rolle: string; produkt: string }[]) {
   for (let i = lag.length - 1; i >= 0; i--) {
-    if (lag[i].rolle === 'Binder' || lag[i].rolle === 'Baseklister' || lag[i].rolle.startsWith('Glidesone')) continue;
+    if (lag[i].rolle === 'Binder' || lag[i].rolle === 'Baseklister' || lag[i].rolle.startsWith('Glidesone') || lag[i].rolle.startsWith('Voksdekke')) continue;
     if (produkt(lag[i].produkt)) return lag[i].produkt;
   }
   return undefined;

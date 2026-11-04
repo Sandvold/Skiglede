@@ -9,8 +9,7 @@ export const SNØ = {
   frostFull: 6, // natt på -6 °C eller kaldere gir full skarphet
   sykluserForFull: 2.5, // vektet sum som gir indeks 100
   vekter: [1, 1, 1, 0.6, 0.6, 0.6, 0.6, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3], // nyeste dag først
-  nysnøMm: 5, // snøfall siste 48 t (24 t nær 0 °C) som nullstiller til «ny»: nysnø blir finkornet etter ca. et par dager, raskere nær 0 [Swix]
-  begravMm: 50, // snø som har falt etter en tine/frys-syklus: 5 cm eller mer dekker skorpa helt (ren nysnø), under det er det blandingsføre [Forslag fra research; ingen kilde har mm-tall]
+  begravMm: 5, // [Bruker] 5 cm nysnø (≈ 5 mm nedbør) oppå uansett lag er helt ny snø: da starter tellingen på skarphet på nytt. Bare nysnø nullstiller, alder gjør det ikke.
   regnMm: 2, // regn på snø siste 7 d som gir skare ved frost (research: lavere enn før)
   minSum: 0.3, // vektet tine/frys-sum under dette er ikke nok til å kalle snøen omdannet (én svak mild dag er ikke omdanning)
   vindStille: 3, // under dette (m/s, snitt kl. 08-16 UTC) har vinden ingen effekt på smelting
@@ -26,6 +25,7 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
   const siste = dagNr(nå);
   const dager: DagsRad[] = [];
   let sum = 0;
+  let nysnøOppå: number | null = null; // snø oppå den nyeste skorpa
   const forklaring: string[] = [];
 
   for (let i = 0; i < 14; i++) {
@@ -49,6 +49,7 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
     }
     // Snø som falt etter denne syklusen ligger oppå skorpa og skjuler den: syklusen teller bare for det som ikke er dekket.
     const snøEtter = h.filter((x) => x.ts >= d * DAG + 17 * 3600_000 && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
+    if (nysnøOppå === null && syklus > 0) nysnøOppå = snøEtter;
     const dekket = clamp(snøEtter / SNØ.begravMm, 0, 1);
     if (syklus > 0 && dekket > 0.05) forklaring.push(`${new Date(d * DAG).toISOString().slice(0, 10)}: skorpa er dekket av ${snøEtter.toFixed(0)} mm snø siden og teller ×${(1 - dekket).toFixed(2)}.`);
     syklus *= 1 - dekket;
@@ -56,22 +57,27 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
     dager.push({ dato: new Date(d * DAG).toISOString().slice(0, 10), maks, natt: nattMin, syklus });
   }
 
-  // Nysnø blir finkornet etter ca. to døgn, raskere nær 0 °C eller med sol: vinduet er 24 t når siste døgn har snitt over −1 °C.
-  const sisteDøgn = h.filter((x) => x.ts > nå - DAG);
-  const nærNull = sisteDøgn.length > 0 && sisteDøgn.reduce((s, x) => s + x.temp, 0) / sisteDøgn.length > -1;
-  const snøfall48 = h.filter((x) => x.ts > nå - (nærNull ? 1 : 2) * DAG && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
+  const snøfall48 = h.filter((x) => x.ts > nå - 2 * DAG && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
+  // Nysnø-restart: finn tidspunktet der snøen som har falt siden tilsammen er begravMm (≈ 5 cm). Alt før det ligger under ny snø og teller ikke (regn, milde timer). Alder spiller ingen rolle.
+  let tBury: number | null = null;
+  let acc = 0;
+  for (const x of [...h].sort((a, b) => b.ts - a.ts)) {
+    if (x.temp <= 0.5) acc += x.nedbor;
+    if (acc >= SNØ.begravMm) { tBury = x.ts; break; }
+  }
   const sju = h.filter((x) => x.ts > nå - 7 * DAG);
-  const regn7 = sju.filter((x) => x.temp > 0.5).reduce((s, x) => s + x.nedbor, 0);
+  const etterBury = (x: Vær) => tBury === null || x.ts > tBury;
+  const regn7 = sju.filter(etterBury).filter((x) => x.temp > 0.5).reduce((s, x) => s + x.nedbor, 0);
   const snittTemp7 = sju.reduce((s, x) => s + x.temp, 0) / Math.max(1, sju.length);
-  const milde = sju.filter((x) => x.temp > 1 && x.sw > 200_000 && (x.vind < SNØ.vindIngenSmelting || x.temp > SNØ.vindMaksT)).length; // vind ved svak plussgrad: ingen smelting
+  const milde = sju.filter(etterBury).filter((x) => x.temp > 1 && x.sw > 200_000 && (x.vind < SNØ.vindIngenSmelting || x.temp > SNØ.vindMaksT)).length; // vind ved svak plussgrad: ingen smelting
 
   let skarphet = 100 * clamp(sum / SNØ.sykluserForFull, 0, 1);
   let type: SnøAnalyse['type'] = 'ny';
-  if (snøfall48 >= SNØ.nysnøMm) {
+  const omdannetTegn = sum >= SNØ.minSum || regn7 >= SNØ.regnMm || milde >= 6;
+  if (tBury !== null && !omdannetTegn) {
     type = 'ny';
-    skarphet *= 0.3;
-    forklaring.push(`Nysnø: ${snøfall48.toFixed(1)} mm snø siste ${nærNull ? 24 : 48} t nullstiller snøen (skarphet ×0,3).`);
-  } else if (sum >= SNØ.minSum || regn7 >= SNØ.regnMm || milde >= 6) {
+    forklaring.push(`Nysnø: ${SNØ.begravMm} mm (≈ ${SNØ.begravMm} cm) snø eller mer ligger oppå alt eldre og starter tellingen på nytt.`);
+  } else if (omdannetTegn) {
     type = 'omdannet';
     forklaring.push(`Omdannet snø: vektet tine/frys-sum ${sum.toFixed(2)}, regn siste 7 d ${regn7.toFixed(1)} mm, ${milde} milde soltimer siste 7 d.`);
   } else {
@@ -83,5 +89,5 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
   if (snittTemp7 > SNØ.snødekkeVarsel) {
     advarsler.push(`Snitt ${snittTemp7.toFixed(1)} °C siste 7 døgn: mye mildvær og regn. Motoren forutsetter snødekke, sjekk at det finnes snø i løypa.`);
   }
-  return { type, skarphet, sykluser: sum, snøfall48, regn7, snittTemp7, dager, forklaring, advarsler };
+  return { type, skarphet, sykluser: sum, snøfall48, nysnøOppå: nysnøOppå ?? 0, regn7, snittTemp7, dager, forklaring, advarsler };
 }

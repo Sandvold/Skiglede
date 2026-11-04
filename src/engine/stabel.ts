@@ -1,4 +1,4 @@
-import { SWIX, glideFor, hardvoksFor, klisterFor, type Smøresystem } from './tabeller';
+import { SWIX, glideFor, hardvoksFor, hardvoksForSnø, klisterFor, type Smøresystem } from './tabeller';
 import type { Lag, Seksjon, SnøAnalyse, Stabel, Stil, Tur } from './typer';
 
 // Tidsgrenser for dekketrinn [Forslag, åpent punkt 2]
@@ -52,8 +52,9 @@ function begrensLag(lag: Lag[], grense: number): string | null {
 }
 
 /** lett = Trening: færre lag og høyst ett dekketrinn. */
-export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false, sys: Smøresystem = SWIX): Stabel {
-  const HARDVOKS = sys.hardvoks;
+export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false, sys0: Smøresystem = SWIX): Stabel {
+  const HARDVOKS = hardvoksForSnø(sys0, snø.type === 'omdannet'); // Swix' dobbelte områder velges automatisk etter snøtype
+  const sys: Smøresystem = { ...sys0, hardvoks: HARDVOKS };
   const t = tur.seksjoner.map((x) => x.tEff);
   const kald = persentil(t, 0.1);
   const midt = persentil(t, 0.5);
@@ -151,6 +152,17 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   if (medIs) lag.push({ rolle: 'Isklister', produkt: sys.isKlister!.navn, antall: '1 lag', merknad: 'Hard/isete bane: gir feste under dagens klister' });
   if (mellom && !lett && !medIs && plass >= 1) lag.push({ rolle: 'Mellomlag', produkt: mellom.navn, antall: '1 lag', merknad: 'Fiskebeinsmønster, gni jevnt. Hindrer at dagens klister vandrer bakover' });
   lag.push({ rolle: 'Dagens klister', produkt: dag.navn, antall: '1 tykt lag', merknad: 'Tykkere enn lagene under til sammen' });
+  // Klister med dekke [Solid: Swix, NSF, Dæhlie]: tynt klister + 2–3 lag hardvoks over når snøen er under 0 °C eller det kan ligge nysnø i sporet.
+  // Hindrer ising og dempar klisteret. Ikke i sludd/våt snø, der hardvoksen baller.
+  const medDekke = !tur.sludd && (tur.tMaks <= 0.5 || snø.nysnøOppå >= 1);
+  if (medDekke) {
+    const hv = sys.hardvoks;
+    const i = Math.max(0, hardvoksFor(T.varm, sys) - 1); // litt hardere enn temperaturen tilsier [Swix]
+    if (hv[i]) {
+      lag.push({ rolle: 'Voksdekke (over klister)', produkt: hv[i].navn, antall: '2–3 lag', merknad: 'La klisteret herde ca. 5 min (gjerne ute) først. Tynne lag, kork mellom hvert' });
+      begrunnelse.push(`Klister med dekke: ${tur.tMaks <= 0.5 ? `snøen er under 0 °C (varmest ${tur.tMaks.toFixed(1)} °C)` : `${snø.nysnøOppå.toFixed(0)} cm nysnø kan ligge i sporet`}. 2–3 tynne lag ${hv[i].navn} over klisteret hindrer ising og demper klisteret. Voksdekket slites av etter ca. 1–2 mil.`);
+    }
+  }
   begrunnelse.push(
     tur.sludd
       ? `Sludd/bløt snø rundt turen: ${dagP === slud && slud ? 'sludd-klister' : 'universalklister'} (${dag.navn}).`
@@ -159,13 +171,13 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
         : 'Stabilt vær: vanlig klister.'
   );
   begrunnelse.push(
-    `Klister: omdannet snø, skarphet ${Math.round(snø.skarphet)} og varmest ${tur.tMaks.toFixed(1)} °C. Dagens klister ${dag.navn} (${dag.farge}) for ${T.varm.toFixed(1)} °C. ${lag.filter((l) => !l.rolle.startsWith('Glidesone')).length} lag totalt (2–3).`
+    `Klister: omdannet snø, skarphet ${Math.round(snø.skarphet)} og varmest ${tur.tMaks.toFixed(1)} °C. Dagens klister ${dag.navn} (${dag.farge}) for ${T.varm.toFixed(1)} °C. ${lag.filter((l) => !l.rolle.startsWith('Glidesone') && !l.rolle.startsWith('Voksdekke')).length} lag klister (2–3).`
   );
   const ute = utenfor(dag, T.varm, 'varm del av løypa');
   if (ute) advarsler.push(ute);
   if (medIs) begrunnelse.push(`Isklister: ${snø.skarphet >= 70 ? `skarphet ${Math.round(snø.skarphet)} ≥ 70` : `kaldeste del ${tur.tMin.toFixed(1)} °C`} gir hard bane.`);
   if (lett) begrunnelse.push('Trening: uten mellomlag.');
-  if (tur.tMin < -2 && tur.tMaks > 0) {
+  if (tur.tMin < -2 && tur.tMaks > 0 && !lag.some((l) => l.rolle.startsWith('Voksdekke'))) {
     advarsler.push(`Isingsfare når temperaturen svinger rundt 0 °C. Valgfritt tiltak: ${sys.ising}`);
   }
   return { type: 'klister', lag, begrunnelse, advarsler };
@@ -262,7 +274,7 @@ export function byggSmøring(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner:
   return byggStabel(tur, snø, seksjoner, lett, sys);
 }
 
-const ENKEL_ROLLER = new Set(['Binder', 'Baseklister', 'Dagens voks', 'Dagens klister', 'Glider', 'Festesone', 'Glidesone (foran og bak)']);
+const ENKEL_ROLLER = new Set(['Binder', 'Baseklister', 'Dagens voks', 'Dagens klister', 'Voksdekke (over klister)', 'Glider', 'Festesone', 'Glidesone (foran og bak)']);
 
 /** Forenklet utgave: bare base (binder/baseklister) og dagens smøring. Mellomlag, isklister, kaldere base og dekke utelates [Bruker]. */
 export function forenklet(stabel: Stabel): Stabel {
