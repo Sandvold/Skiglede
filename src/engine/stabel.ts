@@ -11,8 +11,8 @@ export const DEKKE = { toTrinnMinKm: 6, toTrinnMinMin: 90 };
 export const LAG = { kald: 6, langTur: 8, langTurKm: 30, rundt0: 4, rundt0Fra: -1, klister: 3 };
 export const MAKS_LAG = LAG.langTur; // absolutt øvre grense
 export const lagGrense = (varm: number, lengdeKm: number) => (varm >= LAG.rundt0Fra ? LAG.rundt0 : lengdeKm >= LAG.langTurKm ? LAG.langTur : LAG.kald);
-/** Klister brukes bare når snøen er omdannet/skarp (snøtype styrer, ikke temperatur). Kaldere enn dette brukes hardvoks med binder: blåklister går til ca. −12 (Swix KX30). */
-export const KLISTER_KALDGRENSE = -12;
+/** Klister brukes bare når snøen er omdannet/skarp (snøtype styrer). Kaldere enn dette brukes hardvoks med binder [Bruker, Nystad: kaldføre er −8 °C og kaldere]. */
+export const KLISTER_KALDGRENSE = -8;
 /** Et produkt regnes som utenfor området når temperaturen er mer enn dette (°C) utenfor det oppgitte området. Kald side tåles mer (fluorfri voks går ofte kaldere enn etiketten), varm side gir ising/baller. */
 const TOLERANSE_VARM = 1;
 const TOLERANSE_KALD = 2.5;

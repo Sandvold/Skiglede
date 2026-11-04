@@ -251,7 +251,7 @@ import { lagGrense, LAG, KLISTER_KALDGRENSE } from '../src/engine';
 sjekk('lagGrense kald', lagGrense(-8, 15), 6);
 sjekk('lagGrense kald lang tur', lagGrense(-8, 32), 8);
 sjekk('lagGrense rundt 0', lagGrense(0, 15), 4);
-sjekk('klister kaldgrense −12', KLISTER_KALDGRENSE, -12);
+sjekk('klister kaldgrense −8 (Nystad)', KLISTER_KALDGRENSE, -8);
 const gr = (st: Stabel) => st.lag.filter((l) => !l.rolle.startsWith('Glidesone')).reduce((s, l) => s + (parseInt(l.antall.split('–').pop() as string, 10) || 0), 0);
 sjekk('kald snø: høyst 6 lag', gr(byggSmøring('klassisk', tur5(serie(() => ({ temp: -9 }))), analyserSnø(serie(() => ({ temp: -9 })), start), sek)) <= 6, true);
 const null0 = serie(() => ({ temp: 0.5, sw: 800_000 }));
