@@ -6,8 +6,8 @@ const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
 // Alle terskler her er [Forslag] og skal justeres mot Kristoffers erfaring (åpent punkt 1).
 export const SNØ = {
   tempFull: 3, // [Forslag] tining fra 0 °C, full effekt ved +3 °C (Swix: ved 0 °C holder snøen 0 °C, og vanninnholdet øker bare med varme over)
-  solFra: 150, // W/m² innstråling der solskorpe begynner å dannes
-  solFull: 300, // W/m² der solskorpa er full (lab: skorpe ved ≥ 200 W/m² absorbert; gammel snø absorberer ca. halvparten)
+  solFra: 350, // W/m² innstråling der solskorpe begynner å dannes: skorpe krever ca. 200 W/m² ABSORBERT; gammel snø har albedo 0,5–0,7, så innstrålingen må være ca. 400–600 W/m² [Forslag]
+  solFull: 600, // W/m² der solskorpa er full
   minSmelt: 0.25, // en dag teller som ekte tine/frys-syklus for «omdannet» bare med minst så mye smelting; svake dager (litt over 0 med vind) bidrar bare til skarphetsindeksen
   solVekt: 0.7, // solskorpe er tynnere (1–2 mm) enn en ordentlig tine/frys-skorpe
   solMinTemp: -3, // solskorpe dannes ned til ca. −3 °C lufttemperatur

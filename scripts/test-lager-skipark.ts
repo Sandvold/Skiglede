@@ -287,7 +287,7 @@ sjekk('lagret status ny påvirker ikke', analyserSnø(lang, start, { type: 'ny',
 const dagMed = (maks: number, vind: number, sw: number) => serie((ts, d, h) => (d > 4 && d < 8 ? { temp: h >= 8 && h <= 16 ? maks : -9, vind, sw: h >= 8 && h <= 16 ? sw : 0 } : { temp: -6, vind }));
 sjekk('+1 °C med 4 m/s vind og lite sol tiner ikke (feb)', analyserSnø(dagMed(1, 4, 300_000), start).type, 'ny');
 sjekk('+4 °C uten vind gir skorpe', analyserSnø(dagMed(4, 1, 500_000), start).type, 'omdannet');
-sjekk('solskorpe: −2 °C, 300 W/m², stille = omdannet', analyserSnø(dagMed(-2, 1, 1_080_000), start).type, 'omdannet');
-sjekk('solskorpe kjøles bort av 9 m/s vind', analyserSnø(dagMed(-2, 9, 1_080_000), start).type, 'ny');
-sjekk('−6 °C med sol gir ingen solskorpe', analyserSnø(dagMed(-6, 1, 1_080_000), start).type, 'ny');
+sjekk('solskorpe: −2 °C, 600 W/m², stille = omdannet', analyserSnø(dagMed(-2, 1, 2_160_000), start).type, 'omdannet');
+sjekk('solskorpe kjøles bort av 9 m/s vind', analyserSnø(dagMed(-2, 9, 2_160_000), start).type, 'ny');
+sjekk('−6 °C med sol gir ingen solskorpe', analyserSnø(dagMed(-6, 1, 2_160_000), start).type, 'ny');
 console.log('Kontrollfunn-tester ferdig');
