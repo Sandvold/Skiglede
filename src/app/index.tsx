@@ -63,6 +63,25 @@ function produktFarge(navn: string) {
   return produkt(navn)?.hex ?? '#B9C7D6';
 }
 
+const erGlidesone = (l: { rolle: string }) => l.rolle.startsWith('Glidesone');
+
+/** Glideren (foran og bak festesonen) er valgfri og ikke en del av festestabelen: vises som egen boks. */
+function GliderBoks({ lag }: { lag?: { produkt: string; merknad?: string } }) {
+  const theme = useTheme();
+  if (!lag) return null;
+  const p = produkt(lag.produkt);
+  return (
+    <View style={{ borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.border, borderRadius: 14, padding: 12, gap: 6 }}>
+      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>GLIDER (VALGFRI)</ThemedText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: produktFarge(lag.produkt), borderWidth: 1, borderColor: theme.border }} />
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>{lag.produkt}{p ? <Text style={{ fontWeight: '500', fontSize: 14 }}>  {p.farge}</Text> : null}</Text>
+      </View>
+      <ThemedText type="small" themeColor="textSecondary">Foran og bak festesonen, ikke i den. {lag.merknad ?? ''}</ThemedText>
+    </View>
+  );
+}
+
 function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
   const theme = useTheme();
   return (
@@ -194,7 +213,8 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const km = løype.lengde_m / 1000;
   const tempo = TEMPO[stil === 'skoyting' ? 'skoyting' : 'klassisk'];
   const minutter = Math.round((km / tempo[modus]) * 60);
-  const stabelVisning = [...(enkel ? forenklet(vis) : vis).lag].reverse(); // øverste lag først
+  const stabelVisning = [...(enkel ? forenklet(vis) : vis).lag].filter((l) => !erGlidesone(l)).reverse(); // øverste lag først, uten glider
+  const glidesone = vis.lag.find(erGlidesone);
 
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
@@ -330,7 +350,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
           {ingenPrognose ? (
             <ThemedText type="small">Ingen smøretips uten prognose. Se advarselen under «Turen».</ThemedText>
           ) : (<>
-          <ThemedText type="small" themeColor="textSecondary">{vis.lag.length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Øverst = siste lag. Bygg nedenfra og opp.' : 'Ingen smøring på festesonen.'}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">{vis.lag.filter((l) => !erGlidesone(l)).length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Øverst = siste lag. Bygg nedenfra og opp.' : 'Ingen smøring på festesonen.'}</ThemedText>
           <View style={{ gap: 6 }}>
             {stabelVisning.map((l, i) => (
               <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
@@ -342,6 +362,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
               </View>
             ))}
           </View>
+          <GliderBoks lag={glidesone} />
           {vis.alternativer?.map((a, i) => <ThemedText key={i} type="small" themeColor="textSecondary">Alternativ: {a}</ThemedText>)}
           {vis.advarsler.map((a, i) => (
             <View key={i} style={[styles.advarsel, { borderColor: '#E3A64A' }]}>
@@ -363,7 +384,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
               </View>
             </View>
             <ThemedText type="small">{a.grunn}</ThemedText>
-            {a.stabel.lag.map((l, i) => (
+            {a.stabel.lag.filter((l) => !erGlidesone(l)).map((l, i) => (
               <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.lagProdukt, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.produkt}<Text style={{ fontWeight: '500', fontSize: 14 }}>  {produkt(l.produkt)?.farge}</Text></Text>
@@ -372,6 +393,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
                 <Text style={[styles.lagAntall, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.antall}</Text>
               </View>
             ))}
+            <GliderBoks lag={a.stabel.lag.find(erGlidesone)} />
             {a.stabel.advarsler.map((w, i) => (
               <ThemedText key={i} type="small">⚠ {w}</ThemedText>
             ))}
