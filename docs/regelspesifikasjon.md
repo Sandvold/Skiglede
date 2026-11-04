@@ -127,15 +127,19 @@ Hvert merke er et `Smøresystem` i `src/engine/tabeller.ts` med hardvoks, kliste
 - Produktnavn er unike på tvers av merker («Toko Rød»). «Mine produkter» i temperaturtabellen viser alt du eier, fra alle merker. «Forslag til innkjøp» foreslår Swix-produkter bare der det er et **hull** i dekningen (et sammenhengende temperaturområde du ikke dekker, f.eks. −6 til −1 °C), ikke alle varianter [Bruker].
 - Nytt merke: lag listene og et `Smøresystem`, legg det i `SYSTEMER`. Testene i `scripts/test-lager-skipark.ts` sjekker alle merker.
 
-### Regler fra kontrollen (nov 2026) [Forslag der tall er nevnt]
-- **Snøtype**: nysnø som er begravd under ca. 10 mm ny snø (`SNØ.begravMm`) etter at forrige syklus sluttet, teller ikke lenger som skarp; omdannet snø krever minst 0,3 sum (`SNØ.minSum`), 3 mm regn siste uke eller 6 milde timer.
-- **Klister ved dyp kulde**: klister brukes bare når skarp snø og varmeste punkt er over −8 °C (`KLISTER_KALDGRENSE`); kaldere gir hardvoks.
-- **Glidesone** ligger nederst i festestabelen (hardvoks og klister) og vises som eget lag. Klassisk glidesone følger glidertabellen.
-- **Maks 10 lag** i festesonen (`MAKS_LAG`); over det reduseres dekke, base og dagens voks, og begrunnelsen sier det.
-- **Utenfor produktets område** (mer enn 1 °C, `TOLERANSE`) gir advarsel for dagens voks, klister og glider. Sludd/regn rundt 0 °C gir advarsel om snøballing med hardvoks.
-- **Utstråling** (klar, stille natt/morgen) trekker snøtemperaturen ned 0,7–1,5 °C (`UTSTRÅLING` i `engine/tur.ts`), og sola varmer som før.
-- **Tempo** [Bruker]: klassisk 5 km/t tur og 9 km/t trening; skøyting 7 og 11 (+2 km/t).
-- **Isingsfare** gir bare et valgfritt tiltak.
+### Regler fra kontrollen og research (nov 2026)
+Researchen (Swix-guider, Dæhlie/DN, Budstikka, Dinside, norske forhandlere, Boulder Nordic m.fl.) er lagret i prosjektet. Merking: [Solid] flere kilder, [Produsent], [Enkeltkilde], [Forslag] min vurdering uten kilde.
+- **Lagantall i festesonen** [Bruker]: kald snø 4–6 lag, over 30 km opptil 8, rundt 0 °C (varm del ≥ −1 °C) 2–4 lag, klister 2–3 lag totalt (`LAG` i `engine/stabel.ts`). Reduseres i rekkefølgen: dekke → 1 lag, base → 1 lag, binder → 1 lag, dagens voks → 3, færre base-trinn, dagens voks → 2, uten dekke. Klister: baseklister + (isklister på hard bane, ellers mellomlag) + dagens.
+- **Klister styres av snøtype** [Solid]: bare omdannet/skarp snø gir klister, og varmeste punkt må være over −12 °C (`KLISTER_KALDGRENSE`; Swix KX30 går til −12). Nysnø gir hardvoks. Kaldere enn −12: hardvoks over binder.
+- **Utenfor produktets område** [Produsent/forhandler]: advarsel ved mer enn 1 °C på varm side (ising, baller) og mer enn 2,5 °C på kald side (fluorfri voks går ofte kaldere enn etiketten).
+- **Snø**: nysnø blir finkornet etter ca. to døgn, raskere nær 0 °C [Produsent, Swix]; appen bruker 48 t, og 24 t når siste døgn har snitt over −1 °C. Nysnø på 5 cm eller mer dekker en gammel skorpe helt (`SNØ.begravMm` 50) [Forslag, ingen kilde har mm-tall]. Regn ≥ 2 mm siste uke, en smelte/frys-syklus eller ≥ 6 milde soltimer gir omdannet snø.
+- **Nattestråling** trekker snøtemperaturen ned 1–2 °C på klar, stille natt (`UTSTRÅLING`) [Forslag, svake kilder].
+- **Glider beholdes** når snøen er innenfor produktets område (`SKIPARK.glideMonn` 0) [Forslag].
+- **Ski-soner** følger landslagets strukturkode: kald ≤ −5 °C, mid −5…0, varm over 0 (`SONER`) [Produsent].
+- **Glidesone** nederst i festestabelen vises som eget lag. Hardvoks i sludd gir snøballe-advarsel.
+- **Tempo** [Bruker]: klassisk 5 km/t tur og 9 trening; skøyting 7 og 11.
+
+Ikke gjort ennå (funn fra researchen): Swix' doble temperaturområder (nysnø/gammel snø) per produkt, «klister med dekke» (sandwich) som eget føre, normalisering av Toko/Rode (snø- vs lufttemperatur, Nord-/Sør-Europa) og etikettkontroll av Ski Go Blå/Violett, Rode P36/P42/P46 og Toko-klister.
 
 ### Prognose og lagring av smøring
 - Siste vellykkede Yr-prognose lagres på enheten med tidspunkt og brukes hvis ny henting feiler. Finnes ingen brukbar prognose (tom eller utløpt), vises ingen smøretips, bare en tydelig advarsel; dagvalget er av.

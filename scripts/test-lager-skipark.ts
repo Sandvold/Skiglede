@@ -44,7 +44,7 @@ sjekk('15 dager gammel = rens', vurderPåfylling(smør('hardvoks', [['Dagens vok
 sjekk('klister varmere = topplag', vurderPåfylling(smør('klister', [['Dagens klister', 'KX45N']]), stabel('klister', [['Dagens klister', 'KX65']])).handling, 'topplag');
 sjekk('glider: bytte uten temperatur = rens', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), stabel('glider', [['Glider', 'HS8']])).handling, 'rens');
 const medT = (g: string, t: number): Stabel => ({ ...stabel('glider', [['Glider', g]]), tSnitt: t });
-sjekk('glider: HS7 på, snø −1 °C (innenfor monn) = behold', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), medT('HS8', -1)).behold, true);
+sjekk('glider: HS7 på, snø −3 °C (innenfor produktets område) = behold', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), medT('HS8', -3)).behold, true);
 sjekk('glider: HS7 på, snø +1 °C (utenfor monn) = rens', vurderPåfylling(smør('glider', [['Glider', 'HS7']]), medT('HS8', 1)).handling, 'rens');
 sjekk('glider: HS8 på, snø −9 °C (kaldere, utenfor) = rens', vurderPåfylling(smør('glider', [['Glider', 'HS8']]), medT('HS6', -9)).handling, 'rens');
 sjekk('glider: HS8 -> HS7 (kaldere) = rens', vurderPåfylling(smør('glider', [['Glider', 'HS8']]), stabel('glider', [['Glider', 'HS7']])).handling, 'rens');
@@ -184,8 +184,8 @@ const tur5 = (t: Vær[]) => planTur({ seksjoner: sek, timer: t.filter((x) => x.t
 const skorpe = (ts: number, d: number, h: number): Partial<Vær> => (d > 8 && d < 13.5 ? { temp: h >= 8 && h <= 16 ? 4 : -9, sw: h >= 8 && h <= 16 ? 500_000 : 0 } : {});
 const kald = serie((ts, d, h) => ({ ...skorpe(ts, d, h), ...(d <= 8 ? { temp: -6 } : {}) }));
 sjekk('snø: gammel skorpe uten snø oppå = omdannet', analyserSnø(kald, start).type, 'omdannet');
-const begravd = serie((ts, d, h) => ({ ...skorpe(ts, d, h), ...(d <= 8 ? { temp: -6 } : {}), ...(d > 3.2 && d < 4.2 ? { nedbor: 1.5, temp: -3 } : {}) }));
-sjekk('snø: 30 mm snø oppå skorpa begraver den (ikke omdannet)', analyserSnø(begravd, start).type, 'ny');
+const begravd = serie((ts, d, h) => ({ ...skorpe(ts, d, h), ...(d <= 8 ? { temp: -6 } : {}), ...(d > 3.2 && d < 4.2 ? { nedbor: 2.5, temp: -3 } : {}) }));
+sjekk('snø: 60 mm snø oppå skorpa begraver den (ikke omdannet)', analyserSnø(begravd, start).type, 'ny');
 const enMild = serie((ts, d, h) => (d > 9.5 && d < 10.5 ? { temp: h >= 8 && h <= 16 ? 1.2 : -1 } : { temp: -6 }));
 sjekk('snø: én svak mild dag er ikke omdanning', analyserSnø(enMild, start).type, 'ny');
 // klister bare når det ikke er dyp kulde
@@ -245,4 +245,15 @@ const v1 = lagre('klassisk', stMål, undefined, vurderPåfylling(undefined, stM�
 const v2 = lagre('klassisk', stMål, v1, vurderPåfylling(v1, stMål, start), start + 1000, '2026-11-05');
 sjekk('samme tur lagres på nytt: ingen ny tur', v2.turer, v1.turer);
 sjekk('mål huskes', v2.mål, '2026-11-05');
+// Research-regler (nov 2026): lagantall, klister, toleranse
+import { lagGrense, LAG, KLISTER_KALDGRENSE } from '../src/engine';
+sjekk('lagGrense kald', lagGrense(-8, 15), 6);
+sjekk('lagGrense kald lang tur', lagGrense(-8, 32), 8);
+sjekk('lagGrense rundt 0', lagGrense(0, 15), 4);
+sjekk('klister kaldgrense −12', KLISTER_KALDGRENSE, -12);
+const gr = (st: Stabel) => st.lag.filter((l) => !l.rolle.startsWith('Glidesone')).reduce((s, l) => s + (parseInt(l.antall.split('–').pop() as string, 10) || 0), 0);
+sjekk('kald snø: høyst 6 lag', gr(byggSmøring('klassisk', tur5(serie(() => ({ temp: -9 }))), analyserSnø(serie(() => ({ temp: -9 })), start), sek)) <= 6, true);
+const null0 = serie(() => ({ temp: 0.5, sw: 800_000 }));
+const st0 = byggSmøring('klassisk', tur5(null0), analyserSnø(null0, start), sek);
+sjekk('rundt 0: høyst 4 lag', st0.type === 'klister' || gr(st0) <= 4, true);
 console.log('Kontrollfunn-tester ferdig');

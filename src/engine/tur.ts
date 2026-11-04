@@ -15,7 +15,7 @@ export const SKYGGE_MIN_ANDEL = 0.1;
  * Utstråling: på stille, tørre morgener og kvelder uten sol er snøen kaldere enn lufta (inntil 2–5 °C på klare netter). Vi har ikke skydekke for historikken,
  * så vind og fuktighet brukes som indikator: stille og tørr luft uten sol og under +1 °C gir kjøling [Forslag, justeres mot erfaring].
  */
-export const UTSTRÅLING = { maksSol: 100, stille: 2.5, litVind: 4, tørrRh: 0.8, middelRh: 0.88, kjøl: 1.5, litKjøl: 0.7, maksLuft: 1 };
+export const UTSTRÅLING = { maksSol: 100, stille: 2.5, litVind: 4, tørrRh: 0.8, middelRh: 0.88, kjøl: 2, litKjøl: 1, maksLuft: 1 };
 export function utstråling(v: { temp: number; rh: number; vind: number }, swWm2: number): number {
   if (swWm2 >= UTSTRÅLING.maksSol || v.temp > UTSTRÅLING.maksLuft) return 0;
   if (v.vind < UTSTRÅLING.stille && v.rh < UTSTRÅLING.tørrRh) return -UTSTRÅLING.kjøl;

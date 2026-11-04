@@ -9,8 +9,9 @@ export const SNØ = {
   frostFull: 6, // natt på -6 °C eller kaldere gir full skarphet
   sykluserForFull: 2.5, // vektet sum som gir indeks 100
   vekter: [1, 1, 1, 0.6, 0.6, 0.6, 0.6, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3], // nyeste dag først
-  nysnøMm: 5, // snøfall siste 48 t som nullstiller til «ny»
-  begravMm: 10, // snø som har falt etter en tine/frys-syklus: 10 mm eller mer dekker skorpa helt, mindre dekker den delvis
+  nysnøMm: 5, // snøfall siste 48 t (24 t nær 0 °C) som nullstiller til «ny»: nysnø blir finkornet etter ca. et par dager, raskere nær 0 [Swix]
+  begravMm: 50, // snø som har falt etter en tine/frys-syklus: 5 cm eller mer dekker skorpa helt (ren nysnø), under det er det blandingsføre [Forslag fra research; ingen kilde har mm-tall]
+  regnMm: 2, // regn på snø siste 7 d som gir skare ved frost (research: lavere enn før)
   minSum: 0.3, // vektet tine/frys-sum under dette er ikke nok til å kalle snøen omdannet (én svak mild dag er ikke omdanning)
   vindStille: 3, // under dette (m/s, snitt kl. 08-16 UTC) har vinden ingen effekt på smelting
   vindIngenSmelting: 5, // ved dette og over er det nesten ingen smelting når det bare er svakt over null
@@ -55,7 +56,10 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
     dager.push({ dato: new Date(d * DAG).toISOString().slice(0, 10), maks, natt: nattMin, syklus });
   }
 
-  const snøfall48 = h.filter((x) => x.ts > nå - 2 * DAG && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
+  // Nysnø blir finkornet etter ca. to døgn, raskere nær 0 °C eller med sol: vinduet er 24 t når siste døgn har snitt over −1 °C.
+  const sisteDøgn = h.filter((x) => x.ts > nå - DAG);
+  const nærNull = sisteDøgn.length > 0 && sisteDøgn.reduce((s, x) => s + x.temp, 0) / sisteDøgn.length > -1;
+  const snøfall48 = h.filter((x) => x.ts > nå - (nærNull ? 1 : 2) * DAG && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
   const sju = h.filter((x) => x.ts > nå - 7 * DAG);
   const regn7 = sju.filter((x) => x.temp > 0.5).reduce((s, x) => s + x.nedbor, 0);
   const snittTemp7 = sju.reduce((s, x) => s + x.temp, 0) / Math.max(1, sju.length);
@@ -66,8 +70,8 @@ export function analyserSnø(timer: Vær[], nå: number): SnøAnalyse {
   if (snøfall48 >= SNØ.nysnøMm) {
     type = 'ny';
     skarphet *= 0.3;
-    forklaring.push(`Nysnø: ${snøfall48.toFixed(1)} mm snø siste 48 t nullstiller snøen (skarphet ×0,3).`);
-  } else if (sum >= SNØ.minSum || regn7 >= 3 || milde >= 6) {
+    forklaring.push(`Nysnø: ${snøfall48.toFixed(1)} mm snø siste ${nærNull ? 24 : 48} t nullstiller snøen (skarphet ×0,3).`);
+  } else if (sum >= SNØ.minSum || regn7 >= SNØ.regnMm || milde >= 6) {
     type = 'omdannet';
     forklaring.push(`Omdannet snø: vektet tine/frys-sum ${sum.toFixed(2)}, regn siste 7 d ${regn7.toFixed(1)} mm, ${milde} milde soltimer siste 7 d.`);
   } else {

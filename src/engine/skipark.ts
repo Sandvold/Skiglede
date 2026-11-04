@@ -7,7 +7,7 @@ export type Smøring = { stil: Stil; type: Stabel['type']; lag: { rolle: string;
 export type Påfylling = { handling: 'ny' | 'topplag' | 'rens'; tittel: string; grunner: string[]; /** true: glideren som ligger på beholdes (ingen ny glider) */ behold?: boolean };
 
 /** maksKaldere: hvor mye kaldere (°C, midt i området) ny voks/klister kan være enn øverste lag og fortsatt legges som tynt dekke (ca. ett trinn, Swix/Boulder Nordic: «en eller to temperaturområder»). glideMonn: slingringsmonn (°C) utenfor området til glideren som ligger på før den må byttes (bytte krever rens) [Bruker; tall Forslag]. */
-export const SKIPARK = { maksTurerUtenRens: 4, maksDager: 14, maksKaldere: 3, glideMonn: 1.5 };
+export const SKIPARK = { maksTurerUtenRens: 4, maksDager: 14, maksKaldere: 3, glideMonn: 0 }; // glideren beholdes når snøen er innenfor produktets område (research: HS8 dekker −4/+4, slitasje og snøtype teller mer enn grader)
 const DAG = 86_400_000;
 
 const senter = (navn: string) => {
@@ -98,7 +98,7 @@ export function lagreSmøring(stil: Stil, stabel: Stabel, forrige: Smøring | un
 
 /** Temperatursone for ski: kald (snø kaldere enn −6 °C), mid (−6 til −2 °C), varm (varmere enn −2 °C, inkludert sludd) [Forslag, justeres mot erfaring]. */
 export type Temperatursone = 'kald' | 'mid' | 'varm';
-export const SONER = { kaldMaks: -6, varmMin: -2 };
+export const SONER = { kaldMaks: -5, varmMin: 0 }; // landslagets strukturkode: grønn ≤ −5, blå −5…0, hvit/rød over 0
 export const SONE_NAVN: Record<Temperatursone, string> = { kald: 'Kald', mid: 'Mid', varm: 'Varm' };
 export const soneFor = (t: number): Temperatursone => (t <= SONER.kaldMaks ? 'kald' : t >= SONER.varmMin ? 'varm' : 'mid');
 
