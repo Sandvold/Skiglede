@@ -93,7 +93,30 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
   );
 }
 
-function Detalj({ løype: valgtLøype, liste, område, onVelg, onTilbake }: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
+/** Løypesiden trenger værhistorikk. Et nytt område har ingen før værjobben (hver 4. time) har kjørt: vis beskjed i stedet for å krasje. */
+function Detalj(props: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
+  const theme = useTheme();
+  const værdata = useVær(props.område);
+  if (værdata.timer.length === 0) {
+    return (
+      <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
+        <Hero />
+        <View style={styles.innhold}>
+          <Pressable onPress={props.onTilbake} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+            <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
+          </Pressable>
+          <Kort>
+            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700' }}>{props.område.navn}: værdata mangler</Text>
+            <ThemedText themeColor="textSecondary">Området er nytt, og værhistorikken er ikke hentet ennå. Den kommer automatisk i løpet av noen timer. Prøv igjen senere.</ThemedText>
+          </Kort>
+        </View>
+      </ScrollView>
+    );
+  }
+  return <DetaljMedVær {...props} />;
+}
+
+function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake }: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
   const theme = useTheme();
   const LØYPER = liste;
   const værdata = useVær(område);
