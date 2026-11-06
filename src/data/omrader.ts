@@ -4,7 +4,9 @@ import baerumLøyper from '@/data/trails-baerumsmarka.json';
 import hovdenVær from '@/data/vaer-hovden.json';
 import nordmarkaVær from '@/data/vaer-nordmarka.json';
 import baerumVær from '@/data/vaer-baerumsmarka.json';
+import { useEffect, useState } from 'react';
 import { useLagret } from '@/data/lagring';
+import { neonAnonym } from '@/data/neon';
 
 export type OmrådeId = 'hovden' | 'baerumsmarka' | 'nordmarka';
 
@@ -37,4 +39,32 @@ export function useOmråde(): [Område, (id: OmrådeId) => void] {
   const [id, sett] = useLagret<string>(NØKKEL_OMRÅDE, 'hovden');
   // «oslo» het området før Nordmarka og Bærumsmarka ble delt
   return [OMRÅDER[(id === 'oslo' ? 'nordmarka' : id) as OmrådeId] ?? OMRÅDER.hovden, sett as (id: OmrådeId) => void];
+}
+
+type Værdata = Område['vær'];
+const friskVær = new Map<string, Værdata>();
+
+/** Værhistorikk for området: ferdig innebygd kopi først, byttes mot siste fra databasen (oppdateres hver natt uten nytt bygg). */
+export function useVær(o: Område): Værdata {
+  const [, tving] = useState(0);
+  useEffect(() => {
+    if (friskVær.has(o.id)) return;
+    let avbrutt = false;
+    (async () => {
+      try {
+        const { data } = await neonAnonym().from('vaer').select('referansehoyde_m, timer, oppdatert').eq('omrade', o.id).maybeSingle();
+        const timer = data?.timer as (string | number)[][] | undefined;
+        if (!avbrutt && timer?.length && Date.parse(String(data.oppdatert)) > Date.now() - 4 * 86400_000) {
+          friskVær.set(o.id, { referansehoyde_m: data.referansehoyde_m, timer });
+          tving((n) => n + 1);
+        }
+      } catch {
+        // uten nett eller database brukes den innebygde kopien
+      }
+    })();
+    return () => {
+      avbrutt = true;
+    };
+  }, [o.id]);
+  return friskVær.get(o.id) ?? o.vær;
 }

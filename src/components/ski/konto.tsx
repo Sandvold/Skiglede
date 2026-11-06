@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { Chip, Kort } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
@@ -8,19 +8,24 @@ import { useTheme } from '@/hooks/use-theme';
 /** Innlogging og bryteren mellom premium og vanlig (foreløpig uten ekte betaling). */
 export function KontoLinje() {
   const { klar, bruker, premium, loggInnMedGoogle, loggUt, byttPremium } = usePremium();
-  if (!klar) return null;
+  if (!klar || !bruker) return null;
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, alignItems: 'center' }}>
-      {bruker ? (
-        <>
-          <Text style={{ color: '#BFDDF7', fontSize: 14 }}>{bruker.epost}</Text>
-          <Chip aktiv={premium} onPress={byttPremium}>{premium ? 'Premium: på' : 'Vanlig: bytt til premium'}</Chip>
-          <Chip aktiv={false} onPress={loggUt}>Logg ut</Chip>
-        </>
-      ) : (
-        <Chip aktiv={false} onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
-      )}
+      <Text style={{ color: '#BFDDF7', fontSize: 14 }}>{bruker.epost}</Text>
+      <Chip aktiv={premium} onPress={byttPremium}>{premium ? 'Premium: på' : 'Vanlig: bytt til premium'}</Chip>
+      <Chip aktiv={false} onPress={loggUt}>Logg ut</Chip>
     </View>
+  );
+}
+
+/** Knapp i menyen øverst: logg inn med Google (vises ikke når du er innlogget; da ligger kontoen under menyen). */
+export function LoggInnKnapp({ stil }: { stil: object }) {
+  const { klar, bruker, loggInnMedGoogle } = usePremium();
+  if (!klar || bruker) return null;
+  return (
+    <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[stil, { backgroundColor: '#F4B73B' }]}>
+      <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>Logg inn</Text>
+    </Pressable>
   );
 }
 

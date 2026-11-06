@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { KontoLinje } from '@/components/ski/konto';
+import { KontoLinje, LoggInnKnapp } from '@/components/ski/konto';
 import { OMRÅDE_IDER, OMRÅDER, useOmråde } from '@/data/omrader';
 
 const MENY = [
@@ -45,6 +45,7 @@ export function Hero() {
               </Pressable>
             );
           })}
+          <LoggInnKnapp stil={styles.menyKnapp} />
         </View>
         <KontoLinje />
       </View>

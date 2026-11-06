@@ -1,14 +1,15 @@
 name: Oppdater værhistorikk
 
-# Henter siste 14 døgn fra MET Nordic Analysis hvert døgn (kl. 05:17 norsk tid) og committer src/data/vaer-hovden.json, vaer-nordmarka.json og vaer-baerumsmarka.json.
-# Netlify bygger siden på nytt når filen endres.
+# Henter siste 14 døgn fra MET Nordic Analysis hvert døgn (kl. 05:17 norsk tid) og laster det opp til tabellen `vaer` i Neon.
+# Appen leser fra databasen, så ingenting committes og Netlify bygger ikke på nytt. Filene i src/data/vaer-*.json er bare reserve hvis databasen ikke svarer.
+# Krever hemmeligheten DATABASE_URL (rollen vaer_skriver, som bare kan skrive til tabellen vaer).
 on:
   schedule:
     - cron: '17 4 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   vaer:
@@ -18,13 +19,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install numpy pyproj
-      - run: python3 -I scripts/hent_vaer.py --lat 59.5667 --lon 7.3667 --days 14 --json src/data/vaer-hovden.json
-      - run: python3 -I scripts/hent_vaer.py --lat 59.98 --lon 10.65 --days 14 --ref-hoyde 290 --json src/data/vaer-nordmarka.json
-      - run: python3 -I scripts/hent_vaer.py --lat 59.955 --lon 10.52 --days 14 --ref-hoyde 228 --json src/data/vaer-baerumsmarka.json
-      - name: Commit hvis endret
-        run: |
-          git config user.name "skiglede-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add src/data/vaer-hovden.json src/data/vaer-nordmarka.json src/data/vaer-baerumsmarka.json
-          git diff --cached --quiet || (git commit -m "Oppdater værhistorikk" && git push)
+      - run: pip install numpy pyproj psycopg2-binary
+      - run: python3 -I scripts/hent_vaer.py --lat 59.5667 --lon 7.3667 --days 14 --json "$RUNNER_TEMP/hovden.json"
+      - run: python3 -I scripts/hent_vaer.py --lat 59.98 --lon 10.65 --days 14 --ref-hoyde 290 --json "$RUNNER_TEMP/nordmarka.json"
+      - run: python3 -I scripts/hent_vaer.py --lat 59.955 --lon 10.52 --days 14 --ref-hoyde 228 --json "$RUNNER_TEMP/baerumsmarka.json"
+      - name: Last opp til Neon
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python3 -I scripts/last_opp_vaer.py hovden="$RUNNER_TEMP/hovden.json" nordmarka="$RUNNER_TEMP/nordmarka.json" baerumsmarka="$RUNNER_TEMP/baerumsmarka.json"

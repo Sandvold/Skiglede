@@ -8,3 +8,10 @@ export function neon() {
   if (!klient) klient = createClient(NEON_URL);
   return klient;
 }
+
+let anonym: ReturnType<typeof createClient> | null = null;
+/** Klient uten innlogging (anonym token), til offentlige data som værhistorikken. */
+export function neonAnonym() {
+  if (!anonym) anonym = createClient(NEON_URL, { auth: { allowAnonymous: true } });
+  return anonym;
+}

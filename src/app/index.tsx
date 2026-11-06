@@ -12,7 +12,7 @@ import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
+import { OMRÅDER, useOmråde, useVær, type Område } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { usePremium } from '@/data/premium';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
@@ -20,7 +20,7 @@ import { useRouter } from 'expo-router';
 import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
 const løyperI = (o: Område) => o.løyper as unknown as Løype[];
-const timerI = (o: Område): Vær[] => o.vær.timer.map((r) => ({
+const timerI = (v: Område['vær']): Vær[] => v.timer.map((r) => ({
   ts: Date.parse(r[0] as string), temp: r[1] as number, nedbor: r[2] as number, rh: r[3] as number, vind: r[4] as number, sw: r[5] as number,
 }));
 // Reserve hvis Yr-varselet ikke kommer: observert 2. nov.
@@ -96,7 +96,8 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
 function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: Løype; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
   const theme = useTheme();
   const LØYPER = useMemo(() => løyperI(område), [område]);
-  const TIMER = useMemo(() => timerI(område), [område]);
+  const værdata = useVær(område);
+  const TIMER = useMemo(() => timerI(værdata), [værdata]);
   const { premium } = usePremium();
   const [ekstraLagret, setEkstraIds] = useLagret<string[]>(`skiglede.ekstra.${valgtLøype.id}`, TOM_LISTE);
   const ekstraIds = premium ? ekstraLagret : TOM_LISTE; // utvide løypa er premium
@@ -163,7 +164,7 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
     const sisteHist = TIMER[TIMER.length - 1].ts;
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
     const snø = analyserSnø(alle, startTs, snøStatus);
-    const turFor = (s: 'klassisk' | 'skoyting') => planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[s][modus], refH: område.vær.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
+    const turFor = (s: 'klassisk' | 'skoyting') => planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[s][modus], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
     const turK = turFor('klassisk');
     const turS = stil === 'skoyting' ? turFor('skoyting') : null;
     const tur = turS ?? turK;
