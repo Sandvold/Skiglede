@@ -38,6 +38,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ad252ddc-75b4-439d-a598-19ba845f655d"
+      }
+    },
+    "owner": "ksandvolds-team"
   }
 }
