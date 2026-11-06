@@ -1,10 +1,10 @@
 name: Oppdater værhistorikk
 
-# Henter siste 14 døgn fra MET Nordic Analysis hver sjette time og committer src/data/vaer-hovden.json, vaer-nordmarka.json og vaer-baerumsmarka.json.
+# Henter siste 14 døgn fra MET Nordic Analysis hvert døgn (kl. 05:17 norsk tid) og committer src/data/vaer-hovden.json, vaer-nordmarka.json og vaer-baerumsmarka.json.
 # Netlify bygger siden på nytt når filen endres.
 on:
   schedule:
-    - cron: '17 */6 * * *'
+    - cron: '17 4 * * *'
   workflow_dispatch:
 
 permissions:
