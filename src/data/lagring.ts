@@ -14,7 +14,23 @@ function les(nøkkel: string): string {
   }
 }
 
-function skriv(nøkkel: string, verdi: string) {
+/** Lyttere for synk mot konto (premium): får beskjed om hver lagring som kommer fra brukeren. */
+const skriveLyttere = new Set<(nøkkel: string, verdi: string) => void>();
+export const påSkriv = (f: (nøkkel: string, verdi: string) => void) => {
+  skriveLyttere.add(f);
+  return () => skriveLyttere.delete(f);
+};
+/** Skriver uten å varsle synk (brukes når data kommer fra kontoen). */
+export function skrivFraKonto(nøkkel: string, verdi: string) {
+  skriv(nøkkel, verdi, false);
+}
+export const lesLokal = les;
+
+/** Nøkler som hører til brukerens egne data og synkes til kontoen for premium-brukere. */
+export const erBrukerdata = (n: string) =>
+  /^skiglede\.(lager|skipark|valgte|steder|sted|standardsted|brukLager)(\.|$)/.test(n);
+
+function skriv(nøkkel: string, verdi: string, varsle = true) {
   minne.set(nøkkel, verdi);
   try {
     globalThis.localStorage?.setItem(nøkkel, verdi);
@@ -22,6 +38,7 @@ function skriv(nøkkel: string, verdi: string) {
     // lagring blokkert (privat modus): verdien finnes i minnet så lenge siden er åpen
   }
   lyttere.forEach((l) => l());
+  if (varsle) skriveLyttere.forEach((f) => f(nøkkel, verdi));
 }
 
 const abonner = (l: () => void) => {
@@ -116,4 +133,34 @@ export function flyttSki(skiId: string, fraId: string, tilId: string) {
   skriv(stedNøkkel(NØKKEL_SKIPARK, fraId), JSON.stringify(fra.filter((s) => s.id !== skiId)));
   skriv(stedNøkkel(NØKKEL_VALGTE, fraId), JSON.stringify(lesListe<string>(stedNøkkel(NØKKEL_VALGTE, fraId)).filter((v) => v !== skiId)));
   skriv(stedNøkkel(NØKKEL_SKIPARK, tilId), JSON.stringify([...lesListe<Ski>(stedNøkkel(NØKKEL_SKIPARK, tilId)), ski]));
+}
+
+/** Flytter et smøreprodukt fra lageret på ett sted til lageret på et annet. */
+export function flyttProdukt(navn: string, fraId: string, tilId: string) {
+  if (fraId === tilId) return;
+  const fra = lesListe<string>(stedNøkkel(NØKKEL_LAGER, fraId));
+  if (!fra.includes(navn)) return;
+  skriv(stedNøkkel(NØKKEL_LAGER, fraId), JSON.stringify(fra.filter((n) => n !== navn)));
+  const til = lesListe<string>(stedNøkkel(NØKKEL_LAGER, tilId));
+  if (!til.includes(navn)) skriv(stedNøkkel(NØKKEL_LAGER, tilId), JSON.stringify([...til, navn]));
+}
+
+/** Smørelageret på alle steder: sted-id → produktnavn. Brukes til å vise hvor hvert produkt står. */
+export function useAlleLagre(): Record<string, string[]> {
+  const [ekstra] = useLagret<Sted[]>(NØKKEL_STEDER, TOM_LISTE);
+  const ider = ['', ...ekstra.map((s) => s.id)];
+  const rå = useSyncExternalStore(abonner, () => ider.map((id) => les(stedNøkkel(NØKKEL_LAGER, id)) || '[]').join('|'), () => '');
+  return useMemo(() => {
+    const deler = rå ? rå.split('|') : [];
+    const ut: Record<string, string[]> = {};
+    ider.forEach((id, i) => {
+      try {
+        ut[id] = JSON.parse(deler[i] || '[]');
+      } catch {
+        ut[id] = [];
+      }
+    });
+    return ut;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rå]);
 }

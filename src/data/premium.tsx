@@ -1,0 +1,145 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+
+import { erBrukerdata, lesLokal, påSkriv, skrivFraKonto } from '@/data/lagring';
+import { neon } from '@/data/neon';
+
+type Bruker = { id: string; epost: string; navn: string };
+type Tilstand = {
+  /** false mens vi sjekker om noen er logget inn */
+  klar: boolean;
+  bruker: Bruker | null;
+  premium: boolean;
+  feil: string;
+  loggInnMedGoogle: () => Promise<void>;
+  loggUt: () => Promise<void>;
+  /** Midlertidig bryter mellom premium og vanlig (ingen ekte betaling ennå). */
+  byttPremium: () => Promise<void>;
+};
+
+const Ctx = createContext<Tilstand | null>(null);
+const LOKAL_NØKLER = () => {
+  try {
+    return Object.keys(globalThis.localStorage ?? {}).filter(erBrukerdata);
+  } catch {
+    return [];
+  }
+};
+
+export function PremiumProvider({ children }: { children: ReactNode }) {
+  const [klar, setKlar] = useState(false);
+  const [bruker, setBruker] = useState<Bruker | null>(null);
+  const [premium, setPremium] = useState(false);
+  const [feil, setFeil] = useState('');
+  const synket = useRef(false);
+
+  const hent = useCallback(async () => {
+    try {
+      const { data } = await neon().auth.getSession();
+      const u = data?.user;
+      if (!u) {
+        setBruker(null);
+        setPremium(false);
+        return;
+      }
+      setBruker({ id: u.id, epost: u.email, navn: u.name ?? u.email });
+      const db = neon();
+      let { data: rad } = await db.from('profil').select('premium').maybeSingle();
+      if (!rad) {
+        await db.from('profil').insert({});
+        rad = { premium: false };
+      }
+      setPremium(!!rad.premium);
+    } catch (e) {
+      setFeil(String((e as Error)?.message ?? e));
+    } finally {
+      setKlar(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    hent();
+  }, [hent]);
+
+  // Synk: ved innlogging som premium hentes data fra kontoen (kontoen vinner), og er kontoen tom lastes lokale data opp.
+  useEffect(() => {
+    if (!bruker || !premium || synket.current) return;
+    synket.current = true;
+    (async () => {
+      try {
+        const db = neon();
+        const { data: rader, error } = await db.from('brukerdata').select('nokkel, verdi');
+        if (error) throw error;
+        const server = new Map<string, string>((rader ?? []).map((r: { nokkel: string; verdi: unknown }) => [r.nokkel, JSON.stringify(r.verdi)]));
+        server.forEach((v, n) => skrivFraKonto(n, v));
+        const opp = LOKAL_NØKLER().filter((n) => !server.has(n) && lesLokal(n));
+        if (opp.length) {
+          await db.from('brukerdata').upsert(opp.map((n) => ({ nokkel: n, verdi: JSON.parse(lesLokal(n)), oppdatert: new Date().toISOString() })), { onConflict: 'user_id,nokkel' });
+        }
+      } catch (e) {
+        synket.current = false;
+        setFeil(`Synk feilet: ${String((e as Error)?.message ?? e)}`);
+      }
+    })();
+  }, [bruker, premium]);
+
+  // Hver lagring fra brukeren sendes til kontoen (samles opp i 800 ms).
+  useEffect(() => {
+    if (!bruker || !premium) return;
+    const kø = new Map<string, string>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const send = async () => {
+      const biter = [...kø.entries()];
+      kø.clear();
+      try {
+        const db = neon();
+        const tomme = biter.filter(([, v]) => !v).map(([n]) => n);
+        const fulle = biter.filter(([, v]) => v);
+        if (fulle.length) await db.from('brukerdata').upsert(fulle.map(([n, v]) => ({ nokkel: n, verdi: JSON.parse(v), oppdatert: new Date().toISOString() })), { onConflict: 'user_id,nokkel' });
+        if (tomme.length) await db.from('brukerdata').delete().in('nokkel', tomme);
+      } catch (e) {
+        setFeil(`Synk feilet: ${String((e as Error)?.message ?? e)}`);
+      }
+    };
+    const av = påSkriv((n, v) => {
+      if (!erBrukerdata(n)) return;
+      kø.set(n, v);
+      clearTimeout(timer);
+      timer = setTimeout(send, 800);
+    });
+    return () => {
+      av();
+      clearTimeout(timer);
+    };
+  }, [bruker, premium]);
+
+  const loggInnMedGoogle = useCallback(async () => {
+    setFeil('');
+    const tilbake = typeof window !== 'undefined' ? window.location.origin + '/' : undefined;
+    const { error } = await neon().auth.signIn.social({ provider: 'google', callbackURL: tilbake });
+    if (error) setFeil(error.message ?? 'Innlogging feilet');
+  }, []);
+
+  const loggUt = useCallback(async () => {
+    await neon().auth.signOut();
+    synket.current = false;
+    setBruker(null);
+    setPremium(false);
+  }, []);
+
+  const byttPremium = useCallback(async () => {
+    if (!bruker) return;
+    const ny = !premium;
+    const { error } = await neon().from('profil').upsert({ premium: ny, oppdatert: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (error) setFeil(error.message);
+    else setPremium(ny);
+  }, [bruker, premium]);
+
+  const verdi = useMemo(() => ({ klar, bruker, premium, feil, loggInnMedGoogle, loggUt, byttPremium }), [klar, bruker, premium, feil, loggInnMedGoogle, loggUt, byttPremium]);
+  return <Ctx.Provider value={verdi}>{children}</Ctx.Provider>;
+}
+
+export function usePremium(): Tilstand {
+  const c = useContext(Ctx);
+  if (!c) throw new Error('usePremium må brukes inni PremiumProvider');
+  return c;
+}
