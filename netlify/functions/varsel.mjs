@@ -1,16 +1,13 @@
-// Henter timesvarsel fra MET (Yr, locationforecast) for Hovden, Nordmarka og Bærumsmarka og sender det videre i kompakt form.
+// Henter timesvarsel fra MET (Yr, locationforecast) og sender det videre i kompakt form.
 // MET krever identifiserbar User-Agent (nettlesere kan ikke sette den) og ber om cache, derfor går alt via her.
 // Data: MET Norway, CC BY 4.0 / NLOD. Vis kreditering i appen.
-const STEDER = {
-  hovden: { lat: 59.5667, lon: 7.3667, hoyde: 838 },
-  nordmarka: { lat: 59.98, lon: 10.65, hoyde: 290 },
-  baerumsmarka: { lat: 59.955, lon: 10.52, hoyde: 228 },
-};
+// Stedet kommer som lat, lon og hoyde fra appen (områdene ligger i Neon). Avrundes til 2 desimaler så cachen treffer, og må ligge i Norge.
 const UA = 'Skiglede/0.1 (https://skiglede.netlify.app; sandvold40@gmail.com)';
 
 export default async (req) => {
-  const sted = STEDER[new URL(req.url).searchParams.get('sted') ?? 'hovden'];
-  if (!sted) return new Response('ukjent sted', { status: 400 });
+  const q = new URL(req.url).searchParams;
+  const sted = { lat: Math.round(Number(q.get('lat')) * 100) / 100, lon: Math.round(Number(q.get('lon')) * 100) / 100, hoyde: Math.round(Number(q.get('hoyde')) || 0) };
+  if (!(sted.lat >= 57 && sted.lat <= 72 && sted.lon >= 4 && sted.lon <= 32 && sted.hoyde >= 0 && sted.hoyde <= 2500)) return new Response('ugyldig sted', { status: 400 });
   const url = `https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${sted.lat}&lon=${sted.lon}&altitude=${sted.hoyde}`;
   const r = await fetch(url, { headers: { 'User-Agent': UA } });
   if (!r.ok) return new Response(`MET svarte ${r.status}`, { status: 502 });

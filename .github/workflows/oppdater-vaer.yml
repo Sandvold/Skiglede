@@ -1,8 +1,8 @@
 name: Oppdater værhistorikk
 
-# Henter siste 14 døgn fra MET Nordic Analysis seks ganger i døgnet (hver fjerde time, minutt 17 UTC) og laster det opp til tabellen `vaer` i Neon.
-# Appen leser fra databasen, så ingenting committes og Netlify bygger ikke på nytt. Filene i src/data/vaer-*.json er bare reserve hvis databasen ikke svarer.
-# Krever hemmeligheten DATABASE_URL (rollen vaer_skriver, som bare kan skrive til tabellen vaer).
+# Henter siste 14 døgn fra MET Nordic Analysis hver fjerde time (minutt 17 UTC) for alle områder i tabellen `omrade` i Neon,
+# og laster det opp til tabellen `vaer`. Bare nye timer hentes fra MET. Appen leser fra databasen, så ingenting committes og Netlify bygger ikke på nytt.
+# Nytt område: legg en rad i `omrade` (se docs/regelspesifikasjon.md). Krever hemmeligheten DATABASE_URL (rollen vaer_skriver).
 on:
   schedule:
     - cron: '17 */4 * * *'
@@ -20,14 +20,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install numpy pyproj psycopg2-binary
-      - name: Hent eksisterende data fra Neon (så vi bare henter nye timer fra MET)
+      - name: Oppdater værhistorikk
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: python3 -I scripts/last_opp_vaer.py --hent hovden="$RUNNER_TEMP/hovden.json" nordmarka="$RUNNER_TEMP/nordmarka.json" baerumsmarka="$RUNNER_TEMP/baerumsmarka.json"
-      - run: python3 -I scripts/hent_vaer.py --lat 59.5667 --lon 7.3667 --days 14 --tidligere "$RUNNER_TEMP/hovden.json" --json "$RUNNER_TEMP/hovden.json"
-      - run: python3 -I scripts/hent_vaer.py --lat 59.98 --lon 10.65 --days 14 --ref-hoyde 290 --tidligere "$RUNNER_TEMP/nordmarka.json" --json "$RUNNER_TEMP/nordmarka.json"
-      - run: python3 -I scripts/hent_vaer.py --lat 59.955 --lon 10.52 --days 14 --ref-hoyde 228 --tidligere "$RUNNER_TEMP/baerumsmarka.json" --json "$RUNNER_TEMP/baerumsmarka.json"
-      - name: Last opp til Neon
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: python3 -I scripts/last_opp_vaer.py hovden="$RUNNER_TEMP/hovden.json" nordmarka="$RUNNER_TEMP/nordmarka.json" baerumsmarka="$RUNNER_TEMP/baerumsmarka.json"
+        run: python3 -I scripts/oppdater_vaer.py

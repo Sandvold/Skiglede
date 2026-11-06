@@ -1,14 +1,14 @@
 import { innstråling } from '@/engine/sol';
 import type { Vær } from '@/engine';
-import { OMRÅDER, type OmrådeId } from '@/data/omrader';
+import type { Område } from '@/data/omrader';
 
 export type Varsel = { timer: Vær[]; oppdatert: string; /** Når appen hentet det (ms) */ hentet: number; /** true: lagret fra en tidligere henting, ikke ferskt */ fraCache: boolean };
 
-const cacheNøkkel = (område: OmrådeId) => `skiglede.varsel.${område}`;
+const cacheNøkkel = (område: Område) => `skiglede.varsel.${område.id}`;
 type Rå = { oppdatert: string; hentet: number; timer: [string, number, number, number, number, number][] };
 
-const tilVarsel = (d: Rå, område: OmrådeId, fraCache: boolean): Varsel => {
-  const sted = OMRÅDER[område].sted;
+const tilVarsel = (d: Rå, område: Område, fraCache: boolean): Varsel => {
+  const sted = område.sted;
   return {
     oppdatert: d.oppdatert,
     hentet: d.hentet,
@@ -21,7 +21,7 @@ const tilVarsel = (d: Rå, område: OmrådeId, fraCache: boolean): Varsel => {
 };
 
 /** Siste vellykkede prognose lagret på enheten (uten nett i skibilen), eller null. */
-export function lesVarselCache(område: OmrådeId): Varsel | null {
+export function lesVarselCache(område: Område): Varsel | null {
   try {
     const t = globalThis.localStorage?.getItem(cacheNøkkel(område));
     return t ? tilVarsel(JSON.parse(t) as Rå, område, true) : null;
@@ -31,8 +31,8 @@ export function lesVarselCache(område: OmrådeId): Varsel | null {
 }
 
 /** Timesvarsel fra Yr via Netlify-funksjonen. Kaster hvis det ikke går. Vellykket prognose lagres til bruk uten nett. */
-export async function hentVarsel(område: OmrådeId = 'hovden'): Promise<Varsel> {
-  const r = await fetch(`/.netlify/functions/varsel?sted=${område}`, { cache: 'no-store' });
+export async function hentVarsel(område: Område): Promise<Varsel> {
+  const r = await fetch(`/.netlify/functions/varsel?lat=${område.sted.lat}&lon=${område.sted.lon}&hoyde=${område.hoyde}`, { cache: 'no-store' });
   if (!r.ok) throw new Error(`varsel ${r.status}`);
   const d = (await r.json()) as { oppdatert: string; timer: Rå['timer'] };
   const rå: Rå = { oppdatert: d.oppdatert, hentet: Date.now(), timer: d.timer };

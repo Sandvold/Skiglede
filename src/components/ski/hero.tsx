@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { KontoHøyre } from '@/components/ski/konto';
-import { OMRÅDE_IDER, OMRÅDER, useOmråde } from '@/data/omrader';
+import { useOmråde, useOmråder } from '@/data/omrader';
 
 const MENY = [
   { href: '/', tekst: 'Løyper' },
@@ -17,6 +17,7 @@ export function Hero() {
   const sti = usePathname();
   const router = useRouter();
   const [område, setOmråde] = useOmråde();
+  const områder = useOmråder();
   return (
     <View style={[styles.hero, { backgroundColor: theme.hero }]}>
       {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
@@ -30,11 +31,12 @@ export function Hero() {
         <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
         <View style={styles.meny} accessibilityRole="radiogroup">
           <Text style={{ color: '#BFDDF7', fontSize: 14, alignSelf: 'center' }}>Hvor er du?</Text>
-          {OMRÅDE_IDER.map((id) => {
+          {områder.map((o) => {
+            const id = o.id;
             const aktiv = område.id === id;
             return (
               <Pressable key={id} accessibilityRole="radio" accessibilityState={{ selected: aktiv }} onPress={() => setOmråde(id)} style={[styles.menyKnapp, { backgroundColor: aktiv ? '#FFFFFF' : 'rgba(255,255,255,0.14)' }]}>
-                <Text style={{ color: aktiv ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 14 }}>{OMRÅDER[id].navn}</Text>
+                <Text style={{ color: aktiv ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 14 }}>{o.navn}</Text>
               </Pressable>
             );
           })}

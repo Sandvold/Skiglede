@@ -13,7 +13,7 @@ import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { OMRÅDER, useOmråde, useVær, type Område } from '@/data/omrader';
+import { useOmråde, useVær, type Område } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { usePremium } from '@/data/premium';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
@@ -139,13 +139,13 @@ function Detalj({ løype: valgtLøype, liste, område, onVelg, onTilbake }: { l�
   const [henter, setHenter] = useState(false);
   const oppdaterVær = () => {
     setHenter(true);
-    hentVarsel(område.id)
+    hentVarsel(område)
       .then((v) => { setVarsel(v); setVarselFeil(false); })
       .catch(() => setVarselFeil(true))
       .finally(() => { setHenter(false); setNå(Date.now()); });
   };
   useEffect(() => {
-    setVarsel(lesVarselCache(område.id)); // sist lagrede prognose vises mens ny hentes
+    setVarsel(lesVarselCache(område)); // sist lagrede prognose vises mens ny hentes
     oppdaterVær();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [område.id]);

@@ -6,7 +6,6 @@ Bruker DATABASE_URL (rollen vaer_skriver). Løyper som er borte fra filen slette
 import json, os
 import psycopg2
 
-FILER = {"hovden": "trails.json", "nordmarka": "trails-nordmarka.json", "baerumsmarka": "trails-baerumsmarka.json"}
 Rot = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "data")
 
 
@@ -24,7 +23,11 @@ def oversikt(punkter, steg=150):
 
 
 with psycopg2.connect(os.environ["DATABASE_URL"]) as con, con.cursor() as cur:
-    for omrade, fil in FILER.items():
+    cur.execute("select id, loypefil from public.omrade where loypefil is not null order by rekkefolge, id")  # fil per område står i tabellen omrade
+    for omrade, fil in cur.fetchall():
+        if not os.path.exists(os.path.join(Rot, fil)):
+            print(f"{omrade}: finner ikke {fil}, hopper over")
+            continue
         trails = json.load(open(os.path.join(Rot, fil)))
         for t in trails:
             data = {k: v for k, v in t.items() if k in ("punkter", "terreng")}

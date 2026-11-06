@@ -159,3 +159,9 @@ Ikke gjort ennå (funn fra researchen): gammel-snø-område for flere Swix-produ
 - Premium: smørelager, skipark, steder (flere steder, flytte ski og produkter mellom dem), innkjøpsforslag, «Bruk min smøring» og utvide løypa («Gå lenger»). Uten premium vises en lås; lokale data røres ikke.
 - Innlogging: Google via Neon Auth. Data i Neon (tabellene `profil` og `brukerdata`, RLS på `user_id`). Brukerens lagringsnøkler (lager, skipark, valgte, steder, brukLager) synkes som JSON per nøkkel; kontoen vinner ved innlogging, er kontoen tom lastes lokale data opp.
 - Bryteren «Premium: på/Vanlig» i toppen er midlertidig og endrer `profil.premium` direkte fra klienten. MÅ låses (kun server/betalingswebhook kan sette `premium`) før ekte betaling.
+
+## Områder, løyper og værhistorikk i Neon
+- Områdene ligger i tabellen `omrade` (id, navn, lat/lon for værpunktet, kartutsnitt `vis_*`, snøtemperatur `vinter_*`, `ref_hoyde_m`, `loypefil`, `vaer`, `rekkefolge`). Appen leser den ved start; de tre første områdene ligger også innebygd som reserve.
+- **Nytt område:** sett inn en rad i `omrade` (loypefil = filnavnet i `src/data/`, f.eks. `trails-geilo.json`), legg løypefilen i `src/data/`, og push. GitHub laster løypene opp (`last_opp_loyper.py`) og værjobben henter været for området (`oppdater_vaer.py`, hver fjerde time). Ingen Netlify-bygg og ingen kodeendring.
+- **Nye løyper:** endre løypefilen og push. Løypene hentes bare når de blir sett på (`loype`: lett liste + full løype).
+- Prognosen (Yr) hentes via Netlify-funksjonen `varsel` med lat/lon/høyde fra området.
