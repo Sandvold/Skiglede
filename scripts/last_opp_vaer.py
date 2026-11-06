@@ -3,7 +3,18 @@ import json, os, sys
 import psycopg2
 
 url = os.environ["DATABASE_URL"]
-filer = dict(a.split("=", 1) for a in sys.argv[1:])  # område=fil.json
+args = sys.argv[1:]
+hent = bool(args and args[0] == "--hent")  # --hent: skriv eksisterende data fra databasen til filene i stedet for å laste opp
+filer = dict(a.split("=", 1) for a in (args[1:] if hent else args))  # område=fil.json
+if hent:
+    with psycopg2.connect(url) as con, con.cursor() as cur:
+        for omrade, fil in filer.items():
+            cur.execute("select celle, referansehoyde_m, kolonner, timer from public.vaer where omrade = %s", (omrade,))
+            r = cur.fetchone()
+            if r:
+                json.dump({"celle": r[0], "referansehoyde_m": r[1], "kolonner": r[2], "timer": r[3]}, open(fil, "w"), separators=(",", ":"))
+                print(f"{omrade}: hentet {len(r[3])} timer fra databasen")
+    sys.exit(0)
 with psycopg2.connect(url) as con, con.cursor() as cur:
     for omrade, fil in filer.items():
         d = json.load(open(fil))

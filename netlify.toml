@@ -2,7 +2,7 @@
   command = "node scripts/kontroller-loyper.mjs && npx expo export --platform web"
   publish = "dist"
   # Bare main bygges og publiseres. Andre grener (f.eks. premium) hoppes over, så de ikke bruker Netlify-kreditter.
-  ignore = "test \"$BRANCH\" != \"main\""
+  ignore = "test \"$BRANCH\" != \"main\" || git diff --quiet \"$CACHED_COMMIT_REF\" \"$COMMIT_REF\" -- src app.json package.json package-lock.json netlify.toml scripts/kontroller-loyper.mjs"
 
 [build.environment]
   NODE_VERSION = "22"

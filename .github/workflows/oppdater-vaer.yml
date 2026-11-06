@@ -20,9 +20,13 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install numpy pyproj psycopg2-binary
-      - run: python3 -I scripts/hent_vaer.py --lat 59.5667 --lon 7.3667 --days 14 --json "$RUNNER_TEMP/hovden.json"
-      - run: python3 -I scripts/hent_vaer.py --lat 59.98 --lon 10.65 --days 14 --ref-hoyde 290 --json "$RUNNER_TEMP/nordmarka.json"
-      - run: python3 -I scripts/hent_vaer.py --lat 59.955 --lon 10.52 --days 14 --ref-hoyde 228 --json "$RUNNER_TEMP/baerumsmarka.json"
+      - name: Hent eksisterende data fra Neon (så vi bare henter nye timer fra MET)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python3 -I scripts/last_opp_vaer.py --hent hovden="$RUNNER_TEMP/hovden.json" nordmarka="$RUNNER_TEMP/nordmarka.json" baerumsmarka="$RUNNER_TEMP/baerumsmarka.json"
+      - run: python3 -I scripts/hent_vaer.py --lat 59.5667 --lon 7.3667 --days 14 --tidligere "$RUNNER_TEMP/hovden.json" --json "$RUNNER_TEMP/hovden.json"
+      - run: python3 -I scripts/hent_vaer.py --lat 59.98 --lon 10.65 --days 14 --ref-hoyde 290 --tidligere "$RUNNER_TEMP/nordmarka.json" --json "$RUNNER_TEMP/nordmarka.json"
+      - run: python3 -I scripts/hent_vaer.py --lat 59.955 --lon 10.52 --days 14 --ref-hoyde 228 --tidligere "$RUNNER_TEMP/baerumsmarka.json" --json "$RUNNER_TEMP/baerumsmarka.json"
       - name: Last opp til Neon
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
