@@ -8,9 +8,9 @@ export const MAKS_START_AVSTAND = 300;
 const meter = (a: Punkt, b: Punkt) => Math.hypot((a[0] - b[0]) * Math.cos((a[1] * Math.PI) / 180) * 111_320, (a[1] - b[1]) * 111_320);
 
 /** Løyper som starter ved samme sted og kan legges til turen (Galten og Lundane, Rørvikåsen og Ny Lysløype …). */
-export function tilhørende(løype: Løype, alle: Løype[]): Løype[] {
+export function tilhørende<T extends { id: string; variantAv?: string; start: number[] }>(løype: T, alle: T[]): T[] {
   const gruppe = løype.variantAv ?? løype.id;
-  return alle.filter((l) => !l.variantAv && l.id !== gruppe && meter(l.punkter[0], løype.punkter[0]) <= MAKS_START_AVSTAND);
+  return alle.filter((l) => !l.variantAv && l.id !== gruppe && meter(l.start as Punkt, løype.start as Punkt) <= MAKS_START_AVSTAND);
 }
 
 /** Rette punkter mellom a og b (hvert ~50 m), uten endepunktene. Høyde interpoleres. */

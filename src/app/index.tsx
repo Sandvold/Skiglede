@@ -8,6 +8,7 @@ import { Temperaturoversikt, tekstPå, type OversiktVisning } from '@/components
 import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
 import { byggRute, tilhørende, type Løype } from '@/data/rute';
+import { useLøyper, useLøypeliste, type LøypeInfo } from '@/data/loyper';
 import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
@@ -19,7 +20,6 @@ import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØ
 import { useRouter } from 'expo-router';
 import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
-const løyperI = (o: Område) => o.løyper as unknown as Løype[];
 const timerI = (v: Område['vær']): Vær[] => v.timer.map((r) => ({
   ts: Date.parse(r[0] as string), temp: r[1] as number, nedbor: r[2] as number, rh: r[3] as number, vind: r[4] as number, sw: r[5] as number,
 }));
@@ -93,9 +93,9 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
   );
 }
 
-function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: Løype; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
+function Detalj({ løype: valgtLøype, liste, område, onVelg, onTilbake }: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
   const theme = useTheme();
-  const LØYPER = useMemo(() => løyperI(område), [område]);
+  const LØYPER = liste;
   const værdata = useVær(område);
   const TIMER = useMemo(() => timerI(værdata), [værdata]);
   const { premium } = usePremium();
@@ -103,8 +103,13 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const ekstraIds = premium ? ekstraLagret : TOM_LISTE; // utvide løypa er premium
   const gruppe = valgtLøype.variantAv ?? valgtLøype.id;
   const varianter = useMemo(() => LØYPER.filter((l) => l.id === gruppe || l.variantAv === gruppe), [LØYPER, gruppe]);
-  const mulige = useMemo(() => tilhørende(valgtLøype, LØYPER), [valgtLøype, LØYPER]);
-  const løype = useMemo(() => byggRute(valgtLøype, mulige.filter((x) => ekstraIds.includes(x.id))), [valgtLøype, mulige, ekstraIds]);
+  const valgtInfo = useMemo(() => LØYPER.find((l) => l.id === valgtLøype.id) ?? { id: valgtLøype.id, variantAv: valgtLøype.variantAv, start: valgtLøype.punkter[0] as number[] }, [LØYPER, valgtLøype]);
+  const mulige = useMemo(() => tilhørende(valgtInfo as LøypeInfo, LØYPER), [valgtInfo, LØYPER]);
+  const ekstraFull = useLøyper(område.id, liste, ekstraIds); // ekstra løyper hentes først når de krysses av
+  const løype = useMemo(
+    () => byggRute(valgtLøype, mulige.filter((x) => ekstraIds.includes(x.id)).map((x) => ekstraFull.find((f) => f.id === x.id)).filter((l): l is Løype => !!l)),
+    [valgtLøype, mulige, ekstraIds, ekstraFull],
+  );
   const [modus, setModus] = useLagret<Modus>('skiglede.modus', 'Tur');
   const [startTime, setStartTime] = useLagret<number>('skiglede.start', 10);
   const [debug, setDebug] = useState(false);
@@ -540,17 +545,17 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   );
 }
 
-function Oversikt({ område, onVelg }: { område: Område; onVelg: (id: string) => void }) {
+function Oversikt({ område, liste, feil, onVelg }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; onVelg: (id: string) => void }) {
   const theme = useTheme();
   const router = useRouter();
-  const LØYPER = løyperI(område).filter((l) => !l.variantAv);
+  const LØYPER = (liste ?? []).filter((l) => !l.variantAv);
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
       <Hero />
       <View style={styles.innhold}>
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>LØYPER {område.navn.toUpperCase()}</ThemedText>
-        <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
-        <Oversiktskart key={område.id} løyper={LØYPER} visning={område.visning} onVelg={onVelg} />
+        <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : liste === null ? (feil ? 'Fikk ikke tak i løypene. Sjekk nettforbindelsen og prøv igjen.' : 'Henter løypene …') : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
+        <Oversiktskart key={område.id} løyper={LØYPER.map((l) => ({ id: l.id, navn: l.navn, punkter: l.oversikt }))} visning={område.visning} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
         <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0) og © OpenStreetMap-bidragsytere (ODbL).</ThemedText>
       </View>
@@ -561,9 +566,25 @@ function Oversikt({ område, onVelg }: { område: Område; onVelg: (id: string) 
 export default function Hjem() {
   const [område] = useOmråde();
   const [valgt, setValgt] = useLagret<string | null>(`skiglede.loype.${område.id}`, null);
-  const løype = løyperI(område).find((l) => l.id === valgt);
-  if (!løype) return <Oversikt område={område} onVelg={setValgt} />;
-  return <Detalj key={`${område.id}:${løype.id}`} løype={løype} område={område} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
+  const { liste, feil } = useLøypeliste(område.id);
+  const info = valgt ? liste?.find((l) => l.id === valgt) : undefined;
+  const [løype] = useLøyper(område.id, liste, info ? [info.id] : []);
+  if (valgt && liste === null && !feil) return <Laster tekst="Henter løypa …" />;
+  if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} onVelg={setValgt} />;
+  if (!løype) return <Laster tekst={`Henter ${info.navn} …`} />;
+  return <Detalj key={`${område.id}:${løype.id}`} løype={løype} liste={liste} område={område} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
+}
+
+function Laster({ tekst }: { tekst: string }) {
+  const theme = useTheme();
+  return (
+    <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
+      <Hero />
+      <View style={styles.innhold}>
+        <ThemedText themeColor="textSecondary">{tekst}</ThemedText>
+      </View>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
