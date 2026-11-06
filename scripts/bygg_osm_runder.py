@@ -108,11 +108,14 @@ def polylinje(nett, sti):
 
 def overlapp_pct(pts):
     """Andel av runden som ligger innen 20 m av en annen del av runden som er langt unna langs løypa."""
-    pr = hh.resample(pts, 20)
-    dist = [0.0]
-    for a, b in zip(pr, pr[1:]):
-        dist.append(dist[-1] + math.dist(a, b))
-    n = sum(1 for i, a in enumerate(pr) if any(abs(dist[i] - dist[j]) > 300 and math.dist(a, pr[j]) < 20 for j in range(len(pr))))
+    import numpy as np
+    pr = np.array(hh.resample(pts, 20))
+    dist = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(pr, axis=0).T))])
+    n = 0
+    for i in range(0, len(pr), 400):  # blokkvis, så minnebruket holder seg lavt selv for lange runder
+        d = np.hypot(pr[i:i + 400, None, 0] - pr[None, :, 0], pr[i:i + 400, None, 1] - pr[None, :, 1])
+        langt = np.abs(dist[i:i + 400, None] - dist[None, :]) > 300
+        n += int(((d < 20) & langt).any(axis=1).sum())
     return round(100 * n / len(pr))
 
 
@@ -156,6 +159,8 @@ def til_trail(t, runde, step=50):
         dist.append(dist[-1] + math.dist(a, b))
     punkter = []
     for p, h, d in zip(pr, hs, dist):
+        if h.get("z") is None:
+            raise ValueError("mangler høyde (punkt utenfor den norske høydemodellen, f.eks. over grensen)")
         lon, lat = FRA.transform(*p)
         punkter.append([round(lon, 5), round(lat, 5), round(h["z"], 1), round(d), int(h.get("terreng") == "Skog")])
     nyt = {k: v for k, v in t.items() if k not in ("punkter", "terreng", "overlapp_pct")}

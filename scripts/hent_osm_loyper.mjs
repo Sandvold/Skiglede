@@ -100,13 +100,17 @@ const lengde = (g) => g.slice(1).reduce((s, p, i) => s + meter(g[i], p), 0);
 
 export function tilLøyper(data) {
   const ut = [];
+  const sett = new Set();
   for (const el of data.elements ?? []) {
     const tags = el.tags ?? {};
-    const biter = el.type === 'way' ? [el.geometry] : (el.members ?? []).filter((m) => m.type === 'way' && m.geometry).map((m) => m.geometry);
-    for (const g of biter) {
-      if (!g || g.length < 2) continue;
+    // Hver bit får egen nøkkel (way-id), også medlemmer av relasjoner, så ingen faller bort som «duplikat» og samme vei ikke telles to ganger
+    const biter = el.type === 'way' ? [{ id: el.id, g: el.geometry }] : (el.members ?? []).filter((m) => m.type === 'way' && m.geometry).map((m) => ({ id: m.ref, g: m.geometry }));
+    for (const { id, g } of biter) {
+      if (!g || g.length < 2 || sett.has(id)) continue;
+      sett.add(id);
       ut.push({
-        osm: `${el.type}/${el.id}`,
+        osm: `way/${id}`,
+        relasjon: el.type === 'relation' ? el.id : undefined,
         navn: tags.name ?? tags['piste:name'] ?? null,
         ref: tags.ref ?? null,
         lysløype: tags.lit ?? null,

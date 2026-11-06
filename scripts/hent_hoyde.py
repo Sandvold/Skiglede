@@ -10,7 +10,7 @@ Skriver SQL for trails og trail_sections (se db/schema.sql). aspect_deg lar vi s
 tom foreløpig (krever sideveis terrengprøver); forest_fraction = andel punkter
 Kartverket merker som «Skog».
 """
-import argparse, json, math, urllib.parse, urllib.request
+import argparse, json, math, time, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
 from pyproj import Transformer
 
@@ -85,8 +85,15 @@ def hoyder(pts, batch=50):
     for i in range(0, len(pts), batch):
         chunk = [[round(x, 2), round(y, 2)] for x, y in pts[i:i + batch]]
         q = urllib.parse.urlencode({"punkter": json.dumps(chunk), "koordsys": 25832})
-        with urllib.request.urlopen(f"{REST}?{q}", timeout=60) as r:
-            res += json.load(r)["punkter"]
+        for forsøk in range(5):  # API-et gir av og til 429/5xx: vent og prøv igjen
+            try:
+                with urllib.request.urlopen(f"{REST}?{q}", timeout=60) as r:
+                    res += json.load(r)["punkter"]
+                break
+            except Exception:
+                if forsøk == 4:
+                    raise
+                time.sleep(10 * (forsøk + 1))
     return res
 
 

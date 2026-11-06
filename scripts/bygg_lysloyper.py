@@ -28,9 +28,10 @@ def stykker(filer, filter_, straff=lambda p, pr: not pr):
     for f in filer:
         for p in json.load(open(f))["løyper"]:
             pr = p.get("preparering") or ""
-            if "backcountry" in pr or "scooter" in pr or p["osm"] in sett or not filter_(p, pr):
+            nøkkel = (p["osm"], tuple(p["punkter"][0]), tuple(p["punkter"][-1]), p["lengde_m"])
+            if "backcountry" in pr or "scooter" in pr or nøkkel in sett or not filter_(p, pr):
                 continue
-            sett.add(p["osm"])
+            sett.add(nøkkel)
             out.append(([TO.transform(*q) for q in p["punkter"]], straff(p, pr)))
     return out
 

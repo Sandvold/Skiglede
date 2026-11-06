@@ -13,6 +13,8 @@ export function Områdevelger() {
   const [åpen, setÅpen] = useState(false);
   const [søk, setSøk] = useState('');
   const sortert = sorterOmråder(liste, pos, fav).filter((o) => !søk.trim() || o.navn.toLowerCase().includes(søk.trim().toLowerCase()));
+  const MAKS_VIST = 25; // favoritter og nærmeste først; resten via søk, så listen er rask også med hundrevis av områder
+  const vist = søk.trim() ? sortert : sortert.slice(0, MAKS_VIST);
   const km = (o: (typeof liste)[number]) => {
     const d = avstandTil(o, pos);
     return d === null ? '' : d < 1 ? ' · under 1 km' : ` · ${Math.round(d)} km`;
@@ -32,7 +34,7 @@ export function Områdevelger() {
             <Text style={{ color: '#12386B', fontWeight: '700', fontSize: 15 }}>{`📍 Nærmeste: ${nærmeste.navn}`}</Text>
             <Text style={{ color: '#55708F', fontSize: 12 }}>{pos ? 'Følger posisjonen din' : 'Tillat posisjon i nettleseren for å finne nærmeste'}</Text>
           </Pressable>
-          {sortert.map((o) => (
+          {vist.map((o) => (
             <View key={o.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: !automatisk && o.id === område.id ? '#E8F1FB' : 'transparent' }}>
               <Pressable accessibilityRole="radio" accessibilityState={{ selected: !automatisk && o.id === område.id }} onPress={() => { setOmråde(o.id); setÅpen(false); }} style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 14 }}>
                 <Text style={{ color: '#12386B', fontWeight: '700', fontSize: 15 }}>{`${o.navn}${km(o)}`}</Text>
@@ -42,6 +44,7 @@ export function Områdevelger() {
               </Pressable>
             </View>
           ))}
+          {vist.length < sortert.length ? <Text style={{ color: '#55708F', fontSize: 12, paddingHorizontal: 14, paddingVertical: 8 }}>{`Viser ${vist.length} av ${sortert.length}. Søk for å finne flere.`}</Text> : null}
         </View>
       ) : null}
     </View>

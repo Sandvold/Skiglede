@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: oppdater-vaer
+  cancel-in-progress: false
+
 jobs:
   vaer:
     runs-on: ubuntu-latest

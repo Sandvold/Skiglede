@@ -19,21 +19,32 @@ TO, FRA = bo.TO, bo.FRA
 BANDER = [(2000, 4000), (4000, 7000), (7000, 11000), (11000, 16000)]  # ut-avstand (m) for vendepunkt
 
 
-def stedsnavn(lonlat, brukt):
-    url = "https://nominatim.openstreetmap.org/reverse?" + urllib.parse.urlencode({"lat": lonlat[1], "lon": lonlat[0], "zoom": 15, "format": "jsonv2", "accept-language": "nb"})
-    try:
-        r = json.load(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "skiglede"}), timeout=20))
-    except Exception:
+# Navnetyper fra Kartverkets stedsnavn, i prioritert rekkefølge (lavere tall = bedre navn på en løype). Adressenavn, gårder, jorder, bekker osv. brukes ikke.
+NAVNETYPER = {
+    "Tettsted": 0, "Grend": 0, "Turisthytte": 1, "Hotell": 1, "Alpinanlegg": 1, "Idrettsanlegg": 1, "Hyttefelt": 1,
+    "Fjell": 2, "Topp": 2, "Høyde": 2, "Ås": 2, "Tjern": 3, "Vann": 3, "Seter/støl": 3, "Setervoll": 3, "Dal": 3, "Skogområde": 3,
+}
+
+
+def stedsnavn(lonlat, brukt, radius=1500):
+    """Naturlig navn på et punkt: nærmeste stedsnavn av en egnet type fra Kartverket (ingen Nominatim, tåler parallelle kjøringer)."""
+    q = urllib.parse.urlencode({"nord": lonlat[1], "ost": lonlat[0], "koordsys": 4326, "radius": radius, "treffPerSide": 200, "side": 1, "utkoordsys": 4326})
+    for forsøk in range(3):
+        try:
+            d = json.load(urllib.request.urlopen(urllib.request.Request("https://ws.geonorge.no/stedsnavn/v1/punkt?" + q, headers={"User-Agent": "skiglede"}), timeout=30))
+            break
+        except Exception:
+            time.sleep(2 * (forsøk + 1))
+    else:
         return None
-    time.sleep(1.1)
-    ad = r.get("address", {})
-    for k in ("name",):
-        if r.get(k):
-            return r[k]
-    for k in ("natural", "water", "tourism", "leisure", "neighbourhood", "hamlet", "locality", "suburb", "village", "road"):
-        if ad.get(k) and ad[k] not in brukt:
-            return ad[k]
-    return None
+    kand = []
+    for n in d.get("navn", []):
+        t = NAVNETYPER.get(n.get("navneobjekttype"))
+        navn = n["stedsnavn"][0]["skrivemåte"]
+        if t is None or n.get("stedstatus") != "aktiv" or navn in brukt:
+            continue
+        kand.append((t, n.get("meterFraPunkt", 0), navn))
+    return min(kand)[2] if kand else None
 
 
 def felles(a, b, tol=25):
@@ -90,11 +101,21 @@ def main():
             valgt.append((f"{sn} – {navn}", pts, lonlat))
     if a.skriv:
         eks = json.load(open(a.ut)) if os.path.exists(a.ut) else []
+        nye_ider = set()
         for navn, pts, mal in valgt:
-            t = br.til_trail({"id": bo.id_av(navn), "navn": navn}, pts)
+            try:
+                t = br.til_trail({"id": bo.id_av(navn), "navn": navn}, pts)
+            except ValueError as e:
+                print(f"  hopper over {navn}: {e}")
+                continue
+            ids = {e["id"] for e in eks}
+            i = 2
+            while t["id"] in ids or t["id"] in nye_ider:  # unik id: aldri overskriv en annen runde med samme navn
+                t["id"] = f"{bo.id_av(navn)}-{i}"; i += 1
+            nye_ider.add(t["id"])
             t.pop("kilde_runde", None)
             t.update(kilde="osm", mal=[round(mal[0], 5), round(mal[1], 5)])
-            eks = [e for e in eks if e["id"] != t["id"]] + [t]
+            eks = eks + [t]
         eks.sort(key=lambda e: (e["navn"], bool(e.get("variantAv"))))
         json.dump(eks, open(a.ut, "w"), ensure_ascii=False, separators=(",", ":"))
         print("terreng:", " ".join(f'--navn "{n}"' for n, _, _ in valgt))

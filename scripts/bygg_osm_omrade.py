@@ -29,11 +29,13 @@ def last(filer, uprep=False):
     for f in filer:
         for p in json.load(open(f))["løyper"]:
             pr = p.get("preparering") or ""
-            if "backcountry" in pr or "scooter" in pr or p["osm"] in sett:
+            # eldre filer ga alle medlemmer i en relasjon samme osm-id: nøkkelen inkluderer derfor start og lengde
+            nøkkel = (p["osm"], tuple(p["punkter"][0]), tuple(p["punkter"][-1]), p["lengde_m"])
+            if "backcountry" in pr or "scooter" in pr or nøkkel in sett:
                 continue
             if not pr and not (uprep and p["lengde_m"] >= 150):
                 continue
-            sett.add(p["osm"])
+            sett.add(nøkkel)
             biter.append(([TO.transform(*q) for q in p["punkter"]], not pr))
     return biter
 
