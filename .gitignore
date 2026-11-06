@@ -42,3 +42,4 @@ example
 /ios
 /android
 scripts/ut/
+__pycache__/
