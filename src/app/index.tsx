@@ -14,6 +14,7 @@ import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { OMRÅDER, useOmråde, type Område } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
+import { usePremium } from '@/data/premium';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
 import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
@@ -96,7 +97,9 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const theme = useTheme();
   const LØYPER = useMemo(() => løyperI(område), [område]);
   const TIMER = useMemo(() => timerI(område), [område]);
-  const [ekstraIds, setEkstraIds] = useLagret<string[]>(`skiglede.ekstra.${valgtLøype.id}`, TOM_LISTE);
+  const { premium } = usePremium();
+  const [ekstraLagret, setEkstraIds] = useLagret<string[]>(`skiglede.ekstra.${valgtLøype.id}`, TOM_LISTE);
+  const ekstraIds = premium ? ekstraLagret : TOM_LISTE; // utvide løypa er premium
   const gruppe = valgtLøype.variantAv ?? valgtLøype.id;
   const varianter = useMemo(() => LØYPER.filter((l) => l.id === gruppe || l.variantAv === gruppe), [LØYPER, gruppe]);
   const mulige = useMemo(() => tilhørende(valgtLøype, LØYPER), [valgtLøype, LØYPER]);
@@ -109,17 +112,22 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
   const setDagIdx = (i: number) => setDagDato(osloDato(i));
   const router = useRouter();
   const [stil, setStil] = useLagret<Stil>('skiglede.stil', 'klassisk');
-  const [valgte, setValgte] = useStedData<string[]>(NØKKEL_VALGTE, TOM_LISTE);
+  const [valgteLagret, setValgte] = useStedData<string[]>(NØKKEL_VALGTE, TOM_LISTE);
+  const valgte = premium ? valgteLagret : TOM_LISTE;
   const [nå, setNå] = useState(() => Date.now());
-  const [lager] = useStedData<string[]>(NØKKEL_LAGER, TOM_LISTE);
-  const [oversiktVisning, setOversiktVisning] = useState<OversiktVisning>('alle');
+  const [lagerLagret] = useStedData<string[]>(NØKKEL_LAGER, TOM_LISTE);
+  const lager = premium ? lagerLagret : TOM_LISTE; // smørelageret er premium
+  const [oversiktValgt, setOversiktVisning] = useState<OversiktVisning>('alle');
+  const oversiktVisning: OversiktVisning = premium ? oversiktValgt : 'alle';
   const kjøp = useMemo(() => innkjøpsforslag(område.vinter, lager, SWIX), [område, lager]);
   const sys = SWIX; // Anbefalingen tar alltid utgangspunkt i Swix
-  const [brukLager, setBrukLager] = useLagret<boolean>(NØKKEL_BRUK_LAGER, false);
+  const [brukLagret, setBrukLager] = useLagret<boolean>(NØKKEL_BRUK_LAGER, false);
+  const brukLager = premium && brukLagret;
   // Uten avkrysning: ren Swix-anbefaling. Med avkrysning: tilpasset smørelageret, på tvers av merker.
   const lagerBruk = brukLager ? lager : TOM_LISTE;
   const [visning, setVisning] = useLagret<'full' | 'enkel'>(NØKKEL_VISNING, 'full');
-  const [skipark, setSkipark] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
+  const [skiparkLagret, setSkipark] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
+  const skipark = premium ? skiparkLagret : (TOM_LISTE as Ski[]);
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [varselFeil, setVarselFeil] = useState(false);
   const [henter, setHenter] = useState(false);
@@ -239,8 +247,9 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
         {mulige.length > 0 && (
           <View style={{ gap: Spacing.two }}>
             <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>GÅ LENGER: LEGG TIL FRA SAMME START</ThemedText>
+            {!premium && <ThemedText type="small" themeColor="textSecondary">🔒 Premium: legg til flere løyper fra samme start og få smøringen regnet for hele turen. Logg inn og slå på premium øverst.</ThemedText>}
             <View style={styles.rad}>
-              {mulige.map((x) => (
+              {premium && mulige.map((x) => (
                 <Chip key={x.id} aktiv={ekstraIds.includes(x.id)} onPress={() => setEkstraIds(ekstraIds.includes(x.id) ? ekstraIds.filter((v) => v !== x.id) : [...ekstraIds, x.id])}>
                   {`${ekstraIds.includes(x.id) ? '✓ ' : '+ '}${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km`}
                 </Chip>
@@ -333,13 +342,13 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
               <Text style={{ color: theme.accent, fontWeight: '700' }}>{TYPE_NAVN[vis.type]}</Text>
             </View>
           </View>
-          <Pressable onPress={() => setBrukLager(!brukLager)} style={styles.rad} accessibilityRole="checkbox" accessibilityState={{ checked: brukLager }}>
+          <Pressable onPress={() => premium && setBrukLager(!brukLager)} style={styles.rad} accessibilityRole="checkbox" accessibilityState={{ checked: brukLager }}>
             <View style={{ width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: theme.border, backgroundColor: brukLager ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
               {brukLager ? <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✓</Text> : null}
             </View>
             <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>Bruk min smøring</Text>
             <ThemedText type="small" themeColor="textSecondary" style={{ flexShrink: 1 }}>
-              {brukLager ? (lager.length ? `Tilpasset smørelageret ditt (${lager.length} produkter, alle merker).` : 'Smørelageret er tomt: kryss av det du har under Smørelager.') : 'Anbefaling fra Swix. Kryss av for å bruke det du har i lageret, fra alle merker.'}
+              {brukLager ? (lager.length ? `Tilpasset smørelageret ditt (${lager.length} produkter, alle merker).` : 'Smørelageret er tomt: kryss av det du har under Smørelager.') : (premium ? 'Anbefaling fra Swix. Kryss av for å bruke det du har i lageret, fra alle merker.' : '🔒 Premium: bruk det du har i smørelageret, fra alle merker.')}
             </ThemedText>
           </Pressable>
           <View style={styles.rad}>
@@ -474,8 +483,8 @@ function Detalj({ løype: valgtLøype, område, onVelg, onTilbake }: { løype: L
           <ThemedText type="small" themeColor="textSecondary">Hva hvert produkt fungerer på, med fargekodene til {sys.navn}.</ThemedText>
           <View style={styles.rad}>
             <Chip aktiv={oversiktVisning === 'alle'} onPress={() => setOversiktVisning('alle')}>Alle produkter</Chip>
-            <Chip aktiv={oversiktVisning === 'mine'} onPress={() => setOversiktVisning('mine')}>Mine produkter</Chip>
-            <Chip aktiv={oversiktVisning === 'kjop'} onPress={() => setOversiktVisning('kjop')}>Forslag til innkjøp</Chip>
+            <Chip aktiv={oversiktVisning === 'mine'} onPress={() => premium && setOversiktVisning('mine')}>{premium ? 'Mine produkter' : '🔒 Mine produkter'}</Chip>
+            <Chip aktiv={oversiktVisning === 'kjop'} onPress={() => premium && setOversiktVisning('kjop')}>{premium ? 'Forslag til innkjøp' : '🔒 Forslag til innkjøp'}</Chip>
           </View>
           {oversiktVisning === 'kjop' ? (
             <ThemedText type="small" themeColor="textSecondary">

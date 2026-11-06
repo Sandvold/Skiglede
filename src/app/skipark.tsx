@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { PremiumLås } from '@/components/ski/konto';
 import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
 import { tekstPå } from '@/components/ski/oversikt';
@@ -40,6 +41,7 @@ export default function Skipark() {
       <Hero />
       <View style={styles.innhold}>
         <Text style={[styles.h1, { color: theme.text }]}>Skipark</Text>
+      <PremiumLås tittel="Skipark">
         <ThemedText themeColor="textSecondary">
           Legg inn skiene dine. Når du velger et par på en tur og lagrer smøringen, husker Skiglede hva som ligger på og sier fra neste gang om skia må renses eller bare trenger topplag.
         </ThemedText>
@@ -146,6 +148,7 @@ export default function Skipark() {
           </Kort>
         ))}
         <ThemedText type="small" themeColor="textSecondary">Skiparken lagres på denne enheten. Innlogging og synk mellom enheter kommer senere.</ThemedText>
+      </PremiumLås>
       </View>
     </ScrollView>
   );

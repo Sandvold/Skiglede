@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { KontoLinje } from '@/components/ski/konto';
 import { OMRÅDE_IDER, OMRÅDER, useOmråde } from '@/data/omrader';
 
 const MENY = [
@@ -45,6 +46,7 @@ export function Hero() {
             );
           })}
         </View>
+        <KontoLinje />
       </View>
       <View style={[styles.drift, { left: -80, width: 420, height: 160, backgroundColor: theme.background, bottom: -100 }]} />
       <View style={[styles.drift, { right: -120, width: 560, height: 190, backgroundColor: theme.background, bottom: -120 }]} />

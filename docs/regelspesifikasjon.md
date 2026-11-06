@@ -154,3 +154,8 @@ Ikke gjort ennå (funn fra researchen): gammel-snø-område for flere Swix-produ
 - Valg som løype, ekstra løyper, dag, starttid, tur/trening og stil huskes mellom sidene.
 - Lagring av smøring på ski: i Enkel visning lagres bare base, glidesone og dagens smøring; i Full lagres hele stabelen. Smøringen knyttes til datoen turen gjelder (`mål`): lagres den på nytt for samme tur, erstattes den uten å telle en ny tur.
 - Å slette et ski krever bekreftelse; «Renset (nullstill)» gjør ikke det.
+
+## Premium (grunnlag, nov 2026)
+- Premium: smørelager, skipark, steder (flere steder, flytte ski og produkter mellom dem), innkjøpsforslag, «Bruk min smøring» og utvide løypa («Gå lenger»). Uten premium vises en lås; lokale data røres ikke.
+- Innlogging: Google via Neon Auth. Data i Neon (tabellene `profil` og `brukerdata`, RLS på `user_id`). Brukerens lagringsnøkler (lager, skipark, valgte, steder, brukLager) synkes som JSON per nøkkel; kontoen vinner ved innlogging, er kontoen tom lastes lokale data opp.
+- Bryteren «Premium: på/Vanlig» i toppen er midlertidig og endrer `profil.premium` direkte fra klienten. MÅ låses (kun server/betalingswebhook kan sette `premium`) før ekte betaling.
