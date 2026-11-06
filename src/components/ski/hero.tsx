@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { KontoLinje, LoggInnKnapp } from '@/components/ski/konto';
+import { KontoHøyre } from '@/components/ski/konto';
 import { OMRÅDE_IDER, OMRÅDER, useOmråde } from '@/data/omrader';
 
 const MENY = [
@@ -25,7 +25,7 @@ export function Hero() {
       <View style={styles.innhold}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
           <Text style={styles.tittel}>Skiglede</Text>
-          <LoggInnKnapp stil={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 999, marginTop: 10 }} />
+          <KontoHøyre />
         </View>
         <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
         <View style={styles.meny} accessibilityRole="radiogroup">
@@ -49,7 +49,6 @@ export function Hero() {
             );
           })}
         </View>
-        <KontoLinje />
       </View>
       <View style={[styles.drift, { left: -80, width: 420, height: 160, backgroundColor: theme.background, bottom: -100 }]} />
       <View style={[styles.drift, { right: -120, width: 560, height: 190, backgroundColor: theme.background, bottom: -120 }]} />

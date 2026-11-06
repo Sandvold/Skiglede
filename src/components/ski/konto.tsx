@@ -5,27 +5,30 @@ import { ThemedText } from '@/components/themed-text';
 import { usePremium } from '@/data/premium';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Innlogging og bryteren mellom premium og vanlig (foreløpig uten ekte betaling). */
-export function KontoLinje() {
+/** Øverst til høyre: «Logg inn» når du er utlogget; ellers e-post, premium-bryter (midlertidig, ingen betaling ennå) og «Logg ut». */
+export function KontoHøyre() {
   const { klar, bruker, premium, loggInnMedGoogle, loggUt, byttPremium } = usePremium();
-  if (!klar || !bruker) return null;
+  if (!klar) return null;
+  const knapp = { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 } as const;
+  if (!bruker) {
+    return (
+      <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[knapp, { backgroundColor: '#F4B73B', marginTop: 10 }]}>
+        <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>Logg inn</Text>
+      </Pressable>
+    );
+  }
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, alignItems: 'center' }}>
-      <Text style={{ color: '#BFDDF7', fontSize: 14 }}>{bruker.epost}</Text>
-      <Chip aktiv={premium} onPress={byttPremium}>{premium ? 'Premium: på' : 'Vanlig: bytt til premium'}</Chip>
-      <Chip aktiv={false} onPress={loggUt}>Logg ut</Chip>
+    <View style={{ alignItems: 'flex-end', gap: 6, marginTop: 8, flexShrink: 1 }}>
+      <Text numberOfLines={1} style={{ color: '#BFDDF7', fontSize: 13, maxWidth: 220 }}>{bruker.epost}</Text>
+      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
+          <Text style={{ color: premium ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{premium ? 'Premium' : 'Vanlig'}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={loggUt} style={[knapp, { backgroundColor: 'rgba(255,255,255,0.14)' }]}>
+          <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>Logg ut</Text>
+        </Pressable>
+      </View>
     </View>
-  );
-}
-
-/** Knapp i menyen øverst: logg inn med Google (vises ikke når du er innlogget; da ligger kontoen under menyen). */
-export function LoggInnKnapp({ stil }: { stil: object }) {
-  const { klar, bruker, loggInnMedGoogle } = usePremium();
-  if (!klar || bruker) return null;
-  return (
-    <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[stil, { backgroundColor: '#F4B73B' }]}>
-      <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>Logg inn</Text>
-    </Pressable>
   );
 }
 
