@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { MERKE_IDER, SYSTEMER, type MerkeId, type Smøresystem, type Smøring, type Stil, type Temperatursone } from '@/engine';
 
 // Brukerdata (smørelager og skipark) lagres foreløpig lokalt i nettleseren, per enhet. Uten innlogging er det ikke delt mellom enheter.
@@ -28,7 +28,7 @@ export const lesLokal = les;
 
 /** Nøkler som hører til brukerens egne data og synkes til kontoen for premium-brukere. */
 export const erBrukerdata = (n: string) =>
-  /^skiglede\.(lager|skipark|valgte|steder|sted|standardsted|brukLager|favoritter)(\.|$)/.test(n);
+  /^skiglede\.(lager|skipark|valgte|steder|sted|standardsted|stedomrader|brukLager|favoritter)(\.|$)/.test(n);
 
 function skriv(nøkkel: string, verdi: string, varsle = true) {
   minne.set(nøkkel, verdi);
@@ -74,6 +74,8 @@ export type Sted = { id: string; navn: string };
 export const NØKKEL_STEDER = 'skiglede.steder';
 export const NØKKEL_AKTIVT_STED = 'skiglede.sted';
 export const NØKKEL_STANDARDSTED = 'skiglede.standardsted';
+/** Hvilket område hvert sted hører til: { stedId: områdeId }. Når området byttes, byttes også sted til det som hører til området. */
+export const NØKKEL_STEDOMRÅDER = 'skiglede.stedomrader';
 /** Standardstedet har tom id, så data lagret før steder fantes (uendrede nøkler) hører til det. */
 const stedNøkkel = (base: string, id: string) => (id ? `${base}.${id}` : base);
 const STEDDATA = [NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE];
@@ -82,15 +84,25 @@ export function useSteder() {
   const [ekstra, setEkstra] = useLagret<Sted[]>(NØKKEL_STEDER, TOM_LISTE);
   const [aktivRå, setAktiv] = useLagret<string>(NØKKEL_AKTIVT_STED, '');
   const [standardnavn, setStandardnavn] = useLagret<string>(NØKKEL_STANDARDSTED, 'Standard');
+  const [lenker, setLenker] = useLagret<Record<string, string>>(NØKKEL_STEDOMRÅDER, {});
   const steder: Sted[] = [{ id: '', navn: standardnavn || 'Standard' }, ...ekstra];
   const aktiv = steder.some((s) => s.id === aktivRå) ? aktivRå : '';
   return {
     steder,
     aktiv,
     velg: setAktiv,
-    leggTil(navn: string) {
+    /** Området stedet hører til ('' = ingen). */
+    områdeFor: (id: string) => lenker[id] ?? '',
+    /** Knytter stedet til et område. Hvert område har ett sted, så andre steder som var knyttet dit slippes. */
+    knytt(id: string, områdeId: string) {
+      const ny = Object.fromEntries(Object.entries(lenker).filter(([sid, o]) => sid !== id && o !== områdeId));
+      if (områdeId) ny[id] = områdeId;
+      setLenker(ny);
+    },
+    leggTil(navn: string, områdeId?: string) {
       const id = `s${Date.now().toString(36)}`;
       setEkstra([...ekstra, { id, navn: navn.trim() }]);
+      if (områdeId) setLenker({ ...Object.fromEntries(Object.entries(lenker).filter(([, o]) => o !== områdeId)), [id]: områdeId });
       setAktiv(id);
     },
     gi_nytt_navn(id: string, navn: string) {
@@ -101,6 +113,7 @@ export function useSteder() {
     fjern(id: string) {
       if (!id) return; // standardstedet kan ikke fjernes
       STEDDATA.forEach((b) => skriv(stedNøkkel(b, id), ''));
+      setLenker(Object.fromEntries(Object.entries(lenker).filter(([sid]) => sid !== id)));
       setEkstra(ekstra.filter((s) => s.id !== id));
       setAktiv('');
     },
@@ -163,4 +176,36 @@ export function useAlleLagre(): Record<string, string[]> {
     return ut;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rå]);
+}
+
+/** Bytter aktivt sted til stedet som hører til området (om noe er knyttet dit). Kalles når området endres. */
+export function byttStedForOmråde(områdeId: string) {
+  let lenker: Record<string, string> = {};
+  try {
+    lenker = JSON.parse(les(NØKKEL_STEDOMRÅDER) || '{}');
+  } catch {
+    return;
+  }
+  const treff = Object.keys(lenker).find((sid) => lenker[sid] === områdeId);
+  if (treff === undefined) return;
+  const nå = (() => {
+    try {
+      return JSON.parse(les(NØKKEL_AKTIVT_STED) || '""') as string;
+    } catch {
+      return '';
+    }
+  })();
+  if (nå !== treff) skriv(NØKKEL_AKTIVT_STED, JSON.stringify(treff));
+}
+
+/** Sist behandlede område + koblinger, så vi bare bytter sted når området eller koblingene endres (ikke ved hver sidevisning). */
+let sistOmråde = '';
+export function useStedFølgerOmråde(områdeId: string) {
+  const [lenkerRå] = useLagret<Record<string, string>>(NØKKEL_STEDOMRÅDER, {});
+  const nøkkel = `${områdeId}|${JSON.stringify(lenkerRå)}`;
+  useEffect(() => {
+    if (sistOmråde === nøkkel) return;
+    sistOmråde = nøkkel;
+    byttStedForOmråde(områdeId);
+  }, [nøkkel, områdeId]);
 }

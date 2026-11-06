@@ -7,7 +7,7 @@ Gi en komplett Swix-smøring for en bestemt løype, før start. Skille seg fra d
 
 ## 2. Brukerflyt
 - Input: løype, dato, starttid, **Trening** eller **Tur** [Bruker].
-- Tempo [Forslag, justerbart]: Trening 9 km/t, Tur 5 km/t. Brukes til å regne posisjon om til klokkeslett, så riktig timesprognose slås opp.
+- Tempo [Bruker]: klassisk Tur 7 km/t og Trening 10 km/t; skøyting Tur 10 og Trening 15. Brukes til å regne posisjon om til klokkeslett, så riktig timesprognose slås opp.
 - Output: én komplett lagstabel før start. Ingen smørepunkter underveis, fordi svært få smører om [Bruker].
 
 ## 3. Datakilder
@@ -144,7 +144,7 @@ Researchen (Swix-guider, Dæhlie/DN, Budstikka, Dinside, norske forhandlere, Bou
 - **Glider beholdes** når snøen er innenfor produktets område (`SKIPARK.glideMonn` 0) [Forslag].
 - **Ski-soner** følger landslagets strukturkode: kald ≤ −5 °C, mid −5…0, varm over 0 (`SONER`) [Produsent].
 - **Glidesone** nederst i festestabelen vises som eget lag. Hardvoks i sludd gir snøballe-advarsel.
-- **Tempo** [Bruker]: klassisk 5 km/t tur og 9 trening; skøyting 7 og 11.
+- **Tempo** [Bruker]: klassisk 7 km/t tur og 10 trening; skøyting 10 og 15.
 
 Ikke gjort ennå (funn fra researchen): gammel-snø-område for flere Swix-produkter (bare de fem over er funnet), normalisering av Toko/Rode (snø- vs lufttemperatur, Nord-/Sør-Europa) og etikettkontroll av Ski Go Blå/Violett, Rode P36/P42/P46 og Toko-klister.
 

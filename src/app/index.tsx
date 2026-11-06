@@ -48,8 +48,8 @@ const DAGER = [0, 1, 2];
 const STIL_NAVN: Record<Stil, string> = { klassisk: 'Klassisk', felle: 'Felleski', rubb: 'Rubbski', skoyting: 'Skøyting' };
 const TYPE_NAVN = { hardvoks: 'Hardvoks', klister: 'Klister', glider: 'Glider', felle: 'Felleski', rubb: 'Rubbski' } as const;
 
-// km/t. Skøyting går ca. 2 km/t fortere enn klassisk, både på tur og trening.
-const TEMPO = { klassisk: { Trening: 9, Tur: 5 }, skoyting: { Trening: 11, Tur: 7 } } as const;
+// km/t [Bruker]: klassisk tur 7 og trening 10; skøyting tur 10 og trening 15.
+const TEMPO = { klassisk: { Trening: 10, Tur: 7 }, skoyting: { Trening: 15, Tur: 10 } } as const;
 type Modus = 'Trening' | 'Tur';
 const MODI: Modus[] = ['Tur', 'Trening'];
 const VARSEL_GAMMELT_T = 6; // timer

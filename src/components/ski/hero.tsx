@@ -5,6 +5,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { KontoHøyre } from '@/components/ski/konto';
 import { useOmråde } from '@/data/omrader';
+import { useStedFølgerOmråde } from '@/data/lagring';
 import { Områdevelger } from '@/components/ski/omradevelger';
 
 const MENY = [
@@ -18,6 +19,7 @@ export function Hero() {
   const sti = usePathname();
   const router = useRouter();
   const [område] = useOmråde();
+  useStedFølgerOmråde(område.id);
   return (
     <View style={[styles.hero, { backgroundColor: theme.hero }]}>
       {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
