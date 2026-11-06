@@ -97,13 +97,86 @@ export function useOmråder(): Område[] {
   return områdeliste ?? INNEBYGD;
 }
 
-/** Valgt område, huskes på enheten. */
-export function useOmråde(): [Område, (id: OmrådeId) => void] {
-  const [id, sett] = useLagret<string>(NØKKEL_OMRÅDE, 'hovden');
+export const NØKKEL_FAVORITTER = 'skiglede.favoritter';
+const NØKKEL_POS = 'skiglede.cache.posisjon';
+
+// ---- Posisjon: brukes til å velge nærmeste område når du ikke har valgt selv ----
+export type Pos = { lat: number; lon: number };
+let posisjon: Pos | null = null; // leses fra enheten først etter første visning, så side og klient er like ved oppstart
+let posForespurt = false;
+const posLyttere = new Set<() => void>();
+function hentPosisjon() {
+  if (posForespurt || typeof navigator === 'undefined' || !navigator.geolocation) return;
+  posForespurt = true;
+  navigator.geolocation.getCurrentPosition(
+    (p) => {
+      posisjon = { lat: p.coords.latitude, lon: p.coords.longitude };
+      try {
+        globalThis.localStorage?.setItem(NØKKEL_POS, JSON.stringify(posisjon));
+      } catch {
+        // lagring blokkert
+      }
+      posLyttere.forEach((f) => f());
+    },
+    () => {}, // nektet eller utilgjengelig: da brukes favoritt eller første område
+    { timeout: 8000, maximumAge: 3_600_000 },
+  );
+}
+export function usePosisjon(spør: boolean): Pos | null {
+  const [, tving] = useState(0);
+  useEffect(() => {
+    const f = () => tving((n) => n + 1);
+    posLyttere.add(f);
+    if (!posisjon) {
+      try {
+        const t = globalThis.localStorage?.getItem(NØKKEL_POS);
+        if (t) {
+          posisjon = JSON.parse(t) as Pos;
+          posLyttere.forEach((g) => g());
+        }
+      } catch {
+        // ingen lagret posisjon
+      }
+    }
+    if (spør) hentPosisjon();
+    return () => {
+      posLyttere.delete(f);
+    };
+  }, [spør]);
+  return posisjon;
+}
+
+/** Luftlinje i km. */
+export function avstandKm(a: Pos, b: Pos) {
+  const r = Math.PI / 180;
+  const h = Math.sin(((b.lat - a.lat) * r) / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(((b.lon - a.lon) * r) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+export const avstandTil = (o: Område, p: Pos | null) => (p ? avstandKm(p, { lat: o.visning.lat, lon: o.visning.lon }) : null);
+
+/** Favorittene øverst, så resten. Innen hver gruppe nærmest først når posisjonen er kjent, ellers som i tabellen. */
+export function sorterOmråder(liste: Område[], p: Pos | null, fav: string[]): Område[] {
+  const d = (o: Område) => avstandTil(o, p) ?? 0;
+  const innen = (l: Område[]) => (p ? [...l].sort((x, y) => d(x) - d(y)) : l);
+  return [...innen(liste.filter((o) => fav.includes(o.id))), ...innen(liste.filter((o) => !fav.includes(o.id)))];
+}
+
+/** Favoritter (område-id-er), huskes på enheten. */
+export function useFavoritter(): [string[], (id: string) => void] {
+  const [fav, sett] = useLagret<string[]>(NØKKEL_FAVORITTER, []);
+  return [fav, (id) => sett(fav.includes(id) ? fav.filter((f) => f !== id) : [...fav, id])];
+}
+
+/** Valgt område. Uten eget valg brukes nærmeste område (etter posisjon), ellers første favoritt eller første i lista. Eget valg huskes på enheten; tom id = nærmeste. */
+export function useOmråde(): [Område, (id: OmrådeId) => void, { automatisk: boolean; nærmeste: Område }] {
+  const [id, sett] = useLagret<string>(NØKKEL_OMRÅDE, '');
+  const [fav] = useLagret<string[]>(NØKKEL_FAVORITTER, []);
   const liste = useOmråder();
+  const p = usePosisjon(!id);
   // «oslo» het området før Nordmarka og Bærumsmarka ble delt
-  const gyldig = id === 'oslo' ? 'nordmarka' : id;
-  return [liste.find((o) => o.id === gyldig) ?? liste[0], sett as (id: OmrådeId) => void];
+  const valgt = liste.find((o) => o.id === (id === 'oslo' ? 'nordmarka' : id));
+  const nærmeste = p ? [...liste].sort((x, y) => avstandKm(p, { lat: x.visning.lat, lon: x.visning.lon }) - avstandKm(p, { lat: y.visning.lat, lon: y.visning.lon }))[0] : sorterOmråder(liste, null, fav)[0];
+  return [valgt ?? nærmeste, sett as (id: OmrådeId) => void, { automatisk: !valgt, nærmeste }];
 }
 
 type Værdata = Område['vær'];

@@ -28,7 +28,7 @@ export const lesLokal = les;
 
 /** Nøkler som hører til brukerens egne data og synkes til kontoen for premium-brukere. */
 export const erBrukerdata = (n: string) =>
-  /^skiglede\.(lager|skipark|valgte|steder|sted|standardsted|brukLager)(\.|$)/.test(n);
+  /^skiglede\.(lager|skipark|valgte|steder|sted|standardsted|brukLager|favoritter)(\.|$)/.test(n);
 
 function skriv(nøkkel: string, verdi: string, varsle = true) {
   minne.set(nøkkel, verdi);
