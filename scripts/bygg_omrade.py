@@ -104,6 +104,7 @@ def main():
     ap.add_argument("--antall", type=int, default=12)
     ap.add_argument("--workers", type=int, default=5)
     ap.add_argument("--uten-terreng", action="store_true")
+    ap.add_argument("--dtm", help="glob til lokale GeoTIFF-høydefiler (DTM10): terreng regnes lokalt i stedet for via API-et")
     ap.add_argument("--overskriv", action="store_true")
     a = ap.parse_args()
     fil = f"src/data/trails-{a.id}.json"
@@ -130,7 +131,10 @@ def main():
     if not ut:
         raise SystemExit("ingen løyper ble igjen")
     if not a.uten_terreng:
-        kjør("scripts/hent_terreng.py", "--ut", fil, "--workers", str(a.workers), "--pause", "0.2", "--fortsett")
+        if a.dtm:
+            kjør("scripts/hent_terreng_raster.py", "--ut", fil, "--dtm", a.dtm, "--fortsett")
+        else:
+            kjør("scripts/hent_terreng.py", "--ut", fil, "--workers", str(a.workers), "--pause", "0.2", "--fortsett")
     z = [p[2] for t in ut for p in t["punkter"]]
     lo = statistics.mean(p[0] for t in ut for p in t["punkter"]); la = statistics.mean(p[1] for t in ut for p in t["punkter"])
     k = subprocess.run(["node", "scripts/kontroller-loyper.mjs", "--karantene", "/tmp/karantene-" + a.id + ".json"], capture_output=True, text=True, cwd=ROT)
