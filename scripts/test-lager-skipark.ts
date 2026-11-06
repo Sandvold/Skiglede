@@ -109,7 +109,7 @@ sjekk('terreng: blokkert horisont gir skygge og lav solfaktor', [Math.round(blok
 sjekk('terreng: ignorerSkygge gir full solfaktor men melder skygge', terrengFaktor(TERR(80)[0], høyTid, 59.57, 7.37, true).faktor > 0.3, true);
 
 // Rute: hovedløype + tilhørende fra samme start
-const alleL = trails as any[];
+const alleL = (trails as any[]).map((x) => ({ ...x, start: x.punkter[0] })); // appen får `start` fra løypelisten i databasen
 const lund = alleL.find((x) => x.navn === 'Lundane');
 const tilh = tilhørende(lund, alleL);
 sjekk('rute: Galten hører til Lundane (samme start)', tilh.map((x) => x.navn), ['Galten']);
