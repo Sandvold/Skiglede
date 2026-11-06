@@ -23,7 +23,10 @@ export function Hero() {
         <Text key={i} style={[styles.flak, { left: `${8 + i * 14}%`, top: 14 + ((i * 37) % 70), fontSize: 14 + ((i * 5) % 14) }]}>{f}</Text>
       ))}
       <View style={styles.innhold}>
-        <Text style={styles.tittel}>Skiglede</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <Text style={styles.tittel}>Skiglede</Text>
+          <LoggInnKnapp stil={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 999, marginTop: 10 }} />
+        </View>
         <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
         <View style={styles.meny} accessibilityRole="radiogroup">
           <Text style={{ color: '#BFDDF7', fontSize: 14, alignSelf: 'center' }}>Hvor er du?</Text>
@@ -45,7 +48,6 @@ export function Hero() {
               </Pressable>
             );
           })}
-          <LoggInnKnapp stil={styles.menyKnapp} />
         </View>
         <KontoLinje />
       </View>
