@@ -11,7 +11,7 @@ import argparse, json, math, os, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import bygg_osm_omrade as bo
 
-PRIO = {"Hotell": 0, "Alpinanlegg": 0, "Turisthytte": 1, "Idrettsanlegg": 1, "Hyttefelt": 2, "Grend": 2, "Fjellstue": 0}
+PRIO = {"Parkering": 1, "Hotell": 0, "Alpinanlegg": 0, "Turisthytte": 1, "Idrettsanlegg": 1, "Hyttefelt": 2, "Grend": 2, "Fjellstue": 0}
 
 
 def main():
