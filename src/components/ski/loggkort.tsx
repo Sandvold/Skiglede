@@ -14,6 +14,7 @@ export function Loggkort({ grunnlag }: { grunnlag: Omit<NyLogg, 'grep' | 'glid' 
   const theme = useTheme();
   const router = useRouter();
   const { premium } = usePremium();
+  const skøyting = grunnlag.stil === 'skoyting'; // skøyting har ikke feste: bare glid vurderes
   const [grep, setGrep] = useState<number | null>(null);
   const [glid, setGlid] = useState<number | null>(null);
   const [snø, setSnø] = useState('');
@@ -31,9 +32,9 @@ export function Loggkort({ grunnlag }: { grunnlag: Omit<NyLogg, 'grep' | 'glid' 
   }
   const tall = (t: string) => { const n = parseFloat(t.replace(',', '.')); return Number.isFinite(n) ? n : null; };
   const lagre = async () => {
-    if (grep === null && glid === null && !kommentar.trim()) { setStatus('Velg en vurdering eller skriv en kommentar først.'); return; }
+    if ((skøyting ? false : grep === null) && glid === null && !kommentar.trim()) { setStatus('Velg en vurdering eller skriv en kommentar først.'); return; }
     setStatus('lagrer');
-    const feil = await lagreLogg({ ...grunnlag, grep, glid, snotemp_malt: tall(snø), lufttemp_malt: tall(luft), kommentar: kommentar.trim() || null });
+    const feil = await lagreLogg({ ...grunnlag, grep: skøyting ? null : grep, glid, snotemp_malt: tall(snø), lufttemp_malt: tall(luft), kommentar: kommentar.trim() || null });
     if (feil) { setStatus(feil); return; }
     setStatus('lagret');
     setGrep(null); setGlid(null); setSnø(''); setLuft(''); setKommentar('');
@@ -43,12 +44,16 @@ export function Loggkort({ grunnlag }: { grunnlag: Omit<NyLogg, 'grep' | 'glid' 
     <Kort style={{ gap: Spacing.two }}>
       <Text style={{ color: theme.text, fontWeight: '800', fontSize: 18 }}>Hvordan gikk smøringen?</Text>
       <ThemedText type="small" themeColor="textSecondary">Gjelder smøringen over. Du kan logge etter turen.</ThemedText>
-      <ThemedText type="smallBold" themeColor="textSecondary">FESTE</ThemedText>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {GREP_VALG.map((g) => <Chip key={g.v} aktiv={grep === g.v} onPress={() => setGrep(grep === g.v ? null : g.v)}>{g.tekst}</Chip>)}
-      </View>
-      {grep === -2 && <ThemedText type="small" themeColor="textSecondary">Veldig bakglatt: for kald smøring.</ThemedText>}
-      {grep === 2 && <ThemedText type="small" themeColor="textSecondary">Mye klabb: for varm smøring, eller klister på tørr snø.</ThemedText>}
+      {skøyting ? null : (
+        <>
+          <ThemedText type="smallBold" themeColor="textSecondary">FESTE</ThemedText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {GREP_VALG.map((g) => <Chip key={g.v} aktiv={grep === g.v} onPress={() => setGrep(grep === g.v ? null : g.v)}>{g.tekst}</Chip>)}
+          </View>
+          {grep === -2 && <ThemedText type="small" themeColor="textSecondary">Veldig bakglatt: for kald smøring.</ThemedText>}
+          {grep === 2 && <ThemedText type="small" themeColor="textSecondary">Mye klabb: for varm smøring, eller klister på tørr snø.</ThemedText>}
+        </>
+      )}
       <ThemedText type="smallBold" themeColor="textSecondary">GLID</ThemedText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {GLID_VALG.map((g) => <Chip key={g.v} aktiv={glid === g.v} onPress={() => setGlid(glid === g.v ? null : g.v)}>{g.tekst}</Chip>)}

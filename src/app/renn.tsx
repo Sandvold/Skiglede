@@ -14,6 +14,8 @@ import { useLøypeliste, useLøyper } from '@/data/loyper';
 import type { Løype } from '@/data/rute';
 import { lesAnonymt } from '@/data/neon';
 import { useOmråder, useVær, type Område } from '@/data/omrader';
+import { NØKKEL_SKIPARK, NØKKEL_VALGTE, TOM_LISTE, useStedData, type Ski } from '@/data/lagring';
+import { StedVelger } from '@/components/ski/sted';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
 import { SWIX, analyserSnø, anbefalStruktur, nabostruktur, byggSmøring, lagSeksjoner, planTur, proGlidelag, type Stil, type Tur, type Vær } from '@/engine';
@@ -115,6 +117,10 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
   const [time, setTime] = useState(renn.starttid ? Number(renn.starttid.slice(0, 2)) + Number(renn.starttid.slice(3, 5)) / 60 : 10);
   const [stil, setStil] = useState<'klassisk' | 'skoyting'>(renn.stil === 'skoyting' ? 'skoyting' : 'klassisk');
   const TIMER = useMemo(() => timerI(værdata), [værdata]);
+  const [skipark] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
+  const [valgte, setValgte] = useStedData<string[]>(NØKKEL_VALGTE, TOM_LISTE);
+  const mine = skipark.filter((x) => x.stil === stil);
+  const valgteSki = valgte.map((id) => mine.find((x) => x.id === id)).filter((x): x is Ski => !!x);
 
   useEffect(() => {
     setVarsel(lesVarselCache(område));
@@ -215,13 +221,29 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
             </Kort>
           ) : null}
           <Kort>
+            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Dine ski</Text>
+            <StedVelger forklaring="Stedet velges automatisk når du er innen 10 km. Ellers velger du selv ski fra et av stedene, eller bruker smøring fra lageret." />
+            {mine.length ? (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">Velg ski til testen (samme valg som «Smører i dag» i skiparken). Parene vises i testplanen under.</ThemedText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {mine.map((x) => (
+                    <Chip key={x.id} aktiv={valgte.includes(x.id)} onPress={() => setValgte(valgte.includes(x.id) ? valgte.filter((v) => v !== x.id) : [...valgte, x.id])}>{x.navn}</Chip>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <ThemedText type="small" themeColor="textSecondary">{`Ingen ${stil === 'klassisk' ? 'klassiskski' : 'skøyteski'} på dette stedet. Legg dem til i Skipark, eller velg et annet sted.`}</ThemedText>
+            )}
+          </Kort>
+          <Kort>
             <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Testplan: tre par ski</Text>
             <ThemedText type="small" themeColor="textSecondary">Appen ser ikke snøen i løypa. Mål snøtemperaturen der og test tre par ski. Glid vurderer du på følelsen. {stil === 'klassisk' ? 'Festet testes samtidig, og så melder du tilbake hva som skal justeres (se under).' : ''} Forslag, ikke fasit.</ThemedText>
             {[[1, 'Anbefalt', res.struktur, 0], [2, 'Finere glid' + (stil === 'klassisk' ? ', kaldere feste' : ''), nabostruktur(res.struktur, -1, stil), 1], [3, 'Grovere glid' + (stil === 'klassisk' ? ', varmere feste' : ''), nabostruktur(res.struktur, 1, stil), 2]].map(([n, tittel, str, fi]) => {
               const f = stil === 'klassisk' ? res.feste[fi as number] : null;
               return (
                 <View key={String(n)} style={{ gap: 2, marginTop: 8 }}>
-                  <Text style={{ color: theme.text, fontWeight: '800' }}>{`Par ${n}: ${tittel}`}</Text>
+                  <Text style={{ color: theme.text, fontWeight: '800' }}>{`Par ${n}${valgteSki[(n as number) - 1] ? ` · ${valgteSki[(n as number) - 1].navn}` : ''}: ${tittel}`}</Text>
                   <ThemedText type="small">{`Struktur: ${str ? (str as { navn: string }).navn : 'finnes ikke (bruk anbefalt)'}`}</ThemedText>
                   <ThemedText type="small">{`Glider: ${glid(f ? f.stabel : res.stabel, res.glid)}`}</ThemedText>
                   {f ? (

@@ -6,7 +6,8 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { KontoHøyre } from '@/components/ski/konto';
 import { useOmråde } from '@/data/omrader';
-import { useStedFølgerOmråde } from '@/data/lagring';
+import { useSteder } from '@/data/lagring';
+import { STED_RADIUS_KM, useStedFølgerPosisjon, useStedStatus } from '@/data/stedauto';
 import { usePremium } from '@/data/premium';
 import { Områdevelger } from '@/components/ski/omradevelger';
 
@@ -27,7 +28,10 @@ export function Hero() {
   const [område] = useOmråde();
   const { premium, pro } = usePremium();
   const meny = [...MENY, ...(premium ? [LOGG] : []), ...(pro ? [RENN] : [])];
-  useStedFølgerOmråde(område.id);
+  useStedFølgerPosisjon();
+  const stedStatus = useStedStatus();
+  const { steder, aktiv } = useSteder();
+  const stedNavn = steder.find((x) => x.id === aktiv)?.navn;
   return (
     <View style={[styles.hero, { backgroundColor: theme.hero, paddingTop: 24 + topp }]}>
       {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
@@ -40,6 +44,11 @@ export function Hero() {
         </View>
         <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
         <Områdevelger />
+        {premium && stedStatus.tilstand !== 'ukjent' ? (
+          <Text style={{ color: '#BFDDF7', fontSize: 13, marginTop: 10 }}>
+            {stedStatus.tilstand === 'inne' ? `📍 ${stedNavn} (valgt automatisk)` : `📍 Mer enn ${STED_RADIUS_KM} km fra stedene dine: velg smøring fra lageret eller ski fra et av stedene.`}
+          </Text>
+        ) : null}
         <View style={styles.meny}>
           {meny.map((m) => {
             const aktiv = sti === m.href;

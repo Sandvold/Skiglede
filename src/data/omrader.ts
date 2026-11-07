@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import hovdenVær from '@/data/vaer-hovden.json';
 import nordmarkaVær from '@/data/vaer-nordmarka.json';
 import baerumVær from '@/data/vaer-baerumsmarka.json';
@@ -104,8 +105,36 @@ export type Pos = { lat: number; lon: number };
 let posisjon: Pos | null = null; // leses fra enheten først etter første visning, så side og klient er like ved oppstart
 let posForespurt = false;
 const posLyttere = new Set<() => void>();
+function settPosisjon(lat: number, lon: number) {
+  posisjon = { lat, lon };
+  try {
+    globalThis.localStorage?.setItem(NØKKEL_POS, JSON.stringify(posisjon));
+  } catch {
+    // lagring blokkert
+  }
+  posLyttere.forEach((f) => f());
+}
 function hentPosisjon() {
-  if (posForespurt || typeof navigator === 'undefined' || !navigator.geolocation) return;
+  if (posForespurt) return;
+  if (Platform.OS !== 'web') {
+    // Mobil: expo-location (spør om tillatelse første gang). Lastes først her så web ikke trenger pakken.
+    posForespurt = true;
+    (async () => {
+      try {
+        const L = require('expo-location');
+        const t = await L.requestForegroundPermissionsAsync();
+        if (t.status !== 'granted') return;
+        const sist = await L.getLastKnownPositionAsync();
+        if (sist) settPosisjon(sist.coords.latitude, sist.coords.longitude);
+        const nå = await L.getCurrentPositionAsync({ accuracy: L.Accuracy.Balanced });
+        settPosisjon(nå.coords.latitude, nå.coords.longitude);
+      } catch {
+        // uten posisjon: ingen automatisk sted
+      }
+    })();
+    return;
+  }
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return;
   posForespurt = true;
   navigator.geolocation.getCurrentPosition(
     (p) => {

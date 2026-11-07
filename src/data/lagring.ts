@@ -28,7 +28,7 @@ export const lesLokal = les;
 
 /** Nøkler som hører til brukerens egne data og synkes til kontoen for premium-brukere. */
 export const erBrukerdata = (n: string) =>
-  /^skiglede\.(lager|skipark|valgte|steder|sted|standardsted|stedomrader|brukLager|favoritter)(\.|$)/.test(n);
+  /^skiglede\.(lager|skipark|valgte|steder|sted|standardsted|stedomrader|stedpos|brukLager|favoritter)(\.|$)/.test(n);
 
 function skriv(nøkkel: string, verdi: string, varsle = true) {
   minne.set(nøkkel, verdi);
@@ -77,6 +77,8 @@ export const NØKKEL_STANDARDSTED = 'skiglede.standardsted';
 /** Hvilket område hvert sted hører til: { stedId: områdeId }. Når området byttes, byttes også sted til det som hører til området. */
 export const NØKKEL_STEDOMRÅDER = 'skiglede.stedomrader';
 /** Standardstedet har tom id, så data lagret før steder fantes (uendrede nøkler) hører til det. */
+/** Posisjon per sted: { stedId: {lat, lon} }. Brukes til å velge sted automatisk når du er innen 10 km. */
+export const NØKKEL_STEDPOS = 'skiglede.stedpos';
 const stedNøkkel = (base: string, id: string) => (id ? `${base}.${id}` : base);
 const STEDDATA = [NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE];
 
@@ -85,12 +87,18 @@ export function useSteder() {
   const [aktivRå, setAktiv] = useLagret<string>(NØKKEL_AKTIVT_STED, '');
   const [standardnavn, setStandardnavn] = useLagret<string>(NØKKEL_STANDARDSTED, 'Standard');
   const [lenker, setLenker] = useLagret<Record<string, string>>(NØKKEL_STEDOMRÅDER, {});
+  const [stedpos, setStedpos] = useLagret<Record<string, { lat: number; lon: number }>>(NØKKEL_STEDPOS, {});
   const steder: Sted[] = [{ id: '', navn: standardnavn || 'Standard' }, ...ekstra];
   const aktiv = steder.some((s) => s.id === aktivRå) ? aktivRå : '';
   return {
     steder,
     aktiv,
     velg: setAktiv,
+    /** Lagret posisjon for stedet (brukes til automatisk valg innen 10 km). */
+    posFor: (id: string) => stedpos[id] ?? null,
+    settPos(id: string, p: { lat: number; lon: number }) {
+      setStedpos({ ...stedpos, [id]: p });
+    },
     /** Området stedet hører til ('' = ingen). */
     områdeFor: (id: string) => lenker[id] ?? '',
     /** Knytter stedet til et område. Hvert område har ett sted, så andre steder som var knyttet dit slippes. */
@@ -99,9 +107,10 @@ export function useSteder() {
       if (områdeId) ny[id] = områdeId;
       setLenker(ny);
     },
-    leggTil(navn: string, områdeId?: string) {
+    leggTil(navn: string, områdeId?: string, pos?: { lat: number; lon: number } | null) {
       const id = `s${Date.now().toString(36)}`;
       setEkstra([...ekstra, { id, navn: navn.trim() }]);
+      if (pos) setStedpos({ ...stedpos, [id]: pos });
       if (områdeId) setLenker({ ...Object.fromEntries(Object.entries(lenker).filter(([, o]) => o !== områdeId)), [id]: områdeId });
       setAktiv(id);
     },
@@ -114,6 +123,7 @@ export function useSteder() {
       if (!id) return; // standardstedet kan ikke fjernes
       STEDDATA.forEach((b) => skriv(stedNøkkel(b, id), ''));
       setLenker(Object.fromEntries(Object.entries(lenker).filter(([sid]) => sid !== id)));
+      setStedpos(Object.fromEntries(Object.entries(stedpos).filter(([sid]) => sid !== id)));
       setEkstra(ekstra.filter((s) => s.id !== id));
       setAktiv('');
     },

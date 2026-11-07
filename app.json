@@ -33,6 +33,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Skiglede bruker posisjonen din til å velge riktig sted (smørelager og ski) og område."
+        }
       ]
     ],
     "experiments": {

@@ -4,24 +4,23 @@ import { Text, TextInput, View } from 'react-native';
 import { Chip } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
 import { useSteder } from '@/data/lagring';
-import { sorterOmråder, useOmråde, useOmråder } from '@/data/omrader';
+import { useOmråde } from '@/data/omrader';
 import { usePosisjonNå } from '@/data/posisjon';
+import { STED_RADIUS_KM, useStedStatus } from '@/data/stedauto';
 import { useTheme } from '@/hooks/use-theme';
 
 /** Velg sted (f.eks. fjellet eller hjemme). Hvert sted har eget smørelager og egen skipark. */
 export function StedVelger({ forklaring }: { forklaring?: string }) {
   const theme = useTheme();
-  const { steder, aktiv, velg, leggTil, gi_nytt_navn, fjern, områdeFor, knytt } = useSteder();
+  const { steder, aktiv, velg, leggTil, gi_nytt_navn, fjern, posFor, settPos } = useSteder();
   const [valgtOmråde] = useOmråde();
-  const områder = useOmråder();
   const pos = usePosisjonNå();
-  const [visOmråder, setVisOmråder] = useState(false);
-  const knyttetNavn = områder.find((o) => o.id === områdeFor(aktiv))?.navn;
+  const status = useStedStatus();
   const [modus, setModus] = useState<'ingen' | 'ny' | 'navn' | 'fjern'>('ingen');
   const [tekst, setTekst] = useState('');
   const nåværende = steder.find((s) => s.id === aktiv)!;
   const ferdig = () => {
-    if (modus === 'ny' && tekst.trim()) leggTil(tekst, valgtOmråde.id); // nytt sted hører til området du er i
+    if (modus === 'ny' && tekst.trim()) leggTil(tekst, valgtOmråde.id, pos ?? { lat: valgtOmråde.visning.lat, lon: valgtOmråde.visning.lon }); // nytt sted får posisjonen din (ellers området du ser på)
     if (modus === 'navn') gi_nytt_navn(aktiv, tekst);
     setModus('ingen');
     setTekst('');
@@ -58,21 +57,15 @@ export function StedVelger({ forklaring }: { forklaring?: string }) {
           <Chip aktiv={false} onPress={() => setModus('ingen')}>Avbryt</Chip>
         </View>
       ) : null}
-      <View style={{ gap: 6 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-          <Chip aktiv={visOmråder} onPress={() => setVisOmråder(!visOmråder)}>{knyttetNavn ? `Område: ${knyttetNavn}` : 'Knytt til område'}</Chip>
-          <ThemedText type="small" themeColor="textSecondary" style={{ flexShrink: 1 }}>
-            {knyttetNavn ? `Velger du ${knyttetNavn} (eller er du der), byttes det automatisk til ${nåværende.navn}.` : 'Knyttes stedet til et område, byttes det automatisk når du velger eller er i området.'}
-          </ThemedText>
-        </View>
-        {visOmråder ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            <Chip aktiv={!knyttetNavn} onPress={() => { knytt(aktiv, ''); setVisOmråder(false); }}>Ingen</Chip>
-            {sorterOmråder(områder, pos, []).map((o) => (
-              <Chip key={o.id} aktiv={områdeFor(aktiv) === o.id} onPress={() => { knytt(aktiv, o.id); setVisOmråder(false); }}>{o.navn}</Chip>
-            ))}
-          </View>
-        ) : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        {pos ? <Chip aktiv={false} onPress={() => settPos(aktiv, pos)}>{posFor(aktiv) ? 'Oppdater posisjon til der jeg er' : 'Bruk min posisjon som dette stedet'}</Chip> : null}
+        <ThemedText type="small" themeColor="textSecondary" style={{ flexShrink: 1 }}>
+          {status.tilstand === 'inne'
+            ? `Du er innen ${STED_RADIUS_KM} km fra stedet, så det velges automatisk.`
+            : status.tilstand === 'utenfor'
+              ? `Du er mer enn ${STED_RADIUS_KM} km fra stedene dine. Velg selv smøring fra lageret, eller ski fra et av stedene.`
+              : posFor(aktiv) ? 'Stedet velges automatisk når du er innen 10 km.' : 'Legg til posisjon, så velges stedet automatisk når du er innen 10 km.'}
+        </ThemedText>
       </View>
       <ThemedText type="small" themeColor="textSecondary">
         {forklaring ?? (steder.length > 1 ? `Du ser ${nåværende.navn}.` : 'Har du ski eller smøring på flere steder, for eksempel på fjellet og hjemme, kan du legge til flere steder. Uten steder ligger alt samlet.')}
