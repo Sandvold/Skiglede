@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { KontoHøyre } from '@/components/ski/konto';
 import { useOmråde } from '@/data/omrader';
 import { useStedFølgerOmråde } from '@/data/lagring';
+import { usePremium } from '@/data/premium';
 import { Områdevelger } from '@/components/ski/omradevelger';
 
 const MENY = [
@@ -13,12 +14,17 @@ const MENY = [
   { href: '/lager', tekst: 'Smørelager' },
   { href: '/skipark', tekst: 'Skipark' },
 ] as const;
+// Premium og pro får egne faner.
+const LOGG = { href: '/logg', tekst: 'Logg' } as const;
+const RENN = { href: '/renn', tekst: 'Renn' } as const;
 
 export function Hero() {
   const theme = useTheme();
   const sti = usePathname();
   const router = useRouter();
   const [område] = useOmråde();
+  const { premium, pro } = usePremium();
+  const meny = [...MENY, ...(premium ? [LOGG] : []), ...(pro ? [RENN] : [])];
   useStedFølgerOmråde(område.id);
   return (
     <View style={[styles.hero, { backgroundColor: theme.hero }]}>
@@ -33,7 +39,7 @@ export function Hero() {
         <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
         <Områdevelger />
         <View style={styles.meny}>
-          {MENY.map((m) => {
+          {meny.map((m) => {
             const aktiv = sti === m.href;
             return (
               <Pressable key={m.href} accessibilityRole="link" onPress={() => router.push(m.href)} style={[styles.menyKnapp, { backgroundColor: aktiv ? '#FFFFFF' : 'rgba(255,255,255,0.14)' }]}>
