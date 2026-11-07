@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { lesLokal, skrivFraKonto } from '@/data/lagring';
-import { lesAnonymt, neonAnonym } from '@/data/neon';
+import { lesAnonymt } from '@/data/neon';
 import type { Løype } from '@/data/rute';
 
 /** Lett løypeinfo til oversiktskart og lister. Hele løypa (punkter og terreng) hentes først når den åpnes. */
@@ -44,8 +44,7 @@ export function useLøypeliste(område: string): { liste: LøypeInfo[] | null; f
     }
     (async () => {
       try {
-        const { data, error } = await neonAnonym().from('loype').select('id, navn, type, lengde_m, variant_av, start, oversikt, oppdatert').eq('omrade', område).order('navn');
-        if (error) throw error;
+        const data = await lesAnonymt<Record<string, unknown>>(`loype?select=id,navn,type,lengde_m,variant_av,start,oversikt,oppdatert&omrade=eq.${encodeURIComponent(område)}&order=navn.asc`);
         const liste: LøypeInfo[] = (data ?? []).map((r: Record<string, unknown>) => ({
           id: r.id as string, navn: r.navn as string, type: (r.type as LøypeInfo['type']) ?? undefined, lengde_m: r.lengde_m as number,
           variantAv: (r.variant_av as string | null) ?? undefined, start: r.start as number[], oversikt: r.oversikt as number[][], oppdatert: String(r.oppdatert),

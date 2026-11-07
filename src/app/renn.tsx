@@ -12,7 +12,7 @@ import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import hovdenTour from '@/data/renn-hovden-tour.json';
 import { useLøypeliste, useLøyper } from '@/data/loyper';
 import type { Løype } from '@/data/rute';
-import { neonAnonym } from '@/data/neon';
+import { lesAnonymt } from '@/data/neon';
 import { useOmråder, useVær, type Område } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
@@ -51,7 +51,7 @@ function useRenn(): Renn[] {
     let avbrutt = false;
     (async () => {
       try {
-        const { data } = await neonAnonym().from('konkurranse').select('id, navn, omrade, dato, starttid, stil, lengde_km, loype_id, testdata, merknad').order('dato', { ascending: true, nullsFirst: false });
+        const data = await lesAnonymt('konkurranse?select=id,navn,omrade,dato,starttid,stil,lengde_km,loype_id,testdata,merknad&order=dato.asc.nullslast');
         if (!avbrutt && data?.length) setListe(data as Renn[]);
       } catch {
         // beholder reserven

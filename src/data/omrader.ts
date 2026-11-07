@@ -3,7 +3,7 @@ import nordmarkaVær from '@/data/vaer-nordmarka.json';
 import baerumVær from '@/data/vaer-baerumsmarka.json';
 import { useEffect, useState } from 'react';
 import { useLagret } from '@/data/lagring';
-import { neonAnonym } from '@/data/neon';
+import { lesAnonymt } from '@/data/neon';
 
 export type OmrådeId = string;
 
@@ -47,8 +47,7 @@ function lastOmråder() {
   if (områdeHenting) return;
   områdeHenting = (async () => {
     try {
-      const { data, error } = await neonAnonym().from('omrade').select('*').order('rekkefolge').order('navn');
-      if (error) throw error;
+      const data = await lesAnonymt('omrade?select=*&order=rekkefolge.asc,navn.asc');
       if (data?.length) {
         områdeliste = (data as OmrådeRad[]).map(tilOmråde);
         lagreOmråderLokalt(data as OmrådeRad[]);
@@ -190,10 +189,10 @@ export function useVær(o: Område): Værdata {
     let avbrutt = false;
     (async () => {
       try {
-        const { data } = await neonAnonym().from('vaer').select('referansehoyde_m, timer, oppdatert').eq('omrade', o.id).maybeSingle();
+        const data = ((await lesAnonymt<{ referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string }>(`vaer?select=referansehoyde_m,timer,oppdatert&omrade=eq.${encodeURIComponent(o.id)}`))[0]) as { referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string } | undefined;
         const timer = data?.timer as (string | number)[][] | undefined;
-        if (!avbrutt && timer?.length && Date.parse(String(data.oppdatert)) > Date.now() - 4 * 86400_000) {
-          friskVær.set(o.id, { referansehoyde_m: data.referansehoyde_m, timer });
+        if (!avbrutt && timer?.length && Date.parse(String(data!.oppdatert)) > Date.now() - 4 * 86400_000) {
+          friskVær.set(o.id, { referansehoyde_m: data!.referansehoyde_m, timer });
           tving((n) => n + 1);
         }
       } catch {
