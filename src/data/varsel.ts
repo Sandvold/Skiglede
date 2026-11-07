@@ -30,13 +30,27 @@ export function lesVarselCache(område: Område): Varsel | null {
   }
 }
 
-/** Timesvarsel fra Yr via Netlify-funksjonen. Kaster hvis det ikke går. Vellykket prognose lagres til bruk uten nett. */
+/**
+ * Timesvarsel direkte fra MET (Yr, locationforecast), både i app og på nett: MET tillater kall fra nettlesere (CORS) og trenger ingen egen tjener.
+ * MET ber om identifiserbar User-Agent: appen sender den, nettlesere kan ikke sette den (MET ser Origin/Referer i stedet).
+ * Data: MET Norway, CC BY 4.0 / NLOD. Kaster hvis det ikke går. Vellykket prognose lagres til bruk uten nett.
+ */
 export async function hentVarsel(område: Område): Promise<Varsel> {
-  // På mobil finnes ingen «denne nettsiden»: bruk full adresse (på nett holder en relativ).
-  const base = typeof window === 'undefined' || !window.location?.origin || window.location.origin === 'null' || /^file:/.test(window.location.origin) ? 'https://skiglede.netlify.app' : '';
-  const r = await fetch(`${base}/.netlify/functions/varsel?lat=${område.sted.lat}&lon=${område.sted.lon}&hoyde=${område.hoyde}`, { cache: 'no-store' });
-  if (!r.ok) throw new Error(`varsel ${r.status}`);
-  const d = (await r.json()) as { oppdatert: string; timer: Rå['timer'] };
+  const lat = Math.round(område.sted.lat * 100) / 100;
+  const lon = Math.round(område.sted.lon * 100) / 100;
+  const hoyde = Math.round(område.hoyde || 0);
+  const erNett = typeof document !== 'undefined';
+  const r = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}&altitude=${hoyde}`, erNett ? undefined : { headers: { 'User-Agent': 'Skiglede/0.1 github.com/Sandvold/Skiglede' } });
+  if (!r.ok) throw new Error(`MET svarte ${r.status}`);
+  const j = (await r.json()) as { properties: { meta: { updated_at: string }; timeseries: { time: string; data: { instant: { details: Record<string, number> }; next_1_hours?: { details: { precipitation_amount?: number } } } }[] } };
+  const timer: Rå['timer'] = [];
+  for (const t of j.properties.timeseries) {
+    const n1 = t.data.next_1_hours; // bare de første ca. 2,5 døgnene har timesverdier
+    if (!n1) continue;
+    const i = t.data.instant.details;
+    timer.push([t.time, i.air_temperature, n1.details.precipitation_amount ?? 0, (i.relative_humidity ?? 0) / 100, i.wind_speed ?? 0, i.cloud_area_fraction ?? 0] as Rå['timer'][number]);
+  }
+  const d = { oppdatert: j.properties.meta.updated_at, timer };
   const rå: Rå = { oppdatert: d.oppdatert, hentet: Date.now(), timer: d.timer };
   try {
     globalThis.localStorage?.setItem(cacheNøkkel(område), JSON.stringify(rå));

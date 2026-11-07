@@ -143,7 +143,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       }
       return;
     }
-    const tilbake = typeof window !== 'undefined' ? window.location.origin + '/' : undefined;
+    const tilbake = typeof window !== 'undefined' ? window.location.origin + (process.env.EXPO_BASE_URL ?? '') + '/' : undefined;
     const { error } = await neon().auth.signIn.social({ provider: 'google', callbackURL: tilbake });
     if (error) setFeil(error.message ?? 'Innlogging feilet');
   }, [hent]);
