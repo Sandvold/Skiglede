@@ -16,6 +16,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useOmråde, useVær, type Område } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { usePremium } from '@/data/premium';
+import { Loggkort } from '@/components/ski/loggkort';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
 import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
@@ -498,6 +499,27 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
             )}
           </Kort>
         )}
+
+        {/* Logg (premium) */}
+        <Loggkort grunnlag={{
+          omrade: område.id,
+          loype_id: valgtLøype.id,
+          loype_navn: løype.navn,
+          stil,
+          ski_navn: valgteSki.map((x) => x.ski.navn).join(', ') || null,
+          produkter: vis.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })),
+          modell: {
+            tSnitt: r.tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / r.tur.seksjoner.length,
+            tMin: r.tur.tMin,
+            tMaks: r.tur.tMaks,
+            skarphet: r.snø.skarphet,
+            snotype: r.snø.type,
+            sludd: r.tur.sludd,
+            sol: r.tur.skyggeAndel,
+            type: vis.type,
+            start: r.startTs,
+          },
+        }} />
 
         {/* Snø */}
         <Kort>

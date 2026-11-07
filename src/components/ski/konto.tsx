@@ -24,7 +24,7 @@ export function KontoHøyre() {
         <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
           <Text style={{ color: premium ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{premium ? 'Premium' : 'Vanlig'}</Text>
         </Pressable>
-        {premium && (
+        {(
           <Pressable accessibilityRole="button" onPress={byttPro} style={[knapp, { backgroundColor: pro ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
             <Text style={{ color: pro ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{pro ? 'Pro-bruker' : 'Pro-bruker (av)'}</Text>
           </Pressable>
@@ -73,8 +73,6 @@ export function ProLås({ tittel, children }: { tittel: string; children: React.
       </ThemedText>
       {!klar ? null : !bruker ? (
         <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
-      ) : !premium ? (
-        <Chip aktiv onPress={byttPremium}>Slå på premium først (test, ingen betaling)</Chip>
       ) : (
         <Chip aktiv onPress={byttPro}>Slå på pro (test, ingen betaling)</Chip>
       )}

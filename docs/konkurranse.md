@@ -27,7 +27,8 @@ Snøkrystaller og målt snøtemperatur i løypa, preparering/salt/kunstsnø, gli
 - **Pro-bruker**: knapp ved siden av Premium (kun synlig for premium, test uten betaling). Lagres i `profil.pro`. Pro bygger på premium.
 - **Rennvisning** `/renn` (lenke «Renn» ved Skipark, låst for ikke-pro): velg renn, dag, starttid og stil. Viser slipestruktur (rilljern), glidelag og festelag. Uten prognose for rennstarten brukes siste kjente vær, og det står tydelig i visningen.
 - Motoren: `src/engine/pro.ts` (`anbefalStruktur`, `proGlidelag`). Alle terskler er [Forslag] og skal justeres mot loggen.
-- Mangler: logg etter renn, GPX-import, flere renn, ekte betaling og server-side lås.
+- **Smøreloggen (premium)**: kort «Hvordan gikk smøringen?» på løypesiden og siden `/logg`. Vurdering feste (−2 veldig bakglatt … +2 mye klabb), glid (tregt/OK/fort), valgfri målt snø- og lufttemp, kommentar. Lagrer også det modellen mente (`modell` jsonb). Tabell `smoring_logg` (RLS: bare egne rader, og bare premium kan skrive). Analyse mot modellen venter til det er data.
+- Mangler: påminnelse «hvordan gikk det i går?», GPX-import, flere renn, ekte betaling og server-side lås.
 
 ## Åpne spørsmål
 - Pris: per sesong eller per renn (sesongen er kort, januar–mars).

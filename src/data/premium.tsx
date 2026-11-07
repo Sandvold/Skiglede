@@ -146,11 +146,15 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   }, [bruker, premium]);
 
   const byttPro = useCallback(async () => {
-    if (!bruker || !premium) return;
-    const ny = !proFlagg;
-    const { error } = await neon().from('profil').upsert({ pro: ny, oppdatert: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (!bruker) return;
+    const ny = !(premium && proFlagg);
+    // Pro bygger på premium: slås pro på, slås premium på samtidig.
+    const { error } = await neon().from('profil').upsert({ pro: ny, ...(ny ? { premium: true } : {}), oppdatert: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) setFeil(error.message);
-    else setPro(ny);
+    else {
+      setPro(ny);
+      if (ny) setPremium(true);
+    }
   }, [bruker, premium, proFlagg]);
 
   const pro = premium && proFlagg;
