@@ -29,11 +29,27 @@ export const DATA_API_URL = (() => {
  * Enkel lesing av offentlige data uten postgrest-biblioteket: token fra anonym innlogging, så vanlig fetch mot Data API-et.
  * Brukes der biblioteket feiler på mobil. `steg` fylles ut slik at en feil sier hvor den skjedde.
  */
+export const AUTH_URL = (() => {
+  const m = /^(https?:\/\/)([^./]+)\.(.+?)(\/[^?#]*)?$/.exec(NEON_URL);
+  return m ? `${m[1]}${m[2]}.neonauth.${m[3]}${(m[4] ?? '').replace(/\/+$/, '')}/auth` : NEON_URL;
+})();
+
+let _tok: { token: string; exp: number } | null = null;
+/** Anonym JWT hentet med vanlig fetch (biblioteket bygger feil adresse på Android: HTTP 404). Hurtigbufret til like før utløp. */
+async function anonymToken(): Promise<string> {
+  if (_tok && _tok.exp > Date.now() / 1000 + 60) return _tok.token;
+  const svar = await fetch(`${AUTH_URL}/token/anonymous`, { headers: { Accept: 'application/json' } });
+  const tekst = await svar.text();
+  if (!svar.ok) throw new Error(`token HTTP ${svar.status}: ${tekst.slice(0, 120)}`);
+  const j = JSON.parse(tekst) as { token: string; expires_at: number };
+  _tok = { token: j.token, exp: j.expires_at };
+  return j.token;
+}
+
 export async function lesAnonymt<T = unknown>(spørring: string, steg?: { t: string }): Promise<T[]> {
   const sett = (t: string) => { if (steg) steg.t = t; };
   sett('token');
-  const token = await neonAnonym().auth.getJWTToken(true);
-  if (!token) throw new Error('fikk ikke anonym token');
+  const token = await anonymToken();
   sett('fetch');
   const svar = await fetch(`${DATA_API_URL}/${spørring}`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
   sett('tekst');
