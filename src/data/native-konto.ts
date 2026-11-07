@@ -23,7 +23,7 @@ async function json(svar: Response, trinn: string): Promise<any> {
 async function auth(sti: string, init: RequestInit = {}, trinn = sti) {
   const svar = await fetch(`${AUTH_URL}${sti}`, {
     ...init,
-    headers: { Accept: 'application/json', Origin: ORIGIN, ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...(init.headers as object) },
+    headers: { Accept: 'application/json', Origin: ORIGIN, Referer: `${ORIGIN}/`, ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...(init.headers as object) },
   });
   return json(svar, trinn);
 }
@@ -47,7 +47,7 @@ let jwtCache: { token: string; exp: number } | null = null;
 
 /** Henter eksisterende økt fra telefonens kapsler (tom hvis ikke innlogget). */
 async function hentØkt(verifier?: string): Promise<Økt | null> {
-  const svar = await fetch(`${AUTH_URL}/get-session${verifier ? `?neon_auth_session_verifier=${encodeURIComponent(verifier)}` : ''}`, { headers: { Accept: 'application/json', Origin: ORIGIN } });
+  const svar = await fetch(`${AUTH_URL}/get-session${verifier ? `?neon_auth_session_verifier=${encodeURIComponent(verifier)}` : ''}`, { headers: { Accept: 'application/json', Origin: ORIGIN, Referer: `${ORIGIN}/` } });
   const hode = svar.headers.get('set-auth-jwt');
   if (hode && ER_JWT.test(hode)) jwtCache = { token: hode, exp: jwtUtløp(hode) };
   return lesØkt(await json(svar, 'økt'));

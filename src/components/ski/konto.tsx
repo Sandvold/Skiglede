@@ -12,18 +12,18 @@ export function KontoHøyre() {
   const knapp = { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 } as const;
   if (!bruker) {
     return (
-      <View style={{ alignItems: 'flex-end', marginTop: 10, maxWidth: 220 }}>
+      <View style={{ alignItems: 'flex-end', marginTop: 10, width: 200, flexShrink: 1 }}>
         <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[knapp, { backgroundColor: '#F4B73B', opacity: pågår ? 0.6 : 1 }]}>
           <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>{pågår ? 'Logger inn …' : 'Logg inn'}</Text>
         </Pressable>
-        {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, marginTop: 6, textAlign: 'right' }}>{feil}</Text> : null}
+        {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, marginTop: 6, textAlign: 'right', alignSelf: 'stretch' }}>{feil.slice(0, 160)}</Text> : null}
       </View>
     );
   }
   return (
-    <View style={{ alignItems: 'flex-end', gap: 6, marginTop: 8, flexShrink: 1 }}>
+    <View style={{ alignItems: 'flex-end', gap: 6, marginTop: 8, flexShrink: 1, maxWidth: 220 }}>
       <Text numberOfLines={1} style={{ color: '#BFDDF7', fontSize: 13, maxWidth: 220 }}>{bruker.epost}</Text>
-      {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, maxWidth: 220, textAlign: 'right' }}>{feil}</Text> : null}
+      {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, width: 200, textAlign: 'right' }}>{feil.slice(0, 160)}</Text> : null}
       <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
           <Text style={{ color: premium ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{premium ? 'Premium' : 'Vanlig'}</Text>
