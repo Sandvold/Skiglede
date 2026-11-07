@@ -101,20 +101,34 @@ export function useLøyper(område: string, info: LøypeInfo[] | null, ids: stri
         // Tre forsøk: første kall etter oppstart kan feile mens den anonyme innloggingen settes opp.
         let data: unknown[] | null = null;
         let sisteFeil = '';
+        let trinn = '';
         for (let n = 0; n < 3 && !data; n++) {
           if (n) await vent(1000 * n);
           try {
             // Én forespørsel per løype (ikke .in): enklest mulig kall, og feilen peker på riktig løype.
             const rader: unknown[] = [];
             for (const id of mangler) {
-              const svar = await neonAnonym().from('loype').select('id, data, oppdatert').eq('omrade', område).eq('id', id);
+              // Trinn for trinn, så feilmeldingen sier hvilket kall som feiler (Hermes gir ingen stack i release).
+              trinn = 'klient';
+              const k = neonAnonym();
+              trinn = 'from';
+              const t = k.from('loype');
+              trinn = 'select';
+              const q = t.select('id, data, oppdatert');
+              trinn = 'eq omrade';
+              const q2 = q.eq('omrade', område);
+              trinn = 'eq id';
+              const q3 = q2.eq('id', id);
+              trinn = 'henter';
+              const svar = await q3;
+              trinn = 'svar';
               if (svar.error) throw svar.error;
-              rader.push(...((svar.data ?? []) as unknown[]));
+              for (const r of (svar.data ?? []) as unknown[]) rader.push(r);
             }
             data = rader;
           } catch (e) {
             const er = e as Error;
-            sisteFeil = `${String(er?.message ?? e)} @ ${String(er?.stack ?? '').split('\n').slice(0, 3).join(' | ').slice(0, 300)}`;
+            sisteFeil = `[${trinn}] ${String(er?.message ?? e)}`;
           }
         }
         if (!data) {
