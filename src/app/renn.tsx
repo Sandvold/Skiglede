@@ -16,6 +16,10 @@ import { lesAnonymt } from '@/data/neon';
 import { useOmråder, useVær, type Område } from '@/data/omrader';
 import { NØKKEL_SKIPARK, NØKKEL_VALGTE, TOM_LISTE, useStedData, type Ski } from '@/data/lagring';
 import { StedVelger } from '@/components/ski/sted';
+import * as DocumentPicker from 'expo-document-picker';
+import { byggFraGpx, lesGpx } from '@/data/gpx';
+import { hentRutevær, useMineRuter, type MinRute } from '@/data/minerute';
+import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
 import { SWIX, analyserSnø, anbefalStruktur, nabostruktur, byggSmøring, lagSeksjoner, planTur, proGlidelag, type Stil, type Tur, type Vær } from '@/engine';
@@ -69,6 +73,10 @@ export default function RennSide() {
   const router = useRouter();
   const renn = useRenn();
   const [valgt, setValgt] = useState<string>('');
+  const [valgtEgen, setValgtEgen] = useState<string>('');
+  const { bruker } = usePremium();
+  const mine = useMineRuter(!!bruker);
+  const egen = mine.ruter.find((x) => x.id === valgtEgen) ?? null;
   const r = renn.find((x) => x.id === valgt) ?? null;
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
@@ -81,10 +89,11 @@ export default function RennSide() {
           <ThemedText type="smallBold" themeColor="textSecondary">RENN</ThemedText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {renn.map((x) => (
-              <Chip key={x.id} aktiv={x.id === valgt} onPress={() => setValgt(x.id)}>{x.navn}</Chip>
+              <Chip key={x.id} aktiv={x.id === valgt} onPress={() => { setValgt(x.id); setValgtEgen(''); }}>{x.navn}</Chip>
             ))}
           </View>
-          {r ? <RennDetalj key={r.id} renn={r} /> : <ThemedText themeColor="textSecondary">Velg et renn for å få råd for hele løypa.</ThemedText>}
+          <EgenRute mine={mine} valgt={valgtEgen} velg={(id) => { setValgtEgen(id); setValgt(''); }} />
+          {egen ? <EgenRuteDetalj key={egen.id} rute={egen} /> : r ? <RennDetalj key={r.id} renn={r} /> : <ThemedText themeColor="textSecondary">Velg et renn eller en av dine egne ruter for å få råd for hele løypa.</ThemedText>}
         </ProLås>
       </View>
     </ScrollView>
@@ -99,6 +108,70 @@ function RennDetalj({ renn }: { renn: Renn }) {
   return <RennMedOmråde renn={renn} område={område} />;
 }
 
+/** Dine egne ruter: last opp GPX (bare for deg), velg en lagret rute eller slett den. */
+function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>; valgt: string; velg: (id: string) => void }) {
+  const theme = useTheme();
+  const [status, setStatus] = useState('');
+  const [opptatt, setOpptatt] = useState(false);
+  const last = async () => {
+    setStatus('');
+    try {
+      const r = await DocumentPicker.getDocumentAsync({ type: ['application/gpx+xml', 'application/xml', 'text/xml', 'application/octet-stream', '*/*'], copyToCacheDirectory: true });
+      if (r.canceled || !r.assets?.[0]) return;
+      setOpptatt(true);
+      const a = r.assets[0];
+      const tekst = a.file ? await a.file.text() : await (await fetch(a.uri)).text();
+      const gpx = lesGpx(tekst);
+      setStatus('Henter høyde og skog fra Kartverket …');
+      const navn = (gpx.navn || a.name.replace(/\.gpx$/i, '') || 'Min rute').slice(0, 80);
+      const løype = await byggFraGpx(gpx.punkter, navn);
+      const feil = await mine.lagre(løype, 'klassisk');
+      if (feil) {
+        setStatus(`Kunne ikke lagre: ${feil}`);
+        return;
+      }
+      setStatus(`Lagret «${navn}» (${(løype.lengde_m / 1000).toFixed(1)} km), bare synlig for deg.`);
+    } catch (e) {
+      setStatus(String((e as Error)?.message ?? e));
+    } finally {
+      setOpptatt(false);
+    }
+  };
+  return (
+    <Kort>
+      <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Din egen rute (GPX)</Text>
+      <ThemedText type="small" themeColor="textSecondary">Last opp en GPX-fil, så regnes råd ut for akkurat denne løypa: vær, snøtemperatur, innstråling og struktur. Ruten lagres bare på kontoen din og er ikke synlig for andre. Foreløpig regnes ikke solskygge fra terrenget (bare skog og høyde).</ThemedText>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <Chip aktiv onPress={opptatt ? () => undefined : last}>{opptatt ? 'Laster opp …' : 'Last opp GPX'}</Chip>
+        {mine.ruter.map((x) => (
+          <Chip key={x.id} aktiv={x.id === valgt} onPress={() => velg(x.id)}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km`}</Chip>
+        ))}
+      </View>
+      {valgt ? <Chip aktiv={false} onPress={async () => { await mine.slett(valgt); velg(''); }}>Slett valgt rute</Chip> : null}
+      {status ? <ThemedText type="small" style={{ color: theme.accent }}>{status}</ThemedText> : null}
+      {mine.feil ? <ThemedText type="small" style={{ color: theme.accent }}>{mine.feil}</ThemedText> : null}
+    </Kort>
+  );
+}
+
+/** Råd for en egen rute: været hentes for rutens start, resten regnes som for andre renn. */
+function EgenRuteDetalj({ rute }: { rute: MinRute }) {
+  const [vær, setVær] = useState<{ referansehoyde_m: number; timer: (string | number)[][] } | null>(null);
+  const [feil, setFeil] = useState('');
+  useEffect(() => {
+    hentRutevær(rute.start_lat, rute.start_lon).then(setVær).catch((e) => setFeil(String(e?.message ?? e)));
+  }, [rute.id]);
+  if (feil) return <Kort><ThemedText>Fikk ikke hentet været for ruten: {feil}</ThemedText></Kort>;
+  if (!vær) return <Kort><ThemedText themeColor="textSecondary">Henter været for ruten …</ThemedText></Kort>;
+  const løype: Løype = { id: rute.id, navn: rute.navn, lengde_m: rute.lengde_m, punkter: rute.punkter };
+  const område: Område = {
+    id: `rute-${rute.id}`, navn: rute.navn, sted: { lat: rute.start_lat, lon: rute.start_lon }, hoyde: Math.round(rute.punkter[0][2]),
+    visning: { lon: rute.start_lon, lat: rute.start_lat, z: 12 }, vær, vinter: [-18, 1],
+  };
+  const renn: Renn = { id: `egen-${rute.id}`, navn: rute.navn, omrade: område.id, dato: null, starttid: '10:00', stil: null, lengde_km: rute.lengde_m / 1000, loype_id: null, testdata: false, merknad: null };
+  return <RennMedOmråde renn={renn} område={område} egenLøype={løype} />;
+}
+
 /** Glideren på festeoppsettet (glidesonen), eller dagens glider i skøyting. */
 function glid(st: { lag: { rolle: string; produkt: string }[] }, pro: { rolle: string; produkt: string }[]): string {
   const g = st.lag.find((l) => l.rolle.startsWith('Glidesone') || l.rolle === 'Glider');
@@ -106,12 +179,12 @@ function glid(st: { lag: { rolle: string; produkt: string }[] }, pro: { rolle: s
   return pro.find((l) => l.rolle === 'Dagens glider')?.produkt ?? 'se Glid over';
 }
 
-function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
+function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Område; egenLøype?: Løype }) {
   const theme = useTheme();
   const værdata = useVær(område);
   const { liste } = useLøypeliste(område.id);
   const fraListe = useLøyper(område.id, liste, renn.loype_id ? [renn.loype_id] : [])[0];
-  const løype = RENNLØYPER[renn.id] ?? fraListe;
+  const løype = egenLøype ?? RENNLØYPER[renn.id] ?? fraListe;
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [dag, setDag] = useState(renn.dato ? 0 : 1);
   const [time, setTime] = useState(renn.starttid ? Number(renn.starttid.slice(0, 2)) + Number(renn.starttid.slice(3, 5)) / 60 : 10);
