@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Linking, Platform } from 'react-native';
 
 import { erBrukerdata, lesLokal, påSkriv, skrivFraKonto } from '@/data/lagring';
 import { neon } from '@/data/neon';
@@ -121,6 +122,12 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   const loggInnMedGoogle = useCallback(async () => {
     setFeil('');
+    if (Platform.OS !== 'web') {
+      // Innloggingen bruker nettleser-omdirigering og informasjonskapsler; den virker ikke i appen ennå.
+      setFeil('Innlogging fungerer foreløpig bare på nettsiden. Åpner skiglede.netlify.app …');
+      Linking.openURL('https://skiglede.netlify.app/').catch(() => {});
+      return;
+    }
     const tilbake = typeof window !== 'undefined' ? window.location.origin + '/' : undefined;
     const { error } = await neon().auth.signIn.social({ provider: 'google', callbackURL: tilbake });
     if (error) setFeil(error.message ?? 'Innlogging feilet');
