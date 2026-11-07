@@ -1,4 +1,5 @@
 import { usePathname, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -20,6 +21,7 @@ const RENN = { href: '/renn', tekst: 'Renn' } as const;
 
 export function Hero() {
   const theme = useTheme();
+  const topp = useSafeAreaInsets().top;
   const sti = usePathname();
   const router = useRouter();
   const [område] = useOmråde();
@@ -27,7 +29,7 @@ export function Hero() {
   const meny = [...MENY, ...(premium ? [LOGG] : []), ...(pro ? [RENN] : [])];
   useStedFølgerOmråde(område.id);
   return (
-    <View style={[styles.hero, { backgroundColor: theme.hero }]}>
+    <View style={[styles.hero, { backgroundColor: theme.hero, paddingTop: 24 + topp }]}>
       {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
         <Text key={i} style={[styles.flak, { left: `${8 + i * 14}%`, top: 14 + ((i * 37) % 70), fontSize: 14 + ((i * 5) % 14) }]}>{f}</Text>
       ))}
