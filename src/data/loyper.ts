@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { lesLokal, skrivFraKonto } from '@/data/lagring';
-import { neonAnonym } from '@/data/neon';
+import { lesAnonymt, neonAnonym } from '@/data/neon';
 import type { Løype } from '@/data/rute';
 
 /** Lett løypeinfo til oversiktskart og lister. Hele løypa (punkter og terreng) hentes først når den åpnes. */
@@ -108,22 +108,14 @@ export function useLøyper(område: string, info: LøypeInfo[] | null, ids: stri
             // Én forespørsel per løype (ikke .in): enklest mulig kall, og feilen peker på riktig løype.
             const rader: unknown[] = [];
             for (const id of mangler) {
-              // Trinn for trinn, så feilmeldingen sier hvilket kall som feiler (Hermes gir ingen stack i release).
-              trinn = 'klient';
-              const k = neonAnonym();
-              trinn = 'from';
-              const t = k.from('loype');
-              trinn = 'select';
-              const q = t.select('id, data, oppdatert');
-              trinn = 'eq omrade';
-              const q2 = q.eq('omrade', område);
-              trinn = 'eq id';
-              const q3 = q2.eq('id', id);
-              trinn = 'henter';
-              const svar = await q3;
-              trinn = 'svar';
-              if (svar.error) throw svar.error;
-              for (const r of (svar.data ?? []) as unknown[]) rader.push(r);
+              const steg = { t: '' };
+              try {
+                const r = await lesAnonymt(`loype?select=id,data,oppdatert&omrade=eq.${encodeURIComponent(område)}&id=eq.${encodeURIComponent(id)}`, steg);
+                for (const x of r) rader.push(x);
+              } catch (e) {
+                trinn = steg.t;
+                throw e;
+              }
             }
             data = rader;
           } catch (e) {

@@ -18,3 +18,27 @@ export function neonAnonym() {
   if (!anonym) anonym = createClient(NEON_URL, { auth: { allowAnonymous: true } });
   return anonym;
 }
+
+/** Data-API-adressen (samme avledning som biblioteket gjør). */
+export const DATA_API_URL = (() => {
+  const m = /^(https?:\/\/)([^./]+)\.(.+?)(\/[^?#]*)?$/.exec(NEON_URL);
+  return m ? `${m[1]}${m[2]}.apirest.${m[3]}${(m[4] ?? '').replace(/\/+$/, '')}/rest/v1` : NEON_URL;
+})();
+
+/**
+ * Enkel lesing av offentlige data uten postgrest-biblioteket: token fra anonym innlogging, så vanlig fetch mot Data API-et.
+ * Brukes der biblioteket feiler på mobil. `steg` fylles ut slik at en feil sier hvor den skjedde.
+ */
+export async function lesAnonymt<T = unknown>(spørring: string, steg?: { t: string }): Promise<T[]> {
+  const sett = (t: string) => { if (steg) steg.t = t; };
+  sett('token');
+  const token = await neonAnonym().auth.getJWTToken(true);
+  if (!token) throw new Error('fikk ikke anonym token');
+  sett('fetch');
+  const svar = await fetch(`${DATA_API_URL}/${spørring}`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+  sett('tekst');
+  const tekst = await svar.text();
+  if (!svar.ok) throw new Error(`HTTP ${svar.status}: ${tekst.slice(0, 200)}`);
+  sett('json');
+  return JSON.parse(tekst) as T[];
+}
