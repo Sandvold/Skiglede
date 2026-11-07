@@ -35,10 +35,32 @@ function lesØkt(d: any): Økt | null {
   return { token, bruker: { id: u.id, email: u.email, name: u.name } };
 }
 
+const ER_JWT = /^[\w-]+\.[\w-]+\.[\w-]+$/;
+function jwtUtløp(t: string): number {
+  try {
+    return (JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: number }).exp ?? 0;
+  } catch {
+    return 0;
+  }
+}
+let jwtCache: { token: string; exp: number } | null = null;
+
 /** Henter eksisterende økt fra telefonens kapsler (tom hvis ikke innlogget). */
 async function hentØkt(verifier?: string): Promise<Økt | null> {
-  const d = await auth(`/get-session${verifier ? `?neon_auth_session_verifier=${encodeURIComponent(verifier)}` : ''}`, {}, 'økt');
-  return lesØkt(d);
+  const svar = await fetch(`${AUTH_URL}/get-session${verifier ? `?neon_auth_session_verifier=${encodeURIComponent(verifier)}` : ''}`, { headers: { Accept: 'application/json', Origin: ORIGIN } });
+  const hode = svar.headers.get('set-auth-jwt');
+  if (hode && ER_JWT.test(hode)) jwtCache = { token: hode, exp: jwtUtløp(hode) };
+  return lesØkt(await json(svar, 'økt'));
+}
+
+/** Ekte JWT til Data API-et (øktkoden i seg selv er ikke en JWT). Fornyes før den utløper. */
+async function jwt(): Promise<string> {
+  if (jwtCache && jwtCache.exp > Date.now() / 1000 + 60) return jwtCache.token;
+  const d = await auth('/token', {}, 'jwt');
+  const t = d?.token ?? d?.jwt;
+  if (!t || !ER_JWT.test(t)) throw new Error('[jwt] fikk ikke JWT fra /token');
+  jwtCache = { token: t, exp: jwtUtløp(t) };
+  return t;
 }
 
 export async function loggInnNativt(): Promise<string | void> {
@@ -82,6 +104,7 @@ export async function loggUtNativt(): Promise<void> {
     await auth('/sign-out', { method: 'POST', body: '{}' }, 'utlogging');
   } finally {
     økt = null;
+    jwtCache = null;
   }
 }
 
@@ -144,7 +167,7 @@ class Spørring implements PromiseLike<Svar> {
     try {
       const o = await gjeldendeØkt();
       if (!o) throw new Error('ikke innlogget');
-      const headers: Record<string, string> = { Authorization: `Bearer ${o.token}`, Accept: 'application/json' };
+      const headers: Record<string, string> = { Authorization: `Bearer ${await jwt()}`, Accept: 'application/json' };
       if (this.kropp !== undefined) headers['Content-Type'] = 'application/json';
       if (this.metode !== 'GET') this.prefer.push('return=minimal');
       if (this.prefer.length) headers.Prefer = this.prefer.join(',');

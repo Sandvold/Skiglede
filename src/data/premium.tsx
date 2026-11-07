@@ -149,7 +149,11 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   }, [hent]);
 
   const loggUt = useCallback(async () => {
-    await neon().auth.signOut();
+    try {
+      await neon().auth.signOut();
+    } catch (e) {
+      setFeil(`Utlogging: ${String((e as Error)?.message ?? e)}`);
+    }
     synket.current = false;
     setBruker(null);
     setPremium(false);

@@ -23,6 +23,7 @@ export function KontoHøyre() {
   return (
     <View style={{ alignItems: 'flex-end', gap: 6, marginTop: 8, flexShrink: 1 }}>
       <Text numberOfLines={1} style={{ color: '#BFDDF7', fontSize: 13, maxWidth: 220 }}>{bruker.epost}</Text>
+      {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, maxWidth: 220, textAlign: 'right' }}>{feil}</Text> : null}
       <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
           <Text style={{ color: premium ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{premium ? 'Premium' : 'Vanlig'}</Text>
