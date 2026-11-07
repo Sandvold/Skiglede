@@ -6,8 +6,12 @@ import { ProLås } from '@/components/ski/konto';
 import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { TrailMap } from '@/components/ski/kart';
+import { Hoydeprofil } from '@/components/ski/profil';
+import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
+import hovdenTour from '@/data/renn-hovden-tour.json';
 import { useLøypeliste, useLøyper } from '@/data/loyper';
+import type { Løype } from '@/data/rute';
 import { neonAnonym } from '@/data/neon';
 import { useOmråder, useVær, type Område } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
@@ -17,8 +21,13 @@ import { SWIX, analyserSnø, anbefalStruktur, byggSmøring, lagSeksjoner, planTu
 type Renn = { id: string; navn: string; omrade: string; dato: string | null; starttid: string | null; stil: string | null; lengde_km: number | null; loype_id: string | null; testdata: boolean; merknad: string | null };
 
 // Reserve hvis databasen ikke svarer.
+// Rennløyper som ligger i appen (fra OSM-biter eller arrangørens GPX). Nøkkel = renn-id.
+const RENNLØYPER: Record<string, Løype> = {
+  'hovden-tour-test': (hovdenTour as unknown as Løype[])[0],
+};
+
 const RESERVE: Renn[] = [
-  { id: 'hovden-tour-test', navn: 'Hovden Tour (test)', omrade: 'hovden', dato: null, starttid: null, stil: null, lengde_km: null, loype_id: 'auversvatn', testdata: true, merknad: 'Testoppføring: ingen dato eller offisiell løype. Auversvatn brukes som stedfortreder.' },
+  { id: 'hovden-tour-test', navn: 'Hovden Tour (test)', omrade: 'hovden', dato: null, starttid: null, stil: null, lengde_km: 11.9, loype_id: null, testdata: true, merknad: 'Løypa er OSM-linjene HovdenTour og HovdenTuren satt sammen (11,9 km, én vei). Ikke bekreftet som arrangørens løype. Dato og starttid mangler.' },
 ];
 
 const osloDato = (dager: number) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(Date.now() + dager * 86400_000);
@@ -92,7 +101,8 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
   const theme = useTheme();
   const værdata = useVær(område);
   const { liste } = useLøypeliste(område.id);
-  const løype = useLøyper(område.id, liste, renn.loype_id ? [renn.loype_id] : [])[0];
+  const fraListe = useLøyper(område.id, liste, renn.loype_id ? [renn.loype_id] : [])[0];
+  const løype = RENNLØYPER[renn.id] ?? fraListe;
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [dag, setDag] = useState(renn.dato ? 0 : 1);
   const [time, setTime] = useState(renn.starttid ? Number(renn.starttid.slice(0, 2)) + Number(renn.starttid.slice(3, 5)) / 60 : 10);
@@ -120,7 +130,11 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
     const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO_RENN[stil], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
     const stabel = byggSmøring(stil as Stil, tur, snø, seksjoner, false, SWIX);
     const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
-    return { tur, snø, stabel, snitt, struktur: anbefalStruktur(snitt, snø, tur.sludd), glid: proGlidelag(tur, SWIX), harVarsel: dekket, startTs };
+    const farger = tur.seksjoner.map((x) => tempFarge(x.tEff));
+    const segmenter = seksjoner.map((x, i) => ({ pts: løype.punkter.filter((p) => p[3] >= x.startM && p[3] <= x.endM).map((p) => [p[0], p[1]] as [number, number]), farge: farger[i] }));
+    const profil = løype.punkter.map((p) => ({ d: p[3], h: p[2], farge: farger[Math.max(0, seksjoner.findIndex((x) => p[3] <= x.endM))] }));
+    const opp = løype.punkter.slice(1).reduce((a, p, i) => a + Math.max(0, p[2] - løype.punkter[i][2]), 0);
+    return { segmenter, profil, opp, tur, snø, stabel, snitt, struktur: anbefalStruktur(snitt, snø, tur.sludd), glid: proGlidelag(tur, SWIX), harVarsel: dekket, startTs };
   }, [løype, utenVær, dato, time, varsel, stil, TIMER, område, værdata]);
 
   return (
@@ -149,6 +163,12 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
         <Kort><ThemedText themeColor="textSecondary">Henter løypa …</ThemedText></Kort>
       ) : res ? (
         <>
+          <Kort>
+            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Løypa</Text>
+            <ThemedText type="small" themeColor="textSecondary">{`${(løype.lengde_m / 1000).toFixed(1)} km · ${Math.round(res.opp)} m opp · ${Math.round(Math.min(...løype.punkter.map((p) => p[2])))}–${Math.round(Math.max(...løype.punkter.map((p) => p[2])))} moh. Fargen viser beregnet snøtemperatur langs løypa.`}</ThemedText>
+            <TrailMap segmenter={res.segmenter} />
+            <Hoydeprofil punkter={res.profil} />
+          </Kort>
           {!res.harVarsel && <ThemedText type="small" style={{ color: theme.accent }}>Ingen prognose for rennstarten ennå (finnes bare for de nærmeste dagene). Rådet under er regnet med siste kjente vær og oppdateres når rennet nærmer seg.</ThemedText>}
           <Kort>
             <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Slipestruktur (rilljern)</Text>
