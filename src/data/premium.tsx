@@ -8,6 +8,7 @@ type Bruker = { id: string; epost: string; navn: string };
 type Tilstand = {
   /** false mens vi sjekker om noen er logget inn */
   klar: boolean;
+  pågår: boolean;
   bruker: Bruker | null;
   premium: boolean;
   /** Pro (konkurranse) bygger på premium. */
@@ -36,6 +37,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [premium, setPremium] = useState(false);
   const [proFlagg, setPro] = useState(false);
   const [feil, setFeil] = useState('');
+  const [pågår, setPågår] = useState(false);
   const synket = useRef(false);
 
   const hent = useCallback(async () => {
@@ -124,10 +126,14 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     setFeil('');
     if (Platform.OS !== 'web') {
       try {
-        await require('@/data/native-konto').loggInnNativt();
+        setPågår(true);
+        const melding = await require('@/data/native-konto').loggInnNativt();
+        if (melding) setFeil(melding);
         await hent();
       } catch (e) {
         setFeil(String((e as Error)?.message ?? e));
+      } finally {
+        setPågår(false);
       }
       return;
     }
@@ -169,7 +175,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   const pro = premium && proFlagg;
 
-  const verdi = useMemo(() => ({ klar, bruker, premium, pro, feil, loggInnMedGoogle, loggUt, byttPremium, byttPro }), [klar, bruker, premium, pro, feil, loggInnMedGoogle, loggUt, byttPremium, byttPro]);
+  const verdi = useMemo(() => ({ klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, byttPremium, byttPro }), [klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, byttPremium, byttPro]);
   return <Ctx.Provider value={verdi}>{children}</Ctx.Provider>;
 }
 

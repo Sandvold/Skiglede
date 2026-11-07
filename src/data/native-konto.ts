@@ -41,11 +41,16 @@ async function hentØkt(verifier?: string): Promise<Økt | null> {
   return lesØkt(d);
 }
 
-export async function loggInnNativt(): Promise<void> {
+export async function loggInnNativt(): Promise<string | void> {
+  try {
+    WebBrowser.dismissBrowser();
+  } catch {
+    // ingen åpen nettleser
+  }
   const start = await auth('/sign-in/social', { method: 'POST', body: JSON.stringify({ provider: 'google', callbackURL: TILBAKE_SIDE, disableRedirect: true }) }, 'start');
   if (!start?.url) throw new Error('[start] fikk ingen innloggingsadresse');
   const r = await WebBrowser.openAuthSessionAsync(start.url, APP_TILBAKE);
-  if (r.type !== 'success') return; // avbrutt
+  if (r.type !== 'success') return `Innloggingen ble ikke fullført (${r.type}).`;
   const q = r.url.split('?')[1] ?? '';
   const verifier = new URLSearchParams(q).get('neon_auth_session_verifier');
   if (!verifier) throw new Error(`[retur] mangler verifier i ${r.url.slice(0, 80)}`);

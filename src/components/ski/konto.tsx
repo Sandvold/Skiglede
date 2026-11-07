@@ -7,14 +7,17 @@ import { useTheme } from '@/hooks/use-theme';
 
 /** Øverst til høyre: «Logg inn» når du er utlogget; ellers e-post, premium-bryter (midlertidig, ingen betaling ennå) og «Logg ut». */
 export function KontoHøyre() {
-  const { klar, bruker, premium, pro, loggInnMedGoogle, loggUt, byttPremium, byttPro } = usePremium();
+  const { klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, byttPremium, byttPro } = usePremium();
   if (!klar) return null;
   const knapp = { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 } as const;
   if (!bruker) {
     return (
-      <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[knapp, { backgroundColor: '#F4B73B', marginTop: 10 }]}>
-        <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>Logg inn</Text>
-      </Pressable>
+      <View style={{ alignItems: 'flex-end', marginTop: 10, maxWidth: 220 }}>
+        <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[knapp, { backgroundColor: '#F4B73B', opacity: pågår ? 0.6 : 1 }]}>
+          <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>{pågår ? 'Logger inn …' : 'Logg inn'}</Text>
+        </Pressable>
+        {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, marginTop: 6, textAlign: 'right' }}>{feil}</Text> : null}
+      </View>
     );
   }
   return (
