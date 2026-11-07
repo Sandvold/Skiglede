@@ -1,4 +1,5 @@
 import type { Løype } from '@/data/rute';
+import type { Terreng } from '@/engine/terreng';
 
 type Pkt = { lat: number; lon: number; ele?: number };
 
@@ -56,7 +57,81 @@ async function høydeOgSkog(p: { lat: number; lon: number }[]): Promise<{ z: num
   return ut;
 }
 
-/** Lager en løype i appens format fra GPX-punktene: jevne punkter, høyde og skog (Kartverket). Terreng for solskygge regnes ikke ut ennå. */
+const RINGER = [50, 100, 200, 400, 800, 1600, 3000];
+const STEG_TERRENG = 300;
+
+/**
+ * Terreng for solskygge, som scripts/hent_terreng.py men for ett punkt per 300 m: hellingsretning, helning og horisont i 16 retninger
+ * (høydevinkel til terrenget ut til 3 km). Ett punkt krever 117 høydeoppslag (Kartverket, 50 per kall, noen kall samtidig).
+ * Hopper over punkter der oppslaget feiler; alt feiler = tom liste (da regnes sola uten terrengskygge).
+ */
+export async function terrengFor(punkter: Løype['punkter'], fremdrift?: (ferdig: number, totalt: number) => void): Promise<Terreng[]> {
+  const valgt: Løype['punkter'] = [];
+  let neste = 0;
+  for (const p of punkter) if (p[3] >= neste) { valgt.push(p); neste = p[3] + STEG_TERRENG; }
+  const rad = Math.PI / 180;
+  const sett = valgt.map((p) => {
+    const [lon, lat] = p;
+    const dy = (m: number) => m / 111_320;
+    const dx = (m: number) => m / (111_320 * Math.cos(lat * rad));
+    const pts: [number, number][] = [[lon, lat], [lon, lat + dy(30)], [lon + dx(30), lat], [lon, lat - dy(30)], [lon - dx(30), lat]];
+    for (let a = 0; a < 16; a++) for (const r of RINGER) pts.push([lon + dx(r * Math.sin(a * 22.5 * rad)), lat + dy(r * Math.cos(a * 22.5 * rad))]);
+    return pts;
+  });
+  const flat = sett.flat();
+  const deler: [number, number][][] = [];
+  for (let i = 0; i < flat.length; i += 50) deler.push(flat.slice(i, i + 50));
+  const z: (number | null)[][] = new Array(deler.length);
+  let ferdig = 0;
+  let neste_ = 0;
+  const hentDel = async (d: [number, number][]) => {
+    for (let forsøk = 0; forsøk < 3; forsøk++) {
+      try {
+        const url = `https://ws.geonorge.no/hoydedata/v1/punkt?koordsys=4326&geojson=false&punkter=${encodeURIComponent(JSON.stringify(d.map((x) => [Number(x[0].toFixed(6)), Number(x[1].toFixed(6))])))}`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(String(r.status));
+        return ((await r.json()) as { punkter: { z: number | null }[] }).punkter.map((x) => x.z);
+      } catch {
+        await new Promise((res) => setTimeout(res, 800 * (forsøk + 1)));
+      }
+    }
+    return d.map(() => null);
+  };
+  const arbeider = async () => {
+    while (neste_ < deler.length) {
+      const i = neste_++;
+      z[i] = await hentDel(deler[i]);
+      fremdrift?.(++ferdig, deler.length);
+    }
+  };
+  await Promise.all([arbeider(), arbeider(), arbeider(), arbeider()]);
+  const zflat = z.flat();
+  const n = sett[0]?.length ?? 0;
+  const ut: Terreng[] = [];
+  valgt.forEach((p, k) => {
+    const zz = zflat.slice(k * n, (k + 1) * n);
+    const [z0, zn, zo, zs, zv] = zz;
+    if ([z0, zn, zo, zs, zv].some((v) => v === null || v === undefined)) return;
+    const dzdx = ((zo as number) - (zv as number)) / 60;
+    const dzdy = ((zn as number) - (zs as number)) / 60;
+    const helning = Math.atan(Math.hypot(dzdx, dzdy)) / rad;
+    const retning = (Math.atan2(-dzdx, -dzdy) / rad + 360) % 360;
+    const hor: number[] = [];
+    let q = 5;
+    for (let a = 0; a < 16; a++) {
+      let v = 0;
+      for (const r of RINGER) {
+        const h = zz[q++];
+        if (h !== null && h !== undefined) v = Math.max(v, Math.atan2(h - (z0 as number), r) / rad);
+      }
+      hor.push(Math.round(v * 10) / 10);
+    }
+    ut.push([Math.round(p[3]), Math.round(retning), Math.round(helning * 10) / 10, hor]);
+  });
+  return ut;
+}
+
+/** Lager en løype i appens format fra GPX-punktene: jevne punkter, høyde og skog (Kartverket). Terreng for solskygge hentes separat (terrengFor). */
 export async function byggFraGpx(punkter: Pkt[], navn: string): Promise<Løype & { start_lat: number; start_lon: number }> {
   if (punkter.length < 2) throw new Error('Fant ikke noe spor i GPX-filen.');
   const j = jevnt(punkter);

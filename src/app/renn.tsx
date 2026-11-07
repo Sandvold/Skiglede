@@ -17,7 +17,7 @@ import { useOmråder, useVær, type Område } from '@/data/omrader';
 import { NØKKEL_SKIPARK, NØKKEL_VALGTE, TOM_LISTE, useStedData, type Ski } from '@/data/lagring';
 import { StedVelger } from '@/components/ski/sted';
 import * as DocumentPicker from 'expo-document-picker';
-import { byggFraGpx, lesGpx } from '@/data/gpx';
+import { byggFraGpx, lesGpx, terrengFor } from '@/data/gpx';
 import { hentRutevær, useMineRuter, type MinRute } from '@/data/minerute';
 import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
@@ -113,6 +113,8 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
   const theme = useTheme();
   const [status, setStatus] = useState('');
   const [opptatt, setOpptatt] = useState(false);
+  const [del, setDel] = useState(false);
+  const { bruker } = usePremium();
   const last = async () => {
     setStatus('');
     try {
@@ -125,12 +127,13 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
       setStatus('Henter høyde og skog fra Kartverket …');
       const navn = (gpx.navn || a.name.replace(/\.gpx$/i, '') || 'Min rute').slice(0, 80);
       const løype = await byggFraGpx(gpx.punkter, navn);
-      const feil = await mine.lagre(løype, 'klassisk');
+      løype.terreng = await terrengFor(løype.punkter, (f, t) => setStatus(`Regner terreng for solskygge … ${Math.round((f / t) * 100)} %`));
+      const feil = await mine.lagre(løype, 'klassisk', del);
       if (feil) {
         setStatus(`Kunne ikke lagre: ${feil}`);
         return;
       }
-      setStatus(`Lagret «${navn}» (${(løype.lengde_m / 1000).toFixed(1)} km), bare synlig for deg.`);
+      setStatus(`Lagret «${navn}» (${(løype.lengde_m / 1000).toFixed(1)} km), ${del ? 'delt med andre Pro-brukere' : 'bare synlig for deg'}.`);
     } catch (e) {
       setStatus(String((e as Error)?.message ?? e));
     } finally {
@@ -140,14 +143,25 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
   return (
     <Kort>
       <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Din egen rute (GPX)</Text>
-      <ThemedText type="small" themeColor="textSecondary">Last opp en GPX-fil, så regnes råd ut for akkurat denne løypa: vær, snøtemperatur, innstråling og struktur. Ruten lagres bare på kontoen din og er ikke synlig for andre. Foreløpig regnes ikke solskygge fra terrenget (bare skog og høyde).</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">Last opp en GPX-fil, så regnes råd ut for akkurat denne løypa: vær, snøtemperatur, innstråling og struktur. Ruten lagres på kontoen din. Solskygge regnes fra terrenget (ett punkt per 300 m), så opplasting tar litt tid.</ThemedText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Chip aktiv onPress={opptatt ? () => undefined : last}>{opptatt ? 'Laster opp …' : 'Last opp GPX'}</Chip>
         {mine.ruter.map((x) => (
-          <Chip key={x.id} aktiv={x.id === valgt} onPress={() => velg(x.id)}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km`}</Chip>
+          <Chip key={x.id} aktiv={x.id === valgt} onPress={() => velg(x.id)}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km${x.user_id && bruker && x.user_id !== bruker.id ? ' · delt' : x.delt ? ' · delt av deg' : ''}`}</Chip>
         ))}
       </View>
-      {valgt ? <Chip aktiv={false} onPress={async () => { await mine.slett(valgt); velg(''); }}>Slett valgt rute</Chip> : null}
+      <Chip aktiv={del} onPress={() => setDel(!del)}>{del ? '✓ Del med andre Pro-brukere' : 'Del med andre Pro-brukere (av)'}</Chip>
+      <ThemedText type="small" themeColor="textSecondary">Delte ruter kan alle Pro-brukere se, inkludert startpunktet. Del ikke ruter som starter ved hjemmet ditt.</ThemedText>
+      {(() => {
+        const v = mine.ruter.find((x) => x.id === valgt);
+        if (!v || (bruker && v.user_id && v.user_id !== bruker.id)) return null;
+        return (
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Chip aktiv={false} onPress={async () => { await mine.delMed(v.id, !v.delt); }}>{v.delt ? 'Slutt å dele' : 'Del med Pro-brukere'}</Chip>
+            <Chip aktiv={false} onPress={async () => { await mine.slett(v.id); velg(''); }}>Slett valgt rute</Chip>
+          </View>
+        );
+      })()}
       {status ? <ThemedText type="small" style={{ color: theme.accent }}>{status}</ThemedText> : null}
       {mine.feil ? <ThemedText type="small" style={{ color: theme.accent }}>{mine.feil}</ThemedText> : null}
     </Kort>
@@ -163,7 +177,7 @@ function EgenRuteDetalj({ rute }: { rute: MinRute }) {
   }, [rute.id]);
   if (feil) return <Kort><ThemedText>Fikk ikke hentet været for ruten: {feil}</ThemedText></Kort>;
   if (!vær) return <Kort><ThemedText themeColor="textSecondary">Henter været for ruten …</ThemedText></Kort>;
-  const løype: Løype = { id: rute.id, navn: rute.navn, lengde_m: rute.lengde_m, punkter: rute.punkter };
+  const løype: Løype = { id: rute.id, navn: rute.navn, lengde_m: rute.lengde_m, punkter: rute.punkter, terreng: rute.terreng ?? undefined };
   const område: Område = {
     id: `rute-${rute.id}`, navn: rute.navn, sted: { lat: rute.start_lat, lon: rute.start_lon }, hoyde: Math.round(rute.punkter[0][2]),
     visning: { lon: rute.start_lon, lat: rute.start_lat, z: 12 }, vær, vinter: [-18, 1],
