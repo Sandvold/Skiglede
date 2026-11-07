@@ -16,7 +16,7 @@ import { lesAnonymt } from '@/data/neon';
 import { useOmråder, useVær, type Område } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
-import { SWIX, analyserSnø, anbefalStruktur, byggSmøring, lagSeksjoner, planTur, proGlidelag, type Stil, type Tur, type Vær } from '@/engine';
+import { SWIX, analyserSnø, anbefalStruktur, nabostruktur, byggSmøring, lagSeksjoner, planTur, proGlidelag, type Stil, type Tur, type Vær } from '@/engine';
 
 type Renn = { id: string; navn: string; omrade: string; dato: string | null; starttid: string | null; stil: string | null; lengde_km: number | null; loype_id: string | null; testdata: boolean; merknad: string | null };
 
@@ -131,13 +131,12 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
     const stabel = byggSmøring(stil as Stil, tur, snø, seksjoner, false, SWIX);
     // Tre alternativer til test: anbefalt, kaldere og varmere (±2 °C er [Forslag]). Like alternativer slås sammen.
     const forskyv = (d: number): Tur => ({ ...tur, tMin: tur.tMin + d, tMaks: tur.tMaks + d, tMinRå: tur.tMinRå + d, tMaksRå: tur.tMaksRå + d, seksjoner: tur.seksjoner.map((x) => ({ ...x, tEff: x.tEff + d, tLuft: x.tLuft + d })) });
-    const feste: { navn: string; stabel: typeof stabel }[] = [];
+    const nøkkel = (x: typeof stabel) => x.lag.map((l) => `${l.rolle}:${l.produkt}:${l.antall}`).join('|');
+    const feste: { navn: string; stabel: typeof stabel; likt: boolean }[] = [];
     if (stil === 'klassisk') {
-      for (const [navn, d] of [['Kaldere (−2 °C)', -2], ['Anbefalt', 0], ['Varmere (+2 °C)', 2]] as const) {
+      for (const [navn, d] of [['Anbefalt', 0], ['Kaldere (−2 °C)', -2], ['Varmere (+2 °C)', 2]] as const) {
         const st = d === 0 ? stabel : byggSmøring('klassisk', forskyv(d), snø, seksjoner, false, SWIX);
-        const nøkkel = (x: typeof stabel) => x.lag.map((l) => `${l.rolle}:${l.produkt}:${l.antall}`).join('|');
-        if (feste.some((f) => nøkkel(f.stabel) === nøkkel(st))) continue;
-        feste.push({ navn, stabel: st });
+        feste.push({ navn, stabel: st, likt: d !== 0 && nøkkel(st) === nøkkel(stabel) });
       }
     }
     const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
@@ -145,7 +144,7 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
     const segmenter = seksjoner.map((x, i) => ({ pts: løype.punkter.filter((p) => p[3] >= x.startM && p[3] <= x.endM).map((p) => [p[0], p[1]] as [number, number]), farge: farger[i] }));
     const profil = løype.punkter.map((p) => ({ d: p[3], h: p[2], farge: farger[Math.max(0, seksjoner.findIndex((x) => p[3] <= x.endM))] }));
     const opp = løype.punkter.slice(1).reduce((a, p, i) => a + Math.max(0, p[2] - løype.punkter[i][2]), 0);
-    return { segmenter, profil, opp, tur, snø, stabel, feste, snitt, struktur: anbefalStruktur(snitt, snø, tur.sludd), glid: proGlidelag(tur, SWIX), harVarsel: dekket, startTs };
+    return { segmenter, profil, opp, tur, snø, stabel, feste, snitt, struktur: anbefalStruktur(snitt, snø, tur.sludd, stil), glid: proGlidelag(tur, SWIX), harVarsel: dekket, startTs };
   }, [løype, utenVær, dato, time, varsel, stil, TIMER, område, værdata]);
 
   return (
@@ -197,24 +196,16 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
             ))}
           </Kort>
           {stil === 'klassisk' ? (
-            <>
-              <Kort>
-                <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Feste: {res.feste.length > 1 ? `${res.feste.length} alternativer å teste` : 'ett alternativ'}</Text>
-                <ThemedText type="small" themeColor="textSecondary">{res.feste.length > 1 ? 'Test hvert alternativ på et eget par ski, og velg etter festet i løypa. Alternativene ligger ±2 °C fra anbefalingen [forslag].' : 'Kaldere og varmere alternativ gir samme lag i dag, så ett oppsett holder.'}</ThemedText>
-              </Kort>
-              {res.feste.map((f) => (
-                <Kort key={f.navn}>
-                  <Text style={{ color: theme.text, fontSize: 17, fontWeight: '800' }}>{f.navn}</Text>
-                  {f.stabel.lag.map((l, i) => (
-                    <View key={i} style={{ gap: 2 }}>
-                      <Text style={{ color: theme.text, fontWeight: '700' }}>{`${i + 1}. ${l.rolle}: ${l.produkt} · ${l.antall}`}</Text>
-                      {l.merknad ? <ThemedText type="small" themeColor="textSecondary">{l.merknad}</ThemedText> : null}
-                    </View>
-                  ))}
-                  {f.stabel.advarsler.map((w, i) => <ThemedText key={i} type="small">⚠ {w}</ThemedText>)}
-                </Kort>
+            <Kort>
+              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Feste, lag for lag (anbefalt)</Text>
+              {res.stabel.lag.map((l, i) => (
+                <View key={i} style={{ gap: 2 }}>
+                  <Text style={{ color: theme.text, fontWeight: '700' }}>{`${i + 1}. ${l.rolle}: ${l.produkt} · ${l.antall}`}</Text>
+                  {l.merknad ? <ThemedText type="small" themeColor="textSecondary">{l.merknad}</ThemedText> : null}
+                </View>
               ))}
-            </>
+              {res.stabel.advarsler.map((w, i) => <ThemedText key={i} type="small">⚠ {w}</ThemedText>)}
+            </Kort>
           ) : (
             <Kort>
               <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Skøyting: ingen feste</Text>
@@ -222,9 +213,34 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
             </Kort>
           )}
           <Kort>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Test på rennmorgenen</Text>
-            <ThemedText themeColor="textSecondary">Appen ser ikke snøen i løypa. Mål snøtemperaturen der, og test to eller tre par: anbefalt struktur, en finere og en grovere. Velg etter glidet, ikke etter rådet her.</ThemedText>
+            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Testplan: tre par ski</Text>
+            <ThemedText type="small" themeColor="textSecondary">Appen ser ikke snøen i løypa. Mål snøtemperaturen der og test tre par ski. Glid vurderer du på følelsen. {stil === 'klassisk' ? 'Festet testes samtidig, og så melder du tilbake hva som skal justeres (se under).' : ''} Forslag, ikke fasit.</ThemedText>
+            {[[1, 'Anbefalt', res.struktur, 0], [2, 'Finere glid' + (stil === 'klassisk' ? ', kaldere feste' : ''), nabostruktur(res.struktur, -1, stil), 1], [3, 'Grovere glid' + (stil === 'klassisk' ? ', varmere feste' : ''), nabostruktur(res.struktur, 1, stil), 2]].map(([n, tittel, str, fi]) => {
+              const f = stil === 'klassisk' ? res.feste[fi as number] : null;
+              return (
+                <View key={String(n)} style={{ gap: 2, marginTop: 8 }}>
+                  <Text style={{ color: theme.text, fontWeight: '800' }}>{`Par ${n}: ${tittel}`}</Text>
+                  <ThemedText type="small">{`Struktur: ${str ? (str as { navn: string }).navn : 'finnes ikke (bruk anbefalt)'}`}</ThemedText>
+                  {f ? (
+                    f.likt ? (
+                      <ThemedText type="small">Feste: samme som anbefalt (kaldere/varmere gir samme lag i dag, juster med antall lag).</ThemedText>
+                    ) : (
+                      <ThemedText type="small">{`Feste: ${f.stabel.lag.map((l) => `${l.produkt} (${l.antall})`).join(' → ')}`}</ThemedText>
+                    )
+                  ) : null}
+                </View>
+              );
+            })}
           </Kort>
+          {stil === 'klassisk' ? (
+            <Kort>
+              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Etter testen: juster festet</Text>
+              <ThemedText>{'• Slipper eller er bakglatt: legg på flere lag, eller gå til varmere voks.'}</ThemedText>
+              <ThemedText>{'• Klabber, setter seg fast eller isner: færre lag, eller kaldere voks.'}</ThemedText>
+              <ThemedText>{'• Klister: tykkere lag mot glatt, tynnere mot klabb. Husk å kjøle mellom lagene.'}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">Etter rennet kan du føre inn hva som funket i Smøreloggen, så kalibrerer vi rådene.</ThemedText>
+            </Kort>
+          ) : null}
         </>
       ) : null}
     </View>
