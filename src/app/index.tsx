@@ -8,7 +8,7 @@ import { Temperaturoversikt, tekstPå, type OversiktVisning } from '@/components
 import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
 import { byggRute, tilhørende, type Løype } from '@/data/rute';
-import { useLøyper, useLøypeliste, type LøypeInfo } from '@/data/loyper';
+import { løypeFeilFor, useLøyper, useLøypeliste, type LøypeInfo } from '@/data/loyper';
 import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
@@ -621,20 +621,23 @@ export default function Hjem() {
   const [valgt, setValgt] = useLagret<string | null>(`skiglede.loype.${område.id}`, null);
   const { liste, feil } = useLøypeliste(område.id);
   const info = valgt ? liste?.find((l) => l.id === valgt) : undefined;
-  const [løype] = useLøyper(område.id, liste, info ? [info.id] : []);
+  const [forsøk, setForsøk] = useState(0);
+  const [løype] = useLøyper(område.id, liste, info ? [info.id] : [], forsøk);
+  const hentFeil = info ? løypeFeilFor(område.id, info.id) : '';
   if (valgt && liste === null && !feil) return <Laster tekst="Henter løypa …" />;
   if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} onVelg={setValgt} />;
-  if (!løype) return <Laster tekst={`Henter ${info.navn} …`} />;
+  if (!løype) return <Laster tekst={hentFeil ? `Fikk ikke tak i ${info.navn}: ${hentFeil}` : `Henter ${info.navn} …`} onPrøv={hentFeil ? () => setForsøk((n) => n + 1) : undefined} onTilbake={() => setValgt(null)} />;
   return <Detalj key={`${område.id}:${løype.id}`} løype={løype} liste={liste} område={område} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
 }
 
-function Laster({ tekst }: { tekst: string }) {
+function Laster({ tekst, onPrøv, onTilbake }: { tekst: string; onPrøv?: () => void; onTilbake?: () => void }) {
   const theme = useTheme();
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
       <Hero />
       <View style={styles.innhold}>
         <ThemedText themeColor="textSecondary">{tekst}</ThemedText>
+        {onPrøv ? <View style={styles.rad}><Chip aktiv onPress={onPrøv}>Prøv igjen</Chip>{onTilbake ? <Chip aktiv={false} onPress={onTilbake}>← Alle løyper</Chip> : null}</View> : null}
       </View>
     </ScrollView>
   );

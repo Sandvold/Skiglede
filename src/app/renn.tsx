@@ -27,7 +27,7 @@ const RENNLØYPER: Record<string, Løype> = {
 };
 
 const RESERVE: Renn[] = [
-  { id: 'hovden-tour-test', navn: 'Hovden Tour (test)', omrade: 'hovden', dato: null, starttid: null, stil: null, lengde_km: 11.9, loype_id: null, testdata: true, merknad: 'Løypa er OSM-linjene HovdenTour og HovdenTuren satt sammen (11,9 km, én vei). Ikke bekreftet som arrangørens løype. Dato og starttid mangler.' },
+  { id: 'hovden-tour-test', navn: 'Hovden Tour (test)', omrade: 'hovden', dato: null, starttid: '10:00', stil: null, lengde_km: 16.4, loype_id: null, testdata: true, merknad: 'Løypa er OSM-linjene HovdenTour og HovdenTuren, og så ned til stadion langs Auversvatn-løypa (16,4 km). Ikke bekreftet som arrangørens løype. Dato mangler.' },
 ];
 
 const osloDato = (dager: number) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(Date.now() + dager * 86400_000);

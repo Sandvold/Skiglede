@@ -18,6 +18,7 @@ def main():
     ap.add_argument("--navn", required=True)
     ap.add_argument("--way", action="append", required=True, help="OSM-bit (way/<id>) i kjørerekkefølge")
     ap.add_argument("--ut", required=True)
+    ap.add_argument("--forleng-til", help="lon,lat: legg til korteste vei i det preparerte nettet fra siste punkt til dette stedet (f.eks. stadion)")
     a = ap.parse_args()
     d = {p["osm"]: p for p in json.load(open(a.osm))["løyper"]}
     pts = []
@@ -32,6 +33,20 @@ def main():
                 sys.exit(f"{w} henger ikke sammen med forrige bit ({m(pts[-1], p[0]):.0f} m)")
         pts += p
     utm = [br.TO.transform(x[0], x[1]) for x in pts]
+    if a.forleng_til:
+        nett = br.Nett(br.last_nett(a.osm))
+        mål = br.TO.transform(*map(float, a.forleng_til.split(",")))
+        fra, til = nett.nærmeste(utm[-1]), nett.nærmeste(mål)
+        for q, navn in ((utm[-1], "slutten av siste bit"), (mål, "målet")):
+            avst = math.dist(q, nett.noder[nett.nærmeste(q)])
+            if avst > 60:
+                sys.exit(f"{navn} ligger {avst:.0f} m fra det preparerte nettet")
+        sti = nett.vei(fra, til)
+        if not sti:
+            sys.exit("fant ingen vei i nettet")
+        ekstra = br.polylinje(nett, sti)
+        print(f"forlenger med {sum(math.dist(x, y) for x, y in zip(ekstra, ekstra[1:])):.0f} m i nettet")
+        utm = utm + ekstra
     t = br.til_trail({"id": a.id, "navn": a.navn}, utm)
     t.update(type="enkel", kilde_runde="osm-bit", overlapp_pct=0)
     json.dump([t], open(a.ut, "w"), ensure_ascii=False)

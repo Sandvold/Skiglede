@@ -67,7 +67,12 @@ export function useLøypeliste(område: string): { liste: LøypeInfo[] | null; f
 }
 
 /** Hele løyper (punkter og terreng) for de gitte id-ene. Hentes bare når de trengs, og lagres på enheten. */
-export function useLøyper(område: string, info: LøypeInfo[] | null, ids: string[]): Løype[] {
+const løypeFeil = new Map<string, string>();
+/** Siste feil når en løype ikke kunne hentes (vises på skjermen i stedet for at den bare henger på «Henter …»). */
+export const løypeFeilFor = (område: string, id: string) => løypeFeil.get(`${område}/${id}`) ?? '';
+const vent = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export function useLøyper(område: string, info: LøypeInfo[] | null, ids: string[], forsøk = 0): Løype[] {
   const [, tving] = useState(0);
   const nøkkel = ids.join('|');
   const iHenting = useRef(new Set<string>());
@@ -93,12 +98,31 @@ export function useLøyper(område: string, info: LøypeInfo[] | null, ids: stri
     mangler.forEach((id) => iHenting.current.add(`${område}/${id}`));
     (async () => {
       try {
-        const { data } = await neonAnonym().from('loype').select('id, data, oppdatert').eq('omrade', område).in('id', mangler);
-        for (const r of (data ?? []) as { id: string; data: { punkter: Løype['punkter']; terreng?: Løype['terreng'] }; oppdatert: string }[]) {
-          const i = info.find((l) => l.id === r.id)!;
-          const l = { id: i.id, navn: i.navn, type: i.type, lengde_m: i.lengde_m, variantAv: i.variantAv, punkter: r.data.punkter, terreng: r.data.terreng, oppdatert: String(r.oppdatert) };
-          full.set(`${område}/${r.id}`, l);
-          lagreLokalt(løypeNøkkel(område, r.id), l);
+        // Tre forsøk: første kall etter oppstart kan feile mens den anonyme innloggingen settes opp.
+        let data: unknown[] | null = null;
+        let sisteFeil = '';
+        for (let n = 0; n < 3 && !data; n++) {
+          if (n) await vent(1000 * n);
+          try {
+            const svar = await neonAnonym().from('loype').select('id, data, oppdatert').eq('omrade', område).in('id', mangler);
+            if (svar.error) sisteFeil = String(svar.error.message ?? svar.error);
+            else data = (svar.data ?? []) as unknown[];
+          } catch (e) {
+            sisteFeil = String((e as Error)?.message ?? e);
+          }
+        }
+        if (!data) {
+          mangler.forEach((id) => løypeFeil.set(`${område}/${id}`, sisteFeil || 'ukjent feil'));
+        } else {
+          mangler.forEach((id) => løypeFeil.delete(`${område}/${id}`));
+          for (const r of data as { id: string; data: { punkter: Løype['punkter']; terreng?: Løype['terreng'] }; oppdatert: string }[]) {
+            const i = info.find((l) => l.id === r.id)!;
+            const l = { id: i.id, navn: i.navn, type: i.type, lengde_m: i.lengde_m, variantAv: i.variantAv, punkter: r.data.punkter, terreng: r.data.terreng, oppdatert: String(r.oppdatert) };
+            full.set(`${område}/${r.id}`, l);
+            lagreLokalt(løypeNøkkel(område, r.id), l);
+          }
+          // Ikke i databasen (ennå)? Si det i stedet for å henge.
+          mangler.filter((id) => !(data as { id: string }[]).some((r) => r.id === id)).forEach((id) => løypeFeil.set(`${område}/${id}`, 'løypa finnes ikke i databasen'));
         }
       } catch {
         // uten nett brukes lagret kopi hvis den finnes
@@ -108,6 +132,6 @@ export function useLøyper(område: string, info: LøypeInfo[] | null, ids: stri
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [område, info, nøkkel]);
+  }, [område, info, nøkkel, forsøk]);
   return ids.map((id) => full.get(`${område}/${id}`)).filter((l): l is Løype & { oppdatert: string } => !!l);
 }
