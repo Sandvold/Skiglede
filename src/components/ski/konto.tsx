@@ -24,19 +24,17 @@ export function KontoHøyre() {
     <View style={{ alignItems: 'flex-end', gap: 6, marginTop: 8, flexShrink: 1, maxWidth: 220 }}>
       <Text numberOfLines={1} style={{ color: '#BFDDF7', fontSize: 13, maxWidth: 220 }}>{bruker.epost}</Text>
       {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, width: 200, textAlign: 'right' }}>{feil.slice(0, 160)}</Text> : null}
-      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-        <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
-          <Text style={{ color: premium ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{premium ? 'Premium' : 'Vanlig'}</Text>
+      <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'flex-end' }}>
+        <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { paddingHorizontal: 10, backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
+          <Text style={{ color: premium ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 12 }}>{premium ? 'Premium' : 'Vanlig'}</Text>
         </Pressable>
-        {(
-          <Pressable accessibilityRole="button" onPress={byttPro} style={[knapp, { backgroundColor: pro ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
-            <Text style={{ color: pro ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{pro ? 'Pro-bruker' : 'Pro-bruker (av)'}</Text>
-          </Pressable>
-        )}
-        <Pressable accessibilityRole="button" onPress={loggUt} style={[knapp, { backgroundColor: 'rgba(255,255,255,0.14)' }]}>
-          <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>Logg ut</Text>
+        <Pressable accessibilityRole="button" onPress={byttPro} style={[knapp, { paddingHorizontal: 10, backgroundColor: pro ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
+          <Text style={{ color: pro ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 12 }}>{pro ? 'Pro' : 'Pro (av)'}</Text>
         </Pressable>
       </View>
+      <Pressable accessibilityRole="button" onPress={loggUt} style={[knapp, { paddingHorizontal: 12, backgroundColor: 'rgba(255,255,255,0.14)' }]}>
+        <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 12 }}>Logg ut</Text>
+      </Pressable>
     </View>
   );
 }

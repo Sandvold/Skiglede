@@ -345,7 +345,7 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
           {stil === 'klassisk' ? (
             <Kort>
               <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Feste, lag for lag (anbefalt)</Text>
-              {res.stabel.lag.map((l, i) => (
+              {res.stabel.lag.filter((l) => !l.rolle.startsWith('Glidesone') && l.rolle !== 'Glider').map((l, i) => (
                 <View key={i} style={{ gap: 2 }}>
                   <Text style={{ color: theme.text, fontWeight: '700' }}>{`${i + 1}. ${l.rolle}: ${l.produkt} · ${l.antall}`}</Text>
                   {l.merknad ? <ThemedText type="small" themeColor="textSecondary">{l.merknad}</ThemedText> : null}

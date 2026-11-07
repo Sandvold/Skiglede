@@ -3,7 +3,8 @@
 import * as WebBrowser from 'expo-web-browser';
 import { AUTH_URL, DATA_API_URL } from '@/data/neon';
 
-const ORIGIN = 'https://skiglede.netlify.app';
+// Må være et klarert domene i Neon Auth (utlogging sjekker Origin når kapsler følger med).
+const ORIGIN = 'https://sandvold.github.io';
 const TILBAKE_SIDE = 'https://sandvold.github.io/Skiglede/';
 const APP_TILBAKE = 'skiglede://auth';
 

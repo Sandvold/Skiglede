@@ -39,7 +39,9 @@ export function Hero() {
       ))}
       <View style={styles.innhold}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <Text style={styles.tittel}>Skiglede</Text>
+          <Pressable accessibilityRole="link" onPress={() => router.push('/')}>
+            <Text style={styles.tittel}>Skiglede</Text>
+          </Pressable>
           <KontoHøyre />
         </View>
         <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
@@ -54,7 +56,7 @@ export function Hero() {
             const aktiv = sti === m.href;
             return (
               <Pressable key={m.href} accessibilityRole="link" onPress={() => router.push(m.href)} style={[styles.menyKnapp, { backgroundColor: aktiv ? '#FFFFFF' : 'rgba(255,255,255,0.14)' }]}>
-                <Text style={{ color: aktiv ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 14 }}>{m.tekst}</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: aktiv ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 14 }}>{m.tekst}</Text>
               </Pressable>
             );
           })}
@@ -71,8 +73,8 @@ const styles = StyleSheet.create({
   innhold: { width: '100%', maxWidth: MaxContentWidth, paddingHorizontal: Spacing.three, paddingBottom: 34 },
   tittel: { color: '#FFFFFF', fontSize: 52, fontWeight: '800', letterSpacing: -1 },
   under: { color: '#BFDDF7', fontSize: 17, marginTop: 4 },
-  meny: { flexDirection: 'row', gap: 8, marginTop: 14, flexWrap: 'wrap' },
-  menyKnapp: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 },
+  meny: { flexDirection: 'row', gap: 6, marginTop: 14 },
+  menyKnapp: { paddingVertical: 7, paddingHorizontal: 8, borderRadius: 999, flexGrow: 1, flexShrink: 1, alignItems: 'center' },
   flak: { position: 'absolute', color: 'rgba(255,255,255,0.35)' },
   drift: { position: 'absolute', borderRadius: 999 },
 });
