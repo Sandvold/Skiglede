@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ProLås } from '@/components/ski/konto';
@@ -18,7 +18,7 @@ import { NØKKEL_SKIPARK, NØKKEL_VALGTE, TOM_LISTE, useStedData, type Ski } fro
 import { StedVelger } from '@/components/ski/sted';
 import * as DocumentPicker from 'expo-document-picker';
 import { byggFraGpx, lesGpx, terrengFor } from '@/data/gpx';
-import { hentLagretRutevær, hentRutevær, useMineRuter, type MinRute } from '@/data/minerute';
+import { hentLagretRutevær, hentRennRute, hentRutevær, lagreRenn, useErAdmin, useMineRuter, type MinRute } from '@/data/minerute';
 import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
@@ -104,8 +104,12 @@ function RennDetalj({ renn }: { renn: Renn }) {
   const theme = useTheme();
   const områder = useOmråder();
   const område = områder.find((o) => o.id === renn.omrade);
+  const [opplastet, setOpplastet] = useState<Løype | undefined>(undefined);
+  useEffect(() => {
+    hentRennRute(renn.id).then((l) => setOpplastet(l ? { ...l, navn: renn.navn } : undefined)).catch(() => undefined);
+  }, [renn.id]);
   if (!område) return <Kort><ThemedText>Området {renn.omrade} finnes ikke.</ThemedText></Kort>;
-  return <RennMedOmråde renn={renn} område={område} />;
+  return <RennMedOmråde renn={renn} område={område} egenLøype={opplastet} />;
 }
 
 /** Dine egne ruter: last opp GPX (bare for deg), velg en lagret rute eller slett den. */
@@ -115,6 +119,36 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
   const [opptatt, setOpptatt] = useState(false);
   const [del, setDel] = useState(false);
   const { bruker } = usePremium();
+  const erAdmin = useErAdmin(!!bruker);
+  const områder = useOmråder();
+  const [rennNavn, setRennNavn] = useState('');
+  const [rennDato, setRennDato] = useState('');
+  const [rennStil, setRennStil] = useState<'klassisk' | 'skoyting' | ''>('');
+  const lastRenn = async () => {
+    setStatus('');
+    try {
+      if (!rennNavn.trim()) return setStatus('Skriv navnet på rennet først.');
+      if (rennDato && !/^\d{4}-\d{2}-\d{2}$/.test(rennDato)) return setStatus('Datoen må være åååå-mm-dd, eller tom.');
+      const r = await DocumentPicker.getDocumentAsync({ type: ['*/*'], copyToCacheDirectory: true });
+      if (r.canceled || !r.assets?.[0]) return;
+      setOpptatt(true);
+      const a = r.assets[0];
+      const gpx = lesGpx(a.file ? await a.file.text() : await (await fetch(a.uri)).text());
+      setStatus('Henter høyde og skog fra Kartverket …');
+      const løype = await byggFraGpx(gpx.punkter, rennNavn.trim());
+      løype.terreng = await terrengFor(løype.punkter, (f, t) => setStatus(`Regner terreng for solskygge … ${Math.round((f / t) * 100)} %`));
+      const km = (a_: { sted: { lat: number; lon: number } }) => Math.hypot((a_.sted.lat - løype.start_lat) * 111, (a_.sted.lon - løype.start_lon) * 111 * Math.cos((løype.start_lat * Math.PI) / 180));
+      const nær = [...områder].sort((x, y) => km(x) - km(y))[0];
+      if (!nær || km(nær) > 60) return setStatus('Ruten ligger mer enn 60 km fra et område med værdata. Legg til området først.');
+      const id = rennNavn.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const feil = await lagreRenn({ id, navn: rennNavn.trim(), omrade: nær.id, dato: rennDato || null, stil: rennStil || null, løype });
+      setStatus(feil ? `Kunne ikke lagre: ${feil}` : `Rennet «${rennNavn.trim()}» er lagt inn (${(løype.lengde_m / 1000).toFixed(1)} km, vær fra ${nær.navn}). Alle Pro-brukere ser det under Renn.`);
+    } catch (e) {
+      setStatus(String((e as Error)?.message ?? e));
+    } finally {
+      setOpptatt(false);
+    }
+  };
   const last = async () => {
     setStatus('');
     try {
@@ -142,7 +176,7 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
   };
   return (
     <Kort>
-      <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Din egen rute (GPX)</Text>
+      <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Mine renn (egne ruter)</Text>
       <ThemedText type="small" themeColor="textSecondary">Last opp en GPX-fil, så regnes råd ut for akkurat denne løypa: vær, snøtemperatur, innstråling og struktur. Ruten lagres på kontoen din. Solskygge regnes fra terrenget (ett punkt per 300 m), så opplasting tar litt tid.</ThemedText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Chip aktiv onPress={opptatt ? () => undefined : last}>{opptatt ? 'Laster opp …' : 'Last opp GPX'}</Chip>
@@ -164,6 +198,19 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
       })()}
       {status ? <ThemedText type="small" style={{ color: theme.accent }}>{status}</ThemedText> : null}
       {mine.feil ? <ThemedText type="small" style={{ color: theme.accent }}>{mine.feil}</ThemedText> : null}
+      {erAdmin ? (
+        <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }}>
+          <ThemedText type="smallBold">Legg inn renn for alle (admin)</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">F.eks. Hovden Tour: skriv navn og dato, velg stil og last opp arrangørens GPX. Alle Pro-brukere får rennet og løypa under Renn.</ThemedText>
+          <TextInput value={rennNavn} onChangeText={setRennNavn} placeholder="Navn på rennet" placeholderTextColor={theme.textSecondary} style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 10, color: theme.text }} />
+          <TextInput value={rennDato} onChangeText={setRennDato} placeholder="Dato åååå-mm-dd (valgfritt)" placeholderTextColor={theme.textSecondary} style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 10, color: theme.text }} />
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Chip aktiv={rennStil === 'klassisk'} onPress={() => setRennStil(rennStil === 'klassisk' ? '' : 'klassisk')}>Klassisk</Chip>
+            <Chip aktiv={rennStil === 'skoyting'} onPress={() => setRennStil(rennStil === 'skoyting' ? '' : 'skoyting')}>Skøyting</Chip>
+            <Chip aktiv onPress={opptatt ? () => undefined : lastRenn}>{opptatt ? 'Laster opp …' : 'Last opp GPX som renn'}</Chip>
+          </View>
+        </View>
+      ) : null}
     </Kort>
   );
 }

@@ -71,3 +71,29 @@ export async function hentLagretRutevær(ruteId: string): Promise<{ referansehoy
   const d = data as { referansehoyde_m: number; timer: (string | number)[][] };
   return d.timer?.length >= 14 * 24 * 0.9 ? d : null;
 }
+
+/** Er innlogget bruker administrator (kan legge inn renn og rennløyper for alle)? Tabellen `admin` viser bare brukerens egen rad. */
+export function useErAdmin(innlogget: boolean): boolean {
+  const [er, setEr] = useState(false);
+  useEffect(() => {
+    if (!innlogget) return setEr(false);
+    neon().from('admin').select('user_id').limit(1).then(({ data }: { data: unknown[] | null }) => setEr(!!data?.length));
+  }, [innlogget]);
+  return er;
+}
+
+/** GPX-løypa som admin har lagt til et renn (synlig for Pro-brukere), eller null. */
+export async function hentRennRute(rennId: string): Promise<(Løype & { start_lat: number; start_lon: number }) | null> {
+  const { data, error } = await neon().from('renn_rute').select('lengde_m, punkter, terreng, start_lat, start_lon').eq('renn_id', rennId).maybeSingle();
+  if (error || !data) return null;
+  const d = data as { lengde_m: number; punkter: Løype['punkter']; terreng: Terreng[] | null; start_lat: number; start_lon: number };
+  return { id: rennId, navn: rennId, lengde_m: d.lengde_m, punkter: d.punkter, terreng: d.terreng ?? undefined, start_lat: d.start_lat, start_lon: d.start_lon };
+}
+
+/** Admin: legger inn et renn med GPX-løype som alle Pro-brukere ser under Renn. Returnerer feilmelding eller null. */
+export async function lagreRenn(r: { id: string; navn: string; omrade: string; dato: string | null; stil: string | null; løype: Løype & { start_lat: number; start_lon: number } }): Promise<string | null> {
+  const a = await neon().from('konkurranse').upsert({ id: r.id, navn: r.navn, omrade: r.omrade, dato: r.dato, starttid: '10:00', stil: r.stil, lengde_km: Math.round(r.løype.lengde_m / 100) / 10, testdata: false, oppdatert: new Date().toISOString() }, { onConflict: 'id' });
+  if (a.error) return a.error.message;
+  const b = await neon().from('renn_rute').upsert({ renn_id: r.id, lengde_m: r.løype.lengde_m, punkter: r.løype.punkter, terreng: r.løype.terreng ?? null, start_lat: r.løype.start_lat, start_lon: r.løype.start_lon, oppdatert: new Date().toISOString() }, { onConflict: 'renn_id' });
+  return b.error ? b.error.message : null;
+}
