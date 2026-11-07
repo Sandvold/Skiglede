@@ -14,7 +14,7 @@ export const STRUKTUR_NIVÅ = ['Fin', 'Fin til medium', 'Medium', 'Medium til gr
 export function nabostruktur(s: Struktur, steg: -1 | 1, stil: 'klassisk' | 'skoyting'): Struktur | null {
   const n = s.nivå + steg;
   if (n < 0 || n > 4) return null;
-  return { navn: `${STRUKTUR_NIVÅ[n]} lineær`, nivå: n, grunn: steg < 0 ? 'Finere enn anbefalt: tryggere hvis snøen er tørrere enn ventet.' : stil === 'skoyting' ? 'Grovere enn anbefalt: prøv hvis snøen er våtere enn ventet.' : 'Grovere enn anbefalt: prøv hvis snøen er våtere enn ventet. Ved tvil er finere bedre enn for grovt.' };
+  return { navn: stil === 'klassisk' ? `${STRUKTUR_NIVÅ[n]} lineær` : `${STRUKTUR_NIVÅ[n]} skrue/V`, nivå: n, grunn: steg < 0 ? 'Finere enn anbefalt: tryggere hvis snøen er tørrere enn ventet.' : stil === 'skoyting' ? 'Grovere enn anbefalt: prøv hvis snøen er våtere enn ventet.' : 'Grovere enn anbefalt: prøv hvis snøen er våtere enn ventet. Ved tvil er finere bedre enn for grovt.' };
 }
 
 /**
@@ -25,9 +25,10 @@ export function nabostruktur(s: Struktur, steg: -1 | 1, stil: 'klassisk' | 'skoy
 export function anbefalStruktur(tSnitt: number, snø: Pick<SnøAnalyse, 'type' | 'skarphet' | 'regn7'>, sludd: boolean, stil: 'klassisk' | 'skoyting' = 'klassisk'): Struktur {
   const våt = sludd || tSnitt >= 0 || snø.regn7 >= 5;
   if (stil === 'skoyting') {
-    if (våt) return { navn: 'Medium lineær, grov håndstruktur', nivå: 3, grunn: 'Våt snø: skøyting bruker sjelden grov slipestruktur. Hold medium og legg en grovere håndstruktur (rilleverktøy 1 mm) eller avtrykksverktøy over for å lede bort vann.' };
-    if (tSnitt <= -7) return { navn: 'Fin lineær', nivå: 0, grunn: 'Kald, tørr snø: fin struktur. En nyslipt struktur er skarp, så rund den litt av hvis skiene er nye.' };
-    return { navn: 'Medium lineær', nivå: 2, grunn: 'Medium er standard for skøyting fra ca. −7 °C og opp til våt snø.' };
+    // Skøyting bruker ikke lineær struktur: skrue (høyre/venstre) og kryss/V (fiskebein) fungerer ofte best [Forslag til rekkefølge, fra FasterSkier/Swix].
+    if (våt) return { navn: 'Medium slip, grov skrue (1–1,5 mm) eller V-avtrykk', nivå: 3, grunn: 'Våt snø: skøyting bruker sjelden grov slipestruktur. Hold medium slip og legg en grovere håndstruktur (skrue 1–1,5 mm, evt. V/fiskebein eller avtrykksverktøy) over for å lede bort vannet.' };
+    if (tSnitt <= -7) return { navn: 'Fin skrue eller fin V (0,3–0,5 mm)', nivå: 0, grunn: 'Kald, tørr snø: fin struktur. En nyslipt struktur er skarp, så rund den litt av hvis skiene er nye.' };
+    return { navn: 'Medium skrue eller V (1 mm)', nivå: 2, grunn: 'Medium er standard for skøyting fra ca. −7 °C og opp til våt snø. Skrue (høyre/venstre) eller kryss/V (fiskebein) gir ofte best glid i skøyting; lineær brukes mest i klassisk.' };
   }
   if (sludd || snø.regn7 >= 5 || tSnitt > 3) {
     return { navn: 'Grov lineær', nivå: 4, grunn: 'Våt, grovkornet snø: grov struktur leder bort vannet og gir mindre sug. Ved veldig våte forhold kan medium med avtrykksverktøy testes.' };

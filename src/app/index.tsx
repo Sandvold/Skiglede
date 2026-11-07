@@ -394,6 +394,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           {ingenPrognose ? (
             <ThemedText type="small">Ingen smøretips uten prognose. Se advarselen under «Turen».</ThemedText>
           ) : (<>
+          <GliderBoks lag={glidesone} />
           <ThemedText type="small" themeColor="textSecondary">{vis.lag.filter((l) => !erGlidesone(l)).length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Øverst = siste lag. Bygg nedenfra og opp.' : 'Ingen smøring på festesonen.'}</ThemedText>
           <View style={{ gap: 6 }}>
             {stabelVisning.map((l, i) => (
@@ -406,7 +407,6 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               </View>
             ))}
           </View>
-          <GliderBoks lag={glidesone} />
           {vis.alternativer?.map((a, i) => <ThemedText key={i} type="small" themeColor="textSecondary">Alternativ: {a}</ThemedText>)}
           {vis.advarsler.map((a, i) => (
             <View key={i} style={[styles.advarsel, { borderColor: '#E3A64A' }]}>

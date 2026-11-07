@@ -97,6 +97,13 @@ function RennDetalj({ renn }: { renn: Renn }) {
   return <RennMedOmråde renn={renn} område={område} />;
 }
 
+/** Glideren på festeoppsettet (glidesonen), eller dagens glider i skøyting. */
+function glid(st: { lag: { rolle: string; produkt: string }[] }, pro: { rolle: string; produkt: string }[]): string {
+  const g = st.lag.find((l) => l.rolle.startsWith('Glidesone') || l.rolle === 'Glider');
+  if (g) return g.produkt;
+  return pro.find((l) => l.rolle === 'Dagens glider')?.produkt ?? 'se Glid over';
+}
+
 function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
   const theme = useTheme();
   const værdata = useVær(område);
@@ -206,12 +213,7 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
               ))}
               {res.stabel.advarsler.map((w, i) => <ThemedText key={i} type="small">⚠ {w}</ThemedText>)}
             </Kort>
-          ) : (
-            <Kort>
-              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Skøyting: ingen feste</Text>
-              <ThemedText themeColor="textSecondary">Glideren over er hele smøringen.</ThemedText>
-            </Kort>
-          )}
+          ) : null}
           <Kort>
             <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Testplan: tre par ski</Text>
             <ThemedText type="small" themeColor="textSecondary">Appen ser ikke snøen i løypa. Mål snøtemperaturen der og test tre par ski. Glid vurderer du på følelsen. {stil === 'klassisk' ? 'Festet testes samtidig, og så melder du tilbake hva som skal justeres (se under).' : ''} Forslag, ikke fasit.</ThemedText>
@@ -221,11 +223,12 @@ function RennMedOmråde({ renn, område }: { renn: Renn; område: Område }) {
                 <View key={String(n)} style={{ gap: 2, marginTop: 8 }}>
                   <Text style={{ color: theme.text, fontWeight: '800' }}>{`Par ${n}: ${tittel}`}</Text>
                   <ThemedText type="small">{`Struktur: ${str ? (str as { navn: string }).navn : 'finnes ikke (bruk anbefalt)'}`}</ThemedText>
+                  <ThemedText type="small">{`Glider: ${glid(f ? f.stabel : res.stabel, res.glid)}`}</ThemedText>
                   {f ? (
                     f.likt ? (
                       <ThemedText type="small">Feste: samme som anbefalt (kaldere/varmere gir samme lag i dag, juster med antall lag).</ThemedText>
                     ) : (
-                      <ThemedText type="small">{`Feste: ${f.stabel.lag.map((l) => `${l.produkt} (${l.antall})`).join(' → ')}`}</ThemedText>
+                      <ThemedText type="small">{`Feste: ${f.stabel.lag.filter((l) => !l.rolle.startsWith('Glidesone')).map((l) => `${l.produkt} (${l.antall})`).join(' → ') || 'ingen'}`}</ThemedText>
                     )
                   ) : null}
                 </View>
