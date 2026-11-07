@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { AUTH_URL, DATA_API_URL } from '@/data/neon';
 
 const ORIGIN = 'https://skiglede.netlify.app';
-const TILBAKE_SIDE = `${ORIGIN}/auth-tilbake.html`;
+const TILBAKE_SIDE = 'https://sandvold.github.io/Skiglede/';
 const APP_TILBAKE = 'skiglede://auth';
 
 type Økt = { token: string; bruker: { id: string; email: string; name?: string } };
