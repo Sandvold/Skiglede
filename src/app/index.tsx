@@ -21,6 +21,11 @@ import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØ
 import { useRouter } from 'expo-router';
 import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
+/** Værtimer fra 3 t før start. Dekker været ikke starttiden (utdatert prognose), brukes siste timene i stedet for å krasje. */
+const vindu = (alle: Vær[], startTs: number): Vær[] => {
+  const v = alle.filter((t) => t.ts >= startTs - 3 * 3600_000);
+  return v.length ? v : alle.slice(-6);
+};
 const timerI = (v: Område['vær']): Vær[] => v.timer.map((r) => ({
   ts: Date.parse(r[0] as string), temp: r[1] as number, nedbor: r[2] as number, rh: r[3] as number, vind: r[4] as number, sw: r[5] as number,
 }));
@@ -193,7 +198,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
     const sisteHist = TIMER[TIMER.length - 1].ts;
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
     const snø = analyserSnø(alle, startTs, snøStatus);
-    const turFor = (s: 'klassisk' | 'skoyting') => planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO[s][modus], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
+    const turFor = (s: 'klassisk' | 'skoyting') => planTur({ seksjoner, timer: vindu(alle, startTs), startTs, tempoKmt: TEMPO[s][modus], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
     const turK = turFor('klassisk');
     const turS = stil === 'skoyting' ? turFor('skoyting') : null;
     const tur = turS ?? turK;
