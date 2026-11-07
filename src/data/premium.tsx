@@ -70,6 +70,12 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     hent();
   }, [hent]);
 
+  // Mobil: retur-ruten /auth oppretter økta utenfor denne komponenten og sier fra her.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    return require('@/data/native-konto').påØkt(() => hent());
+  }, [hent]);
+
   // Synk: ved innlogging som premium hentes data fra kontoen (kontoen vinner), og er kontoen tom lastes lokale data opp.
   useEffect(() => {
     if (!bruker || !premium || synket.current) return;

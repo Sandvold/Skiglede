@@ -54,9 +54,27 @@ export async function loggInnNativt(): Promise<string | void> {
   const q = r.url.split('?')[1] ?? '';
   const verifier = new URLSearchParams(q).get('neon_auth_session_verifier');
   if (!verifier) throw new Error(`[retur] mangler verifier i ${r.url.slice(0, 80)}`);
+  await fullførMedVerifier(verifier);
+}
+
+let sisteVerifier = '';
+const lyttere = new Set<() => void>();
+/** Kalles når en økt er opprettet (også fra retur-ruten `/auth`), slik at kontotilstanden lastes på nytt. */
+export function påØkt(f: () => void) {
+  lyttere.add(f);
+  return () => {
+    lyttere.delete(f);
+  };
+}
+
+/** Bytter engangskoden fra innloggingen mot en økt. Trygg å kalle to ganger med samme kode. */
+export async function fullførMedVerifier(verifier: string): Promise<void> {
+  if (verifier === sisteVerifier && økt) return;
+  sisteVerifier = verifier;
   const o = await hentØkt(verifier);
   if (!o) throw new Error('[økt] ingen økt etter innlogging');
   økt = o;
+  lyttere.forEach((f) => f());
 }
 
 export async function loggUtNativt(): Promise<void> {
