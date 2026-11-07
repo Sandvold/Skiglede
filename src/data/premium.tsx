@@ -123,15 +123,18 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const loggInnMedGoogle = useCallback(async () => {
     setFeil('');
     if (Platform.OS !== 'web') {
-      // Innloggingen bruker nettleser-omdirigering og informasjonskapsler; den virker ikke i appen ennå.
-      setFeil('Innlogging fungerer foreløpig bare på nettsiden. Åpner skiglede.netlify.app …');
-      Linking.openURL('https://skiglede.netlify.app/').catch(() => {});
+      try {
+        await require('@/data/native-konto').loggInnNativt();
+        await hent();
+      } catch (e) {
+        setFeil(String((e as Error)?.message ?? e));
+      }
       return;
     }
     const tilbake = typeof window !== 'undefined' ? window.location.origin + '/' : undefined;
     const { error } = await neon().auth.signIn.social({ provider: 'google', callbackURL: tilbake });
     if (error) setFeil(error.message ?? 'Innlogging feilet');
-  }, []);
+  }, [hent]);
 
   const loggUt = useCallback(async () => {
     await neon().auth.signOut();

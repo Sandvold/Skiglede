@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 // Lastes først ved bruk: pakken må ikke kjøres ved oppstart på mobil (en feil der tok hele appen ned før noe vistes).
 function createClient(...a: any[]): any {
   return require('@neon/neon-js').createClient(...a);
@@ -8,7 +9,7 @@ const NEON_URL = process.env.EXPO_PUBLIC_NEON_URL ?? 'https://ep-wandering-breez
 
 let klient: any | null = null;
 export function neon() {
-  if (!klient) klient = createClient(NEON_URL);
+  if (!klient) klient = Platform.OS === 'web' ? createClient(NEON_URL) : require('@/data/native-konto').nativKlient;
   return klient;
 }
 
