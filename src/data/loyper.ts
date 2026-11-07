@@ -104,11 +104,17 @@ export function useLøyper(område: string, info: LøypeInfo[] | null, ids: stri
         for (let n = 0; n < 3 && !data; n++) {
           if (n) await vent(1000 * n);
           try {
-            const svar = await neonAnonym().from('loype').select('id, data, oppdatert').eq('omrade', område).in('id', mangler);
-            if (svar.error) sisteFeil = String(svar.error.message ?? svar.error);
-            else data = (svar.data ?? []) as unknown[];
+            // Én forespørsel per løype (ikke .in): enklest mulig kall, og feilen peker på riktig løype.
+            const rader: unknown[] = [];
+            for (const id of mangler) {
+              const svar = await neonAnonym().from('loype').select('id, data, oppdatert').eq('omrade', område).eq('id', id);
+              if (svar.error) throw svar.error;
+              rader.push(...((svar.data ?? []) as unknown[]));
+            }
+            data = rader;
           } catch (e) {
-            sisteFeil = String((e as Error)?.message ?? e);
+            const er = e as Error;
+            sisteFeil = `${String(er?.message ?? e)} @ ${String(er?.stack ?? '').split('\n').slice(0, 3).join(' | ').slice(0, 300)}`;
           }
         }
         if (!data) {
@@ -124,8 +130,8 @@ export function useLøyper(område: string, info: LøypeInfo[] | null, ids: stri
           // Ikke i databasen (ennå)? Si det i stedet for å henge.
           mangler.filter((id) => !(data as { id: string }[]).some((r) => r.id === id)).forEach((id) => løypeFeil.set(`${område}/${id}`, 'løypa finnes ikke i databasen'));
         }
-      } catch {
-        // uten nett brukes lagret kopi hvis den finnes
+      } catch (e) {
+        mangler.forEach((id) => løypeFeil.set(`${område}/${id}`, `behandling: ${String((e as Error)?.message ?? e)}`));
       } finally {
         mangler.forEach((id) => iHenting.current.delete(`${område}/${id}`));
         tving((n) => n + 1);
