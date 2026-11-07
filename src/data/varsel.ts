@@ -32,7 +32,9 @@ export function lesVarselCache(område: Område): Varsel | null {
 
 /** Timesvarsel fra Yr via Netlify-funksjonen. Kaster hvis det ikke går. Vellykket prognose lagres til bruk uten nett. */
 export async function hentVarsel(område: Område): Promise<Varsel> {
-  const r = await fetch(`/.netlify/functions/varsel?lat=${område.sted.lat}&lon=${område.sted.lon}&hoyde=${område.hoyde}`, { cache: 'no-store' });
+  // På mobil finnes ingen «denne nettsiden»: bruk full adresse (på nett holder en relativ).
+  const base = typeof window === 'undefined' || !window.location?.origin || window.location.origin === 'null' || /^file:/.test(window.location.origin) ? 'https://skiglede.netlify.app' : '';
+  const r = await fetch(`${base}/.netlify/functions/varsel?lat=${område.sted.lat}&lon=${område.sted.lon}&hoyde=${område.hoyde}`, { cache: 'no-store' });
   if (!r.ok) throw new Error(`varsel ${r.status}`);
   const d = (await r.json()) as { oppdatert: string; timer: Rå['timer'] };
   const rå: Rå = { oppdatert: d.oppdatert, hentet: Date.now(), timer: d.timer };
