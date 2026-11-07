@@ -7,3 +7,4 @@ export * from './sol';
 export * from './terreng';
 export * from './lager';
 export * from './skipark';
+export * from './pro';

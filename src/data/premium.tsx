@@ -9,11 +9,15 @@ type Tilstand = {
   klar: boolean;
   bruker: Bruker | null;
   premium: boolean;
+  /** Pro (konkurranse) bygger på premium. */
+  pro: boolean;
   feil: string;
   loggInnMedGoogle: () => Promise<void>;
   loggUt: () => Promise<void>;
   /** Midlertidig bryter mellom premium og vanlig (ingen ekte betaling ennå). */
   byttPremium: () => Promise<void>;
+  /** Midlertidig bryter for pro (kun for premium, ingen betaling ennå). */
+  byttPro: () => Promise<void>;
 };
 
 const Ctx = createContext<Tilstand | null>(null);
@@ -29,6 +33,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [klar, setKlar] = useState(false);
   const [bruker, setBruker] = useState<Bruker | null>(null);
   const [premium, setPremium] = useState(false);
+  const [proFlagg, setPro] = useState(false);
   const [feil, setFeil] = useState('');
   const synket = useRef(false);
 
@@ -39,16 +44,18 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       if (!u) {
         setBruker(null);
         setPremium(false);
+        setPro(false);
         return;
       }
       setBruker({ id: u.id, epost: u.email, navn: u.name ?? u.email });
       const db = neon();
-      let { data: rad } = await db.from('profil').select('premium').maybeSingle();
+      let { data: rad } = await db.from('profil').select('premium, pro').maybeSingle();
       if (!rad) {
         await db.from('profil').insert({});
-        rad = { premium: false };
+        rad = { premium: false, pro: false };
       }
       setPremium(!!rad.premium);
+      setPro(!!rad.pro);
     } catch (e) {
       setFeil(String((e as Error)?.message ?? e));
     } finally {
@@ -124,17 +131,31 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     synket.current = false;
     setBruker(null);
     setPremium(false);
+    setPro(false);
   }, []);
 
   const byttPremium = useCallback(async () => {
     if (!bruker) return;
     const ny = !premium;
-    const { error } = await neon().from('profil').upsert({ premium: ny, oppdatert: new Date().toISOString() }, { onConflict: 'user_id' });
+    const { error } = await neon().from('profil').upsert({ premium: ny, ...(ny ? {} : { pro: false }), oppdatert: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) setFeil(error.message);
-    else setPremium(ny);
+    else {
+      setPremium(ny);
+      if (!ny) setPro(false);
+    }
   }, [bruker, premium]);
 
-  const verdi = useMemo(() => ({ klar, bruker, premium, feil, loggInnMedGoogle, loggUt, byttPremium }), [klar, bruker, premium, feil, loggInnMedGoogle, loggUt, byttPremium]);
+  const byttPro = useCallback(async () => {
+    if (!bruker || !premium) return;
+    const ny = !proFlagg;
+    const { error } = await neon().from('profil').upsert({ pro: ny, oppdatert: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (error) setFeil(error.message);
+    else setPro(ny);
+  }, [bruker, premium, proFlagg]);
+
+  const pro = premium && proFlagg;
+
+  const verdi = useMemo(() => ({ klar, bruker, premium, pro, feil, loggInnMedGoogle, loggUt, byttPremium, byttPro }), [klar, bruker, premium, pro, feil, loggInnMedGoogle, loggUt, byttPremium, byttPro]);
   return <Ctx.Provider value={verdi}>{children}</Ctx.Provider>;
 }
 

@@ -23,8 +23,11 @@ Snøkrystaller og målt snøtemperatur i løypa, preparering/salt/kunstsnø, gli
 - Rennkalender: start med 20–30 store renn lagt inn for hånd (Skiforbundets terminliste og arrangørenes sider), ikke automatisk.
 
 ## Status
-- `konkurranse` er opprettet, og raden `hovden-tour-test` ligger inne som **testoppføring**: ingen dato, starttid eller distanse. Auversvatn (16,7 km) er stedfortreder til vi har arrangørens GPX. Ikke vist i appen ennå.
-- Neste: rennliste og rennside bak premium, GPX-import-skript, loggtabell med RLS per bruker.
+- `konkurranse` er opprettet, og raden `hovden-tour-test` ligger inne som **testoppføring**: ingen dato, starttid eller distanse. Auversvatn (16,7 km) er stedfortreder til vi har arrangørens GPX.
+- **Pro-bruker**: knapp ved siden av Premium (kun synlig for premium, test uten betaling). Lagres i `profil.pro`. Pro bygger på premium.
+- **Rennvisning** `/renn` (lenke «Renn» ved Skipark, låst for ikke-pro): velg renn, dag, starttid og stil. Viser slipestruktur (rilljern), glidelag og festelag. Uten prognose for rennstarten brukes siste kjente vær, og det står tydelig i visningen.
+- Motoren: `src/engine/pro.ts` (`anbefalStruktur`, `proGlidelag`). Alle terskler er [Forslag] og skal justeres mot loggen.
+- Mangler: logg etter renn, GPX-import, flere renn, ekte betaling og server-side lås.
 
 ## Åpne spørsmål
 - Pris: per sesong eller per renn (sesongen er kort, januar–mars).

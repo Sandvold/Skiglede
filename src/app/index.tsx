@@ -121,7 +121,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const LØYPER = liste;
   const værdata = useVær(område);
   const TIMER = useMemo(() => timerI(værdata), [værdata]);
-  const { premium } = usePremium();
+  const { premium, pro } = usePremium();
   const [ekstraLagret, setEkstraIds] = useLagret<string[]>(`skiglede.ekstra.${valgtLøype.id}`, TOM_LISTE);
   const ekstraIds = premium ? ekstraLagret : TOM_LISTE; // utvide løypa er premium
   const gruppe = valgtLøype.variantAv ?? valgtLøype.id;
@@ -446,6 +446,9 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           ))}
           <Pressable accessibilityRole="link" onPress={() => router.push('/skipark')} style={[styles.chip, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
             <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>{skipark.length ? 'Skipark' : '+ Legg inn ski'}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="link" onPress={() => router.push('/renn')} style={[styles.chip, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
+            <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>{pro ? 'Renn' : '🔒 Renn (pro)'}</Text>
           </Pressable>
         </View>
         {valgteSki.length > 0 && !ingenPrognose && (

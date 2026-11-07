@@ -7,7 +7,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 /** Øverst til høyre: «Logg inn» når du er utlogget; ellers e-post, premium-bryter (midlertidig, ingen betaling ennå) og «Logg ut». */
 export function KontoHøyre() {
-  const { klar, bruker, premium, loggInnMedGoogle, loggUt, byttPremium } = usePremium();
+  const { klar, bruker, premium, pro, loggInnMedGoogle, loggUt, byttPremium, byttPro } = usePremium();
   if (!klar) return null;
   const knapp = { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 } as const;
   if (!bruker) {
@@ -24,6 +24,11 @@ export function KontoHøyre() {
         <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
           <Text style={{ color: premium ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{premium ? 'Premium' : 'Vanlig'}</Text>
         </Pressable>
+        {premium && (
+          <Pressable accessibilityRole="button" onPress={byttPro} style={[knapp, { backgroundColor: pro ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
+            <Text style={{ color: pro ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{pro ? 'Pro-bruker' : 'Pro-bruker (av)'}</Text>
+          </Pressable>
+        )}
         <Pressable accessibilityRole="button" onPress={loggUt} style={[knapp, { backgroundColor: 'rgba(255,255,255,0.14)' }]}>
           <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>Logg ut</Text>
         </Pressable>
@@ -54,3 +59,26 @@ export function PremiumLås({ tittel, children }: { tittel: string; children: Re
 }
 
 export const LåsKort = Kort;
+
+/** Viser innholdet bare for pro (konkurranse); ellers forklaring og bryter. Pro bygger på premium. */
+export function ProLås({ tittel, children }: { tittel: string; children: React.ReactNode }) {
+  const theme = useTheme();
+  const { klar, bruker, premium, pro, feil, loggInnMedGoogle, byttPremium, byttPro } = usePremium();
+  if (pro) return <>{children}</>;
+  return (
+    <Kort>
+      <Text style={{ color: theme.text, fontWeight: '800', fontSize: 20 }}>{tittel} er for pro-brukere</Text>
+      <ThemedText themeColor="textSecondary">
+        Pro er konkurransesmøring: velg et renn og få råd for hele løypa, med slipestruktur (rilljern), glidelag og festesmøring. Rådene er utgangspunkt for testing på rennmorgenen.
+      </ThemedText>
+      {!klar ? null : !bruker ? (
+        <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
+      ) : !premium ? (
+        <Chip aktiv onPress={byttPremium}>Slå på premium først (test, ingen betaling)</Chip>
+      ) : (
+        <Chip aktiv onPress={byttPro}>Slå på pro (test, ingen betaling)</Chip>
+      )}
+      {feil ? <ThemedText type="small" style={{ color: theme.accent }}>{feil}</ThemedText> : null}
+    </Kort>
+  );
+}
