@@ -18,7 +18,7 @@ import { NØKKEL_SKIPARK, NØKKEL_VALGTE, TOM_LISTE, useStedData, type Ski } fro
 import { StedVelger } from '@/components/ski/sted';
 import * as DocumentPicker from 'expo-document-picker';
 import { byggFraGpx, lesGpx, terrengFor } from '@/data/gpx';
-import { hentRutevær, useMineRuter, type MinRute } from '@/data/minerute';
+import { hentLagretRutevær, hentRutevær, useMineRuter, type MinRute } from '@/data/minerute';
 import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
@@ -151,7 +151,7 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
         ))}
       </View>
       <Chip aktiv={del} onPress={() => setDel(!del)}>{del ? '✓ Del med andre Pro-brukere' : 'Del med andre Pro-brukere (av)'}</Chip>
-      <ThemedText type="small" themeColor="textSecondary">Delte ruter kan alle Pro-brukere se, inkludert startpunktet. Del ikke ruter som starter ved hjemmet ditt.</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">Delte ruter kan alle Pro-brukere se, inkludert startpunktet. Del ikke ruter som starter ved hjemmet ditt. Delte ruter får værhistorikk lagret fra opplastingen (opptil 90 døgn, oppdatert hver fjerde time); først etter første oppdatering brukes den, til da brukes 14 døgn.</ThemedText>
       {(() => {
         const v = mine.ruter.find((x) => x.id === valgt);
         if (!v || (bruker && v.user_id && v.user_id !== bruker.id)) return null;
@@ -173,7 +173,7 @@ function EgenRuteDetalj({ rute }: { rute: MinRute }) {
   const [vær, setVær] = useState<{ referansehoyde_m: number; timer: (string | number)[][] } | null>(null);
   const [feil, setFeil] = useState('');
   useEffect(() => {
-    hentRutevær(rute.start_lat, rute.start_lon).then(setVær).catch((e) => setFeil(String(e?.message ?? e)));
+    (rute.delt ? hentLagretRutevær(rute.id) : Promise.resolve(null)).catch(() => null).then((l) => l ?? hentRutevær(rute.start_lat, rute.start_lon)).then(setVær).catch((e) => setFeil(String(e?.message ?? e)));
   }, [rute.id]);
   if (feil) return <Kort><ThemedText>Fikk ikke hentet været for ruten: {feil}</ThemedText></Kort>;
   if (!vær) return <Kort><ThemedText themeColor="textSecondary">Henter været for ruten …</ThemedText></Kort>;

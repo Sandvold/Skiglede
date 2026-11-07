@@ -63,3 +63,11 @@ export async function hentRutevær(lat: number, lon: number): Promise<{ referans
   }
   return { referansehoyde_m: j.elevation ?? 0, timer };
 }
+
+/** Lagret værhistorikk for en delt rute (MET Nordic Analysis, oppdatert hver fjerde time fra opplasting), eller null hvis den ikke finnes ennå. */
+export async function hentLagretRutevær(ruteId: string): Promise<{ referansehoyde_m: number; timer: (string | number)[][] } | null> {
+  const { data, error } = await neon().from('rute_vaer').select('referansehoyde_m, timer').eq('rute_id', ruteId).maybeSingle();
+  if (error || !data) return null;
+  const d = data as { referansehoyde_m: number; timer: (string | number)[][] };
+  return d.timer?.length >= 14 * 24 * 0.9 ? d : null;
+}
