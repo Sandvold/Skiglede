@@ -39,12 +39,14 @@ export function Hero() {
       ))}
       <View style={styles.innhold}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <Pressable accessibilityRole="link" onPress={() => router.push('/')}>
-            <Text style={styles.tittel}>Skiglede</Text>
-          </Pressable>
+          <View style={{ flex: 1, flexShrink: 1 }}>
+            <Pressable accessibilityRole="link" onPress={() => router.push('/')}>
+              <Text style={styles.tittel}>Skiglede</Text>
+            </Pressable>
+            <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
+          </View>
           <KontoHøyre />
         </View>
-        <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
         <Områdevelger />
         {premium && stedStatus.tilstand !== 'ukjent' ? (
           <Text style={{ color: '#BFDDF7', fontSize: 13, marginTop: 10 }}>
