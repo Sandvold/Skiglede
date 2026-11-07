@@ -3,6 +3,13 @@ if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
   require('react-native-url-polyfill/auto');
 }
 
+// atob/btoa brukes til å lese utløpstid i innloggingstokenet; sørg for at de finnes.
+if (typeof global.atob !== 'function') {
+  const { Buffer } = require('buffer');
+  global.atob = (s) => Buffer.from(String(s), 'base64').toString('binary');
+  global.btoa = (s) => Buffer.from(String(s), 'binary').toString('base64');
+}
+
 // Hermes (Android) har ikke Web Crypto. Innloggingsbiblioteket (Neon/better-auth) bruker globalThis.crypto, så vi gir det en enkel versjon fra expo-crypto.
 if (typeof global.crypto === 'undefined' || typeof global.crypto.getRandomValues !== 'function') {
   const C = require('expo-crypto');
