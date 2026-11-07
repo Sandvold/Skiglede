@@ -1,3 +1,8 @@
+// React Native har en ufullstendig URL/URLSearchParams (mangler bl.a. searchParams.set). Neon-biblioteket trenger hele; polyfill bare på mobil.
+if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
+  require('react-native-url-polyfill/auto');
+}
+
 // Hermes (Android) har ikke Web Crypto. Innloggingsbiblioteket (Neon/better-auth) bruker globalThis.crypto, så vi gir det en enkel versjon fra expo-crypto.
 if (typeof global.crypto === 'undefined' || typeof global.crypto.getRandomValues !== 'function') {
   const C = require('expo-crypto');
