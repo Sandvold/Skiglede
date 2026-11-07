@@ -79,7 +79,6 @@ export async function loggInnNativt(): Promise<string | void> {
   await fullførMedVerifier(verifier);
 }
 
-let sisteVerifier = '';
 const lyttere = new Set<() => void>();
 /** Kalles når en økt er opprettet (også fra retur-ruten `/auth`), slik at kontotilstanden lastes på nytt. */
 export function påØkt(f: () => void) {
@@ -89,14 +88,20 @@ export function påØkt(f: () => void) {
   };
 }
 
-/** Bytter engangskoden fra innloggingen mot en økt. Trygg å kalle to ganger med samme kode. */
-export async function fullførMedVerifier(verifier: string): Promise<void> {
-  if (verifier === sisteVerifier && økt) return;
-  sisteVerifier = verifier;
-  const o = await hentØkt(verifier);
-  if (!o) throw new Error('[økt] ingen økt etter innlogging');
-  økt = o;
-  lyttere.forEach((f) => f());
+// Engangskoden kan bare brukes én gang, men både nettleserretur og /auth-ruten får den: begge deler samme forespørsel.
+const pågående = new Map<string, Promise<void>>();
+export function fullførMedVerifier(verifier: string): Promise<void> {
+  let p = pågående.get(verifier);
+  if (!p) {
+    p = (async () => {
+      const o = await hentØkt(verifier);
+      if (!o) throw new Error('[økt] ingen økt etter innlogging');
+      økt = o;
+      lyttere.forEach((f) => f());
+    })();
+    pågående.set(verifier, p);
+  }
+  return p;
 }
 
 export async function loggUtNativt(): Promise<void> {
