@@ -8,8 +8,8 @@ pip install osmium pyproj scikit-learn scipy numpy rasterio
 ```
 
 ## 2. Last ned data
-- OSM for Norge: https://download.geofabrik.de/europe/norway-latest.osm.pbf (ca. 1,3 GB) → `data\norway-latest.osm.pbf`
-- Høydemodell DTM10 (UTM33, GeoTIFF) fra https://hoydedata.no (Last ned → «DTM 10 m», hele Norge eller fylkesvis) → pakk ut i `data\dtm\` (filer `*.tif`).
+- OSM for Norge: https://download.geofabrik.de/europe/norway-latest.osm.pbf (ca. 1,3 GB) → `data\norway-latest.osm.pbf` (filnavnet kan ha dato, f.eks. `norway-261107.osm.pbf`; bruk det som står i mappa). Filen kan slettes etter steg 3.
+- Høydemodell er valgfri (19 GB for hele Norge). Uten den hentes terrenget fra Kartverkets API. Med den: DTM10 fra https://hoydedata.no → `data\dtm\*.tif`.
 
 ## 3. Løyper og steder fra pbf
 ```
@@ -21,15 +21,16 @@ Gir `osm-loyper.json` (alle nordiske pistes) og `steder.json` (hotell, hytter, p
 ```
 python -X utf8 scripts/del_i_omrader.py --osm scripts\ut\norge\osm-loyper.json --ut scripts\ut\omrader
 ```
-Klynger nettet (eps 2 km, maks 30 km, minst 15 km løype), navngir fra Kartverket og skriver `manifest.json`. Hovden, Nordmarka, Bærumsmarka og Sjusjøen er låst og hoppes over. Se gjennom `manifest.json` og rett navn før neste steg.
+Klynger nettet (eps 2 km, maks 30 km). Legg til `--min-km 3 --manifest` for å beholde små nett og id/navn fra tidligere kjøring (minst 3 km løype), navngir fra Kartverket og skriver `manifest.json`. Hovden, Nordmarka, Bærumsmarka og Sjusjøen er låst og hoppes over. Se gjennom `manifest.json` og rett navn før neste steg. Windows: bruk alltid `python -X utf8` (aldri `-I`, den skjuler pakkene du har installert; uten utf8 krasjer JSON-skriving på cp1252).
 
-## 5. Bygg alle områder parallelt
+## 5. Bygg områdene (ett fylke om gangen, anbefalt)
+Bruk `kjor_fylke.py` under. `kjor_norge.py` kan kjøre alt i ett:
 ```
 python -X utf8 scripts/kjor_norge.py --mappe scripts\ut\omrader --steder scripts\ut\norge\steder.json --dtm "data\dtm\*.tif" --samtidig 4
 ```
 Kan avbrytes og startes igjen (ferdige områder hoppes over, status i `status.json`). Test først med `--maks 2` eller `--kun id1,id2`. Loggen per område: `scripts\ut\omrader\<id>\bygg.log`. Uten `--dtm` hentes terreng fra Kartverkets API (ca. 1 min per løype, mye tregere).
 
-### Ett fylke om gangen (anbefalt uten lokal høydemodell)
+### Ett fylke om gangen
 ```
 python -X utf8 scripts/kjor_fylke.py                          # oversikt: fylker, områder, km, ferdige
 python -X utf8 scripts/kjor_fylke.py --fylke Telemark --maks 2   # test
@@ -37,12 +38,21 @@ python -X utf8 scripts/kjor_fylke.py --fylke Telemark          # hele fylket (Ct
 ```
 Uten `--dtm` hentes terrenget fra Kartverkets API (tregt, men ingen nedlasting). Fylket slås opp mot Kartverket og lagres i `scripts\ut\omrader\fylker.json`.
 
-## 6. Inn i appen
-1. Kjør `scripts\ut\omrader\omrader.sql` i Neon (SQL-editoren, eller send meg innholdet).
-2. `git add src/data/trails-*.json && git commit && git pull --rebase && git push`. Opplastingsjobben kontrollerer løypene (dårlige settes i karantene) og laster dem til Neon.
-3. Start «Oppdater værhistorikk» i GitHub Actions én gang; deretter går den hver 4. time.
+## 6. Inn i appen (per fylke)
+1. **Først** områdene: kjør `INSERT`-radene fra `scripts\ut\omrader\omrader.sql` i Neon (`ON CONFLICT DO NOTHING`). Områdene må finnes i tabellen `omrade` før løypene lastes opp; push alene lager dem ikke. Se opp for dobbelte områder med nesten lik posisjon.
+2. Deretter: `git add src/data/trails-*.json && git commit && git pull --rebase && git push`. Jobben «Last opp løyper til Neon» kontrollerer løypene (dårlige settes i karantene) og laster dem opp.
+3. «Oppdater værhistorikk» i GitHub Actions trengs først før snøsesongen (nye områder får værdata da).
+
+Hold oversikt over hvilke fylker som er kjørt: `kjor_fylke.py` uten argumenter viser ferdige/feilet per fylke.
+
+## Hva byggeskriptene gjør (kort)
+- Startpunkter fra steder (hotell, parkering, hytte) innen 600 m, minst 2,5 km fra hverandre. Rundløyper: maks 25 % overlapp, ≥75 % preparert, 3–26 km.
+- **Tur-retur som reserve:** finnes ingen runde fra et startpunkt, lages tur-retur ut til det fjerneste punktet i hvert avstandsbånd (1,25–13 km ut), `type: retur`. Små nett (≥30 noder) beholdes.
+- Ingen startpunkter: midten av nettet brukes.
+- Navn: `navn_fra_turrutebasen.py` kjøres automatisk og gir løypene navn fra Turrutebasen der de følger en navngitt skiløype (kan kjøres på alle filer: `python -X utf8 scripts/navn_fra_turrutebasen.py --alle --skriv`). Mange områder har ingen navngitte løyper der, og beholder «Start – Sted».
+- Kontrollen setter sløyfer med >25 % dobbel vei i karantene (ikke slettet).
 
 ## Kjente begrensninger
-- Pbf-skriptet og rastersamplingen er testet på små uttak, ikke på hele Norge: gi beskjed om feil, så retter jeg.
-- Områder uten runder (f.eks. bare korte biter) får ingen løyper og hoppes over.
-- Navn kommer fra Kartverkets stedsnavn; sjekk manifestet for rare navn.
+- Korte stadionrunder (under ca. 3 km) droppes bevisst; områder med bare slike (f.eks. lillesand-stadion) får ingen løyper.
+- Områdenavn kommer fra Kartverkets stedsnavn og er ikke sjekket mot Turrutebasen; noen er rare («Skiområde 59.36 7.33»).
+- `.gitignore` må ha `/data/` (ikke `data/`), ellers skjules `src/data/trails-*.json`.
