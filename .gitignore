@@ -43,3 +43,6 @@ example
 /android
 scripts/ut/
 __pycache__/
+
+# store nedlastinger for norgeskjøringen (OSM-pbf og høydemodell)
+data/
