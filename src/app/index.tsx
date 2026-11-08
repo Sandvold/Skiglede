@@ -6,7 +6,7 @@ import { TrailMap } from '@/components/ski/kart';
 import { Hoydeprofil } from '@/components/ski/profil';
 import { Temperaturoversikt, tekstPå, type OversiktVisning } from '@/components/ski/oversikt';
 import { Hero } from '@/components/ski/hero';
-import { Chip, Kort } from '@/components/ski/ui';
+import { Chip, Kort, Nedtrekk, Sammenleggbar } from '@/components/ski/ui';
 import { byggRute, tilhørende, type Løype } from '@/data/rute';
 import { løypeFeilFor, useLøyper, useLøypeliste, type LøypeInfo } from '@/data/loyper';
 import { Loypevelger } from '@/components/ski/loypevelger';
@@ -84,7 +84,7 @@ function GliderBoks({ lag }: { lag?: { produkt: string; merknad?: string } }) {
         <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: produktFarge(lag.produkt), borderWidth: 1, borderColor: theme.border }} />
         <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>{lag.produkt}{p ? <Text style={{ fontWeight: '500', fontSize: 14 }}>  {p.farge}</Text> : null}</Text>
       </View>
-      <ThemedText type="small" themeColor="textSecondary">Foran og bak festesonen, ikke i den. {lag.merknad ?? ''}</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">Foran og bak festesonen. {(lag.merknad ?? '').replace(/\s*Ikke på festesonen\.?/, '')}</ThemedText>
     </View>
   );
 }
@@ -340,7 +340,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               ...STARTTIDER.map((h) => createElement('option', { key: h, value: String(h) }, `🕒 ${klokke(h)}`))
             )
           ) : (
-            [9, 10, 11, 12, 13].map((h) => <Chip key={h} aktiv={h === startTime} onPress={() => setStartTime(h)}>{`${klokke(h)}`}</Chip>)
+            <Nedtrekk etikett="Starttidspunkt for turen" verdi={String(startTime)} valg={STARTTIDER.map((h) => ({ verdi: String(h), tekst: `🕒 ${klokke(h)}` }))} onVelg={(v) => setStartTime(Number(v))} />
           )}
         </View>
         <ThemedText type="small" themeColor="textSecondary">
@@ -419,30 +419,35 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           </ThemedText>
         </Kort>
 
-        {!ingenPrognose && r.alternativer.map((a) => (
-          <Kort key={a.stil} style={{ gap: Spacing.two }}>
-            <View style={styles.rad}>
-              <Text style={[styles.h3, { color: theme.text, flex: 1 }]}>Alternativ: {STIL_NAVN[a.stil]}</Text>
-              <View style={[styles.merke, { backgroundColor: theme.accentSoft }]}>
-                <Text style={{ color: theme.accent, fontWeight: '700' }}>{skipark.filter((x) => x.stil === a.stil).map((x) => x.navn).join(', ')}</Text>
-              </View>
-            </View>
-            <ThemedText type="small">{a.grunn}</ThemedText>
-            {a.stabel.lag.filter((l) => !erGlidesone(l)).map((l, i) => (
-              <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.lagProdukt, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.produkt}<Text style={{ fontWeight: '500', fontSize: 14 }}>  {produkt(l.produkt)?.farge}</Text></Text>
-                  <Text style={[styles.lagRolle, { color: tekstPå(produktFarge(l.produkt)), opacity: 0.85 }]}>{l.rolle}{l.merknad ? ` · ${l.merknad}` : ''}</Text>
-                </View>
-                <Text style={[styles.lagAntall, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.antall}</Text>
-              </View>
-            ))}
-            <GliderBoks lag={a.stabel.lag.find(erGlidesone)} />
-            {a.stabel.advarsler.map((w, i) => (
-              <ThemedText key={i} type="small">⚠ {w}</ThemedText>
-            ))}
-          </Kort>
-        ))}
+        {!ingenPrognose && r.alternativer.map((a) => {
+          const festeLag = a.stabel.lag.filter((l) => !erGlidesone(l));
+          const ingenSmøring = festeLag.length > 0 && festeLag.every((l) => l.antall === 'Ingen smøring');
+          const alt = a.stabel.lag.find(erGlidesone);
+          const samme = !!alt && alt.produkt === glidesone?.produkt;
+          return (
+            <Sammenleggbar key={a.stil} id={`alt-${a.stil}`} tittel={`Alternativ: ${STIL_NAVN[a.stil]}`} style={{ gap: Spacing.two }}>
+              <ThemedText type="small">{a.grunn}</ThemedText>
+              <ThemedText type="smallBold" themeColor="textSecondary">{skipark.filter((x) => x.stil === a.stil).map((x) => x.navn).join(', ') || 'Ingen ski av denne typen i skiparken ennå'}</ThemedText>
+              {ingenSmøring ? (
+                <ThemedText type="small">{`Ingen festevoks eller klister. ${festeLag[0].merknad ?? ''}`}</ThemedText>
+              ) : (
+                festeLag.map((l, i) => (
+                  <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.lagProdukt, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.produkt}<Text style={{ fontWeight: '500', fontSize: 14 }}>  {produkt(l.produkt)?.farge}</Text></Text>
+                      <Text style={[styles.lagRolle, { color: tekstPå(produktFarge(l.produkt)), opacity: 0.85 }]}>{l.rolle}{l.merknad ? ` · ${l.merknad}` : ''}</Text>
+                    </View>
+                    <Text style={[styles.lagAntall, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.antall}</Text>
+                  </View>
+                ))
+              )}
+              {alt ? (samme ? <ThemedText type="small" themeColor="textSecondary">Samme glider som over ({alt.produkt}).</ThemedText> : <GliderBoks lag={alt} />) : null}
+              {a.stabel.advarsler.map((w, i) => (
+                <ThemedText key={i} type="small">⚠ {w}</ThemedText>
+              ))}
+            </Sammenleggbar>
+          );
+        })}
 
         {/* Ski */}
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>SKI JEG SMØRER I DAG</ThemedText>
@@ -527,18 +532,16 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
         }} />
 
         {/* Snø */}
-        <Kort>
-          <Text style={[styles.h2, { color: theme.text }]}>Snøen</Text>
+        <Sammenleggbar id="snoen" tittel="Snøen">
           <View style={styles.rad}>
             <Tall verdi={r.snø.type === 'ny' ? 'Nysnø' : 'Omdannet'} tekst="snøtype" />
             <Tall verdi={`${Math.round(r.snø.skarphet)}`} tekst="skarphet (0–100)" />
             <Tall verdi={`${r.tur.tMin.toFixed(1)} / ${r.tur.tMaks.toFixed(1)} °C`} tekst="kaldest / varmest" />
           </View>
-        </Kort>
+        </Sammenleggbar>
 
         {/* Temperaturoversikt */}
-        <Kort>
-          <Text style={[styles.h2, { color: theme.text }]}>Voks og klister</Text>
+        <Sammenleggbar id="voks-og-klister" tittel="Voks og klister" standardÅpen={false}>
           <ThemedText type="small" themeColor="textSecondary">Hva hvert produkt fungerer på, med fargekodene til {sys.navn}.</ThemedText>
           <View style={styles.rad}>
             <Chip aktiv={oversiktVisning === 'alle'} onPress={() => setOversiktVisning('alle')}>Alle produkter</Chip>
@@ -551,7 +554,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
             </ThemedText>
           ) : null}
           <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={vis.lag.map((l) => l.produkt)} sys={sys} visning={oversiktVisning} lager={lager} kjøp={kjøp} />
-        </Kort>
+        </Sammenleggbar>
 
         {/* Feilsøking */}
         <Pressable onPress={() => setDebug(!debug)} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>

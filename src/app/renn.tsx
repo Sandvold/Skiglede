@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { ProLås } from '@/components/ski/konto';
 import { Hero } from '@/components/ski/hero';
-import { Chip, Kort } from '@/components/ski/ui';
+import { Chip, Kort, Nedtrekk, Sammenleggbar } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
 import { TrailMap } from '@/components/ski/kart';
 import { Hoydeprofil } from '@/components/ski/profil';
@@ -175,8 +175,7 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
     }
   };
   return (
-    <Kort>
-      <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Mine renn (egne ruter)</Text>
+    <Sammenleggbar id="renn-1" tittel="Mine renn (egne ruter)" standardÅpen={false}>
       <ThemedText type="small" themeColor="textSecondary">Last opp en GPX-fil, så regnes råd ut for akkurat denne løypa: vær, snøtemperatur, innstråling og struktur. Ruten lagres på kontoen din. Solskygge regnes fra terrenget (ett punkt per 300 m), så opplasting tar litt tid.</ThemedText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Chip aktiv onPress={opptatt ? () => undefined : last}>{opptatt ? 'Laster opp …' : 'Last opp GPX'}</Chip>
@@ -211,7 +210,7 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
           </View>
         </View>
       ) : null}
-    </Kort>
+    </Sammenleggbar>
   );
 }
 
@@ -309,7 +308,7 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
         </View>
       )}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {[9, 10, 11, 12].map((t) => <Chip key={t} aktiv={time === t} onPress={() => setTime(t)}>{`Start ${t}:00`}</Chip>)}
+        <Nedtrekk etikett="Starttidspunkt" verdi={String(time)} valg={Array.from({ length: 35 }, (_, i) => 6 + i / 2).map((h) => ({ verdi: String(h), tekst: `🕒 Start ${String(Math.floor(h)).padStart(2, '0')}:${h % 1 ? '30' : '00'}` }))} onVelg={(v) => setTime(Number(v))} />
         <Chip aktiv={stil === 'klassisk'} onPress={() => setStil('klassisk')}>Klassisk</Chip>
         <Chip aktiv={stil === 'skoyting'} onPress={() => setStil('skoyting')}>Skøyting</Chip>
       </View>
@@ -320,31 +319,27 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
         <Kort><ThemedText themeColor="textSecondary">Henter løypa …</ThemedText></Kort>
       ) : res ? (
         <>
-          <Kort>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Løypa</Text>
+          <Sammenleggbar id="renn-2" tittel="Løypa">
             <ThemedText type="small" themeColor="textSecondary">{`${(løype.lengde_m / 1000).toFixed(1)} km · ${Math.round(res.opp)} m opp · ${Math.round(Math.min(...løype.punkter.map((p) => p[2])))}–${Math.round(Math.max(...løype.punkter.map((p) => p[2])))} moh. Fargen viser beregnet snøtemperatur langs løypa.`}</ThemedText>
             <TrailMap segmenter={res.segmenter} />
             <Hoydeprofil punkter={res.profil} />
-          </Kort>
+          </Sammenleggbar>
           {!res.harVarsel && <ThemedText type="small" style={{ color: theme.accent }}>Ingen prognose for rennstarten ennå (finnes bare for de nærmeste dagene). Rådet under er regnet med siste kjente vær og oppdateres når rennet nærmer seg.</ThemedText>}
-          <Kort>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Slipestruktur (rilljern)</Text>
+          <Sammenleggbar id="renn-3" tittel="Slipestruktur (rilljern)">
             <Text style={{ color: theme.text, fontSize: 17, fontWeight: '700' }}>{res.struktur.navn}</Text>
             <ThemedText themeColor="textSecondary">{res.struktur.grunn}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">{`Snøtemperatur i snitt ${res.snitt.toFixed(1)} °C (${res.tur.tMin.toFixed(1)} til ${res.tur.tMaks.toFixed(1)}). Forslag til testing, ikke fasit.`}</ThemedText>
-          </Kort>
-          <Kort>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Glid, lag for lag</Text>
+          </Sammenleggbar>
+          <Sammenleggbar id="renn-4" tittel="Glid, lag for lag">
             {res.glid.map((l, i) => (
               <View key={i} style={{ gap: 2 }}>
                 <Text style={{ color: theme.text, fontWeight: '700' }}>{`${i + 1}. ${l.rolle}: ${l.produkt} · ${l.antall}`}</Text>
                 {l.merknad ? <ThemedText type="small" themeColor="textSecondary">{l.merknad}</ThemedText> : null}
               </View>
             ))}
-          </Kort>
+          </Sammenleggbar>
           {stil === 'klassisk' ? (
-            <Kort>
-              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Feste, lag for lag (anbefalt)</Text>
+            <Sammenleggbar id="renn-5" tittel="Feste, lag for lag (anbefalt)">
               {res.stabel.lag.filter((l) => !l.rolle.startsWith('Glidesone') && l.rolle !== 'Glider').map((l, i) => (
                 <View key={i} style={{ gap: 2 }}>
                   <Text style={{ color: theme.text, fontWeight: '700' }}>{`${i + 1}. ${l.rolle}: ${l.produkt} · ${l.antall}`}</Text>
@@ -352,10 +347,9 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
                 </View>
               ))}
               {res.stabel.advarsler.map((w, i) => <ThemedText key={i} type="small">⚠ {w}</ThemedText>)}
-            </Kort>
+            </Sammenleggbar>
           ) : null}
-          <Kort>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Dine ski</Text>
+          <Sammenleggbar id="renn-6" tittel="Dine ski">
             <StedVelger forklaring="Stedet velges automatisk når du er innen 10 km. Ellers velger du selv ski fra et av stedene, eller bruker smøring fra lageret." />
             {mine.length ? (
               <>
@@ -369,9 +363,8 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
             ) : (
               <ThemedText type="small" themeColor="textSecondary">{`Ingen ${stil === 'klassisk' ? 'klassiskski' : 'skøyteski'} på dette stedet. Legg dem til i Skipark, eller velg et annet sted.`}</ThemedText>
             )}
-          </Kort>
-          <Kort>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Testplan: tre par ski</Text>
+          </Sammenleggbar>
+          <Sammenleggbar id="renn-7" tittel="Testplan: tre par ski">
             <ThemedText type="small" themeColor="textSecondary">Appen ser ikke snøen i løypa. Mål snøtemperaturen der og test tre par ski. Glid vurderer du på følelsen. {stil === 'klassisk' ? 'Festet testes samtidig, og så melder du tilbake hva som skal justeres (se under).' : ''} Forslag, ikke fasit.</ThemedText>
             {[[1, 'Anbefalt', res.struktur, 0], [2, 'Finere glid' + (stil === 'klassisk' ? ', kaldere feste' : ''), nabostruktur(res.struktur, -1, stil), 1], [3, 'Grovere glid' + (stil === 'klassisk' ? ', varmere feste' : ''), nabostruktur(res.struktur, 1, stil), 2]].map(([n, tittel, str, fi]) => {
               const f = stil === 'klassisk' ? res.feste[fi as number] : null;
@@ -390,15 +383,14 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
                 </View>
               );
             })}
-          </Kort>
+          </Sammenleggbar>
           {stil === 'klassisk' ? (
-            <Kort>
-              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Etter testen: juster festet</Text>
+            <Sammenleggbar id="renn-8" tittel="Etter testen: juster festet">
               <ThemedText>{'• Slipper eller er bakglatt: legg på flere lag, eller gå til varmere voks.'}</ThemedText>
               <ThemedText>{'• Klabber, setter seg fast eller isner: færre lag, eller kaldere voks.'}</ThemedText>
               <ThemedText>{'• Klister: tykkere lag mot glatt, tynnere mot klabb. Husk å kjøle mellom lagene.'}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">Etter rennet kan du føre inn hva som funket i Smøreloggen, så kalibrerer vi rådene.</ThemedText>
-            </Kort>
+            </Sammenleggbar>
           ) : null}
         </>
       ) : null}

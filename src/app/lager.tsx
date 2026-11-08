@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PremiumLås } from '@/components/ski/konto';
 import { Hero } from '@/components/ski/hero';
-import { Chip, Kort } from '@/components/ski/ui';
+import { Chip, Kort, Sammenleggbar } from '@/components/ski/ui';
 import { tekstPå } from '@/components/ski/oversikt';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -45,11 +45,7 @@ export default function Lager() {
           <ThemedText type="smallBold" themeColor="textSecondary">{lager.length} produkter totalt</ThemedText>
         </View>
         {GRUPPER.map((g) => (
-          <Kort key={g.tittel}>
-            <View style={styles.rad}>
-              <Text style={[styles.h2, { color: theme.text, flex: 1 }]}>{g.tittel}</Text>
-              <Chip aktiv={false} onPress={() => gruppe(g.liste, !g.liste.every((p) => har(p.navn)))}>{g.liste.every((p) => har(p.navn)) ? 'Fjern alle' : 'Velg alle'}</Chip>
-            </View>
+          <Sammenleggbar key={g.tittel} id={`lager-${g.tittel.toLowerCase().replace(/[^a-zæøå0-9]+/g, '-')}`} tittel={g.tittel} topp={<Chip aktiv={false} onPress={() => gruppe(g.liste, !g.liste.every((p) => har(p.navn)))}>{g.liste.every((p) => har(p.navn)) ? 'Fjern alle' : 'Velg alle'}</Chip>}>
             {g.liste.map((p) => (
               <View key={p.navn} style={{ gap: 6 }}>
               <Pressable onPress={() => bytt(p.navn)} style={styles.produkt} accessibilityRole="checkbox" accessibilityState={{ checked: har(p.navn) }}>
@@ -74,7 +70,7 @@ export default function Lager() {
               ) : null}
               </View>
             ))}
-          </Kort>
+          </Sammenleggbar>
         ))}
         <ThemedText type="small" themeColor="textSecondary">Toko, Rode og Ski Go: temperaturområdene er hentet fra nettsider og bør sjekkes mot etiketten. Lageret synkes til kontoen din som premium-bruker.</ThemedText>
       </PremiumLås>
