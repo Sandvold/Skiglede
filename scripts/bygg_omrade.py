@@ -80,7 +80,9 @@ def rydd(fil):
     """Fjern runder over 25 km og dubletter (over 70 % felles vei begge veier); behold de som ligger nærmest 14 km."""
     from pyproj import Transformer
     T = Transformer.from_crs(4326, 25832, always_xy=True)
-    d = [t for t in json.load(open(fil)) if t["lengde_m"] <= MAKS_M]
+    alle = json.load(open(fil, encoding="utf-8"))
+    d = [t for t in alle if t["lengde_m"] <= MAKS_M]
+    stat = [f"{len(alle)} lagd", f"{len(d)} under {MAKS_M // 1000} km"]
     pts = lambda t: br.hh.resample([T.transform(p[0], p[1]) for p in t["punkter"]], 50)
     felles = lambda a, b: sum(1 for p in a if any(math.dist(p, q) < 25 for q in b)) / len(a)
     d.sort(key=lambda t: (t.get("type") == "retur", abs(t["lengde_m"] - 14000)))
@@ -90,7 +92,16 @@ def rydd(fil):
         if any(felles(p, q) > FELLES and felles(q, p) > FELLES for q in P):
             continue
         ut.append(t); P.append(p)
-    ut = [t for t in ut if " – punkt " not in t["navn"]]
+    stat.append(f"{len(ut)} etter dublettfjerning")
+    navngitt = [t for t in ut if " – punkt " not in t["navn"]]
+    if navngitt:
+        ut = navngitt  # løyper uten stedsnavn (« – punkt N») droppes bare når det finnes navngitte
+    else:  # ellers beholdes de, med nøytralt navn, i stedet for et tomt område
+        for i, t in enumerate(ut, 1):
+            t["navn"] = t["navn"].split(" – punkt ")[0] + f" – tur {i}"
+            t["id"] = t["id"].split("-punkt")[0] + f"-tur-{i}"
+    stat.append(f"{len(ut)} etter navnefilter")
+    print("rydding: " + ", ".join(stat))
     ut.sort(key=lambda t: t["navn"])
     json.dump(ut, open(fil, "w"), ensure_ascii=False, separators=(",", ":"))
     return ut
