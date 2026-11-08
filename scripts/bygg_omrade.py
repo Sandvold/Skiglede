@@ -8,7 +8,7 @@ Mal for agentene i Norge-kjøringen: én kjøring per område, egen utfil, røre
 
 Etterpå (manuelt eller av samle-jobben): kjør SQL-en som skrives ut i Neon, commit og push (opplastingsjobben tar resten).
 """
-import argparse, json, math, os, statistics, subprocess, sys, time, urllib.parse, urllib.request
+import argparse, json, math, os, statistics, subprocess, sys, tempfile, time, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 HER = os.path.dirname(os.path.abspath(__file__))
@@ -137,8 +137,9 @@ def main():
             kjør("scripts/hent_terreng.py", "--ut", fil, "--workers", str(a.workers), "--pause", "0.2", "--fortsett")
     z = [p[2] for t in ut for p in t["punkter"]]
     lo = statistics.mean(p[0] for t in ut for p in t["punkter"]); la = statistics.mean(p[1] for t in ut for p in t["punkter"])
-    k = subprocess.run(["node", "scripts/kontroller-loyper.mjs", "--karantene", "/tmp/karantene-" + a.id + ".json"], capture_output=True, text=True, cwd=ROT)
-    kar = json.load(open("/tmp/karantene-" + a.id + ".json")).get(os.path.basename(fil), [])
+    karfil = os.path.join(tempfile.gettempdir(), "karantene-" + a.id + ".json")
+    k = subprocess.run(["node", "scripts/kontroller-loyper.mjs", "--karantene", karfil], capture_output=True, text=True, cwd=ROT)
+    kar = json.load(open(karfil)).get(os.path.basename(fil), [])
     print(k.stdout.strip().splitlines()[-1] if k.stdout.strip() else "", f"| karantene i dette området: {len(kar)}")
     print("\nSQL (kjør i Neon, juster vinter_min/vinter_max, rekkefolge og ref_hoyde_m ved behov):")
     print(f"insert into public.omrade (id, navn, lat, lon, vis_lon, vis_lat, vis_z, vinter_min, vinter_max, ref_hoyde_m, loypefil, vaer, rekkefolge) values "

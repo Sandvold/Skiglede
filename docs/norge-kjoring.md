@@ -29,6 +29,14 @@ python -I scripts/kjor_norge.py --mappe scripts\ut\omrader --steder scripts\ut\n
 ```
 Kan avbrytes og startes igjen (ferdige områder hoppes over, status i `status.json`). Test først med `--maks 2` eller `--kun id1,id2`. Loggen per område: `scripts\ut\omrader\<id>\bygg.log`. Uten `--dtm` hentes terreng fra Kartverkets API (ca. 1 min per løype, mye tregere).
 
+### Ett fylke om gangen (anbefalt uten lokal høydemodell)
+```
+python -I scripts/kjor_fylke.py                          # oversikt: fylker, områder, km, ferdige
+python -I scripts/kjor_fylke.py --fylke Telemark --maks 2   # test
+python -I scripts/kjor_fylke.py --fylke Telemark          # hele fylket (Ctrl+C og start igjen er trygt)
+```
+Uten `--dtm` hentes terrenget fra Kartverkets API (tregt, men ingen nedlasting). Fylket slås opp mot Kartverket og lagres i `scripts\ut\omrader\fylker.json`.
+
 ## 6. Inn i appen
 1. Kjør `scripts\ut\omrader\omrader.sql` i Neon (SQL-editoren, eller send meg innholdet).
 2. `git add src/data/trails-*.json && git commit && git pull --rebase && git push`. Opplastingsjobben kontrollerer løypene (dårlige settes i karantene) og laster dem til Neon.

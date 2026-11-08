@@ -30,8 +30,8 @@ def bygg(m, a, steder, status):
     cmd = [sys.executable, "-I", os.path.join(HER, "bygg_omrade.py"), "--id", id_, "--navn", m["navn"], "--osm", os.path.join(mappe, "osm.json"), "--steder", sf, "--overskriv"]
     if a.dtm:
         cmd += ["--dtm", a.dtm]
-    else:
-        cmd += ["--uten-terreng"]
+    elif a.uten_terreng:
+        cmd += ["--uten-terreng"]  # ellers hentes terrenget fra Kartverkets API (tregt)
     t0 = time.time()
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROT, timeout=a.timeout)
@@ -53,6 +53,7 @@ def main():
     ap.add_argument("--mappe", required=True)
     ap.add_argument("--steder", required=True)
     ap.add_argument("--dtm")
+    ap.add_argument("--uten-terreng", action="store_true", help="hopp over terreng helt (test)")
     ap.add_argument("--samtidig", type=int, default=max(1, min(4, os.cpu_count() or 1)))
     ap.add_argument("--kun")
     ap.add_argument("--maks", type=int)
