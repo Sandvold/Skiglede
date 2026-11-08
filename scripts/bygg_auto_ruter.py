@@ -53,15 +53,15 @@ def felles(a, b, tol=25):
     return sum(1 for p in pa if any(math.dist(p, q) < tol for q in pb)) / len(pa)
 
 
-RETUR_MIN_PREP = 0.5   # tur-retur: minst halvparten av veien ut må være preparert (OSM mangler ofte preparering-merket)
+RETUR_MIN_PREP = 0.0   # tur-retur: ingen krav til preparert andel (OSM mangler ofte preparering-merket, f.eks. lysløyper)
+RETUR_BANDER = [(1250, 2500), (2500, 5000), (5000, 8000), (8000, 13000)]  # vei ut (m) => tur-retur på 2,5–26 km
 
 
 def retur_kandidater(nett, s, avst, komp):
-    """Tur-retur for nett uten sløyfer: i hvert av de tre første lengdebåndene det fjerneste vendepunktet med nok preparert vei.
+    """Tur-retur for nett uten sløyfer: i hvert av lengdebåndene det fjerneste vendepunktet med nok preparert vei.
     Veien ut og samme vei tilbake (type retur). Maks 26 km totalt."""
     ut = []
-    for lo, hi in BANDER[:3]:
-        hi = min(hi, 13000)
+    for lo, hi in RETUR_BANDER:
         noder = sorted((i for i in komp if lo <= avst.get(i, 0) <= hi), key=lambda i: -avst[i])
         for t in noder[:40]:
             sti = nett.vei(s, t)
@@ -75,7 +75,7 @@ def retur_kandidater(nett, s, avst, komp):
             pts = br.polylinje(nett, sti)
             pts = pts + pts[::-1][1:]
             L = br.lengde(pts)
-            if 3000 <= L <= 26000:
+            if 2500 <= L <= 26000:
                 ut.append((t, pts, L))
                 break
     return ut
@@ -89,7 +89,7 @@ def main():
     ap.add_argument("--skriv", action="store_true")
     ap.add_argument("--per-start", type=int, default=4)
     a = ap.parse_args()
-    bo.Rutenett.min_noder = 60  # standard 300 kaster små nett (f.eks. lysløyper rundt tettsteder); områdene er alt klynget
+    bo.Rutenett.min_noder = 30  # standard 300 kaster små nett (f.eks. lysløyper rundt tettsteder); områdene er alt klynget
     nett = bo.Rutenett(bo.last(a.osm, uprep=True))
     valgt = []
     brukt_navn = set()
