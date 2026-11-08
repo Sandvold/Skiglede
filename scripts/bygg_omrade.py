@@ -121,8 +121,13 @@ def main():
     r = kjør("scripts/finn_startpunkter.py", *osmargs, "--steder", steder, "--maks-avstand", "600", "--min-avstand", "2500", "--antall", str(a.antall))
     starter = r.stdout.strip().replace('--start "', "").split('" ') if r.stdout.strip() else []
     starter = [s.strip('"') for s in starter]
-    if not starter:
-        raise SystemExit("fant ingen startpunkter")
+    if not starter:  # ingen hytte/parkering/hotell nær løypene: bruk løypepunktet nærmest midten av nettet
+        punkter = [(x, y) for o in osm for p in json.load(open(o, encoding="utf-8"))["løyper"] if p.get("preparering") for x, y in p["punkter"]] or \
+                  [(x, y) for o in osm for p in json.load(open(o, encoding="utf-8"))["løyper"] for x, y in p["punkter"]]
+        mx, my = sum(q[0] for q in punkter) / len(punkter), sum(q[1] for q in punkter) / len(punkter)
+        q = min(punkter, key=lambda q: (q[0] - mx) ** 2 + ((q[1] - my) * 2) ** 2)
+        starter = [f"{a.navn.replace('=', ' ').replace(',', ' ')}={q[0]:.5f},{q[1]:.5f}"]
+        print("ingen egnede startpunkter; bruker midten av nettet")
     print(f"{len(starter)} startpunkter: " + ", ".join(s.split("=")[0] for s in starter))
     sa = [x for s in starter for x in ("--start", s)]
     kjør("scripts/bygg_auto_ruter.py", *osmargs, "--ut", fil, *sa, "--skriv")
