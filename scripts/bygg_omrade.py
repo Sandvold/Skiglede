@@ -23,6 +23,7 @@ FELLES = 0.7
 
 def kjør(*args):
     r = subprocess.run([sys.executable, "-X", "utf8", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROT)
+    print(f"$ {os.path.basename(args[0])}\n{r.stdout[-3000:]}", flush=True)  # havner i bygg.log
     if r.returncode:
         raise SystemExit(f"feilet: {' '.join(args)[:200]}\n{r.stderr[-1500:]}")
     return r
