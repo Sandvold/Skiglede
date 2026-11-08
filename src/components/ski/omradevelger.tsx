@@ -57,13 +57,17 @@ export function Områdevelger() {
   const [sted, setSted] = useState<Sted | null>(null);
   const stedsforslag = useStedssøk(sted ? '' : søk);
   // Valgt sted: områdene sorteres etter avstand til stedet (ikke posisjonen din)
-  const sentrum = sted ? { lat: sted.lat, lon: sted.lon } : pos;
-  const sortert = (sted ? [...liste].sort((x, y) => avstandKm(sentrum!, { lat: x.visning.lat, lon: x.visning.lon }) - avstandKm(sentrum!, { lat: y.visning.lat, lon: y.visning.lon })) : sorterOmråder(liste, pos, fav))
-    .filter((o) => sted || !søk.trim() || o.navn.toLowerCase().includes(søk.trim().toLowerCase()));
+  // Søker du, brukes valgt sted, ellers første stedstreff, som sentrum: områdene fra databasen kommer først, navnetreff øverst, så nærmest.
+  const aktivt = sted ?? (søk.trim() ? stedsforslag[0] ?? null : null);
+  const sentrum = aktivt ? { lat: aktivt.lat, lon: aktivt.lon } : pos;
+  const q = søk.trim().toLowerCase();
+  const dist = (o: (typeof liste)[number]) => avstandKm(sentrum!, { lat: o.visning.lat, lon: o.visning.lon });
+  const sortert = (aktivt ? [...liste].sort((x, y) => (sted ? 0 : Number(y.navn.toLowerCase().includes(q)) - Number(x.navn.toLowerCase().includes(q))) || dist(x) - dist(y)) : sorterOmråder(liste, pos, fav))
+    .filter((o) => aktivt || !q || o.navn.toLowerCase().includes(q));
   const MAKS_VIST = 25; // favoritter og nærmeste først; resten via søk, så listen er rask også med hundrevis av områder
-  const vist = sted ? sortert.slice(0, 8) : søk.trim() ? sortert : sortert.slice(0, MAKS_VIST);
+  const vist = aktivt ? sortert.slice(0, 8) : q ? sortert : sortert.slice(0, MAKS_VIST);
   const km = (o: (typeof liste)[number]) => {
-    const d = sted ? avstandKm(sentrum!, { lat: o.visning.lat, lon: o.visning.lon }) : avstandTil(o, pos);
+    const d = aktivt ? dist(o) : avstandTil(o, pos);
     return d === null ? '' : d < 1 ? ' · under 1 km' : ` · ${Math.round(d)} km`;
   };
   return (
@@ -77,34 +81,18 @@ export function Områdevelger() {
           {liste.length > 8 ? (
             <TextInput value={søk} onChangeText={setSøk} placeholder="Søk etter område eller sted" style={{ margin: 8, borderWidth: 1, borderColor: '#C9D6E6', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, fontSize: 15, color: '#12386B' }} />
           ) : null}
-          {stedsforslag.length ? (
-            <View>
-              <Text style={{ color: '#55708F', fontSize: 12, fontWeight: '700', paddingHorizontal: 14, paddingTop: 4 }}>STEDER</Text>
-              {stedsforslag.map((s) => (
-                <View key={`${s.navn}|${s.kommune}|${s.lat}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Pressable accessibilityRole="button" onPress={() => setSted(s)} style={{ flex: 1, paddingVertical: 8, paddingHorizontal: 14 }}>
-                    <Text style={{ color: '#12386B', fontWeight: '700', fontSize: 15 }}>{`📍 ${s.navn}`}</Text>
-                    <Text style={{ color: '#55708F', fontSize: 12 }}>{[s.type, s.kommune].filter(Boolean).join(' · ')}</Text>
-                  </Pressable>
-                  <Pressable accessibilityRole="link" accessibilityLabel={`Åpne ${s.navn} i Google Maps`} onPress={() => åpneIGoogleMaps(s)} style={{ paddingVertical: 10, paddingHorizontal: 14 }}>
-                    <Text style={{ color: '#1F6FEB', fontSize: 12, fontWeight: '700' }}>Google Maps ↗</Text>
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {sted ? (
+          {aktivt ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F1FB' }}>
-              <Text style={{ flex: 1, color: '#12386B', fontWeight: '700', fontSize: 13, paddingVertical: 8, paddingHorizontal: 14 }}>{`Nærmeste løyper til ${sted.navn}`}</Text>
-              <Pressable accessibilityRole="button" onPress={() => setSted(null)} style={{ paddingVertical: 8, paddingHorizontal: 14 }}>
+              <Text style={{ flex: 1, color: '#12386B', fontWeight: '700', fontSize: 13, paddingVertical: 8, paddingHorizontal: 14 }}>{`Nærmeste løyper til ${aktivt.navn}`}</Text>
+              <Pressable accessibilityRole="button" onPress={() => { setSted(null); setSøk(''); }} style={{ paddingVertical: 8, paddingHorizontal: 14 }}>
                 <Text style={{ color: '#1F6FEB', fontSize: 12, fontWeight: '700' }}>Fjern</Text>
               </Pressable>
-              <Pressable accessibilityRole="link" onPress={() => åpneIGoogleMaps(sted)} style={{ paddingVertical: 8, paddingHorizontal: 10 }}>
+              <Pressable accessibilityRole="link" onPress={() => åpneIGoogleMaps(aktivt)} style={{ paddingVertical: 8, paddingHorizontal: 10 }}>
                 <Text style={{ color: '#1F6FEB', fontSize: 12, fontWeight: '700' }}>Google Maps ↗</Text>
               </Pressable>
             </View>
           ) : null}
-          {sted ? null : <Pressable onPress={() => { setOmråde(''); setÅpen(false); }} style={{ paddingVertical: 10, paddingHorizontal: 14, backgroundColor: automatisk ? '#E8F1FB' : 'transparent' }}>
+          {aktivt ? null : <Pressable onPress={() => { setOmråde(''); setÅpen(false); }} style={{ paddingVertical: 10, paddingHorizontal: 14, backgroundColor: automatisk ? '#E8F1FB' : 'transparent' }}>
             <Text style={{ color: '#12386B', fontWeight: '700', fontSize: 15 }}>{`📍 Nærmeste: ${nærmeste.navn}`}</Text>
             <Text style={{ color: '#55708F', fontSize: 12 }}>{pos ? 'Følger posisjonen din' : 'Tillat posisjon i nettleseren for å finne nærmeste'}</Text>
           </Pressable>}
@@ -118,7 +106,20 @@ export function Områdevelger() {
               </Pressable>
             </View>
           ))}
-          {!sted && vist.length < sortert.length ? <Text style={{ color: '#55708F', fontSize: 12, paddingHorizontal: 14, paddingVertical: 8 }}>{`Viser ${vist.length} av ${sortert.length}. Søk for å finne flere.`}</Text> : null}
+          {stedsforslag.length ? (
+            <View>
+              <Text style={{ color: '#55708F', fontSize: 12, fontWeight: '700', paddingHorizontal: 14, paddingTop: 4 }}>VELG ET ANNET STED</Text>
+              {stedsforslag.slice(0, 5).map((s) => (
+                <View key={`${s.navn}|${s.kommune}|${s.lat}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Pressable accessibilityRole="button" onPress={() => setSted(s)} style={{ flex: 1, paddingVertical: 8, paddingHorizontal: 14 }}>
+                    <Text style={{ color: '#12386B', fontWeight: '700', fontSize: 15 }}>{`📍 ${s.navn}`}</Text>
+                    <Text style={{ color: '#55708F', fontSize: 12 }}>{[s.type, s.kommune].filter(Boolean).join(' · ')}</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {!aktivt && vist.length < sortert.length ? <Text style={{ color: '#55708F', fontSize: 12, paddingHorizontal: 14, paddingVertical: 8 }}>{`Viser ${vist.length} av ${sortert.length}. Søk for å finne flere.`}</Text> : null}
         </View>
       ) : null}
     </View>
