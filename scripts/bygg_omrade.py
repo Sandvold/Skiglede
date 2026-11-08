@@ -155,9 +155,19 @@ def main():
     z = [p[2] for t in ut for p in t["punkter"]]
     lo = statistics.mean(p[0] for t in ut for p in t["punkter"]); la = statistics.mean(p[1] for t in ut for p in t["punkter"])
     karfil = os.path.join(tempfile.gettempdir(), "karantene-" + a.id + ".json")
-    k = subprocess.run(["node", "scripts/kontroller-loyper.mjs", "--karantene", karfil], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROT)
-    kar = json.load(open(karfil)).get(os.path.basename(fil), [])
-    print(k.stdout.strip().splitlines()[-1] if k.stdout.strip() else "", f"| karantene i dette området: {len(kar)}")
+    kar, k = [], None
+    for forsøk in range(3):  # kontrollen leser alle trails*.json; en fil kan være halvskrevet av et parallelt område
+        if os.path.exists(karfil):
+            os.remove(karfil)
+        k = subprocess.run(["node", "scripts/kontroller-loyper.mjs", "--karantene", karfil], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROT)
+        try:
+            kar = json.load(open(karfil, encoding="utf-8")).get(os.path.basename(fil), [])
+            break
+        except Exception:
+            time.sleep(3)
+    else:
+        print("(løypekontrollen kunne ikke kjøres; opplastingsjobben kontrollerer uansett)")
+    print(k.stdout.strip().splitlines()[-1] if k and k.stdout.strip() else "", f"| karantene i dette området: {len(kar)}")
     print("\nSQL (kjør i Neon, juster vinter_min/vinter_max, rekkefolge og ref_hoyde_m ved behov):")
     print(f"insert into public.omrade (id, navn, lat, lon, vis_lon, vis_lat, vis_z, vinter_min, vinter_max, ref_hoyde_m, loypefil, vaer, rekkefolge) values "
           f"('{a.id}','{a.navn}',{la:.4f},{lo:.4f},{lo:.2f},{la:.2f},11,-20,1,{round(statistics.mean(z))},'{os.path.basename(fil)}',true,100) on conflict (id) do nothing;")
