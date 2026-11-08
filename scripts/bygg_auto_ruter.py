@@ -53,6 +53,34 @@ def felles(a, b, tol=25):
     return sum(1 for p in pa if any(math.dist(p, q) < tol for q in pb)) / len(pa)
 
 
+RETUR_MIN_PREP = 0.5   # tur-retur: minst halvparten av veien ut må være preparert (OSM mangler ofte preparering-merket)
+
+
+def retur_kandidater(nett, s, avst, komp):
+    """Tur-retur for nett uten sløyfer: i hvert av de tre første lengdebåndene det fjerneste vendepunktet med nok preparert vei.
+    Veien ut og samme vei tilbake (type retur). Maks 26 km totalt."""
+    ut = []
+    for lo, hi in BANDER[:3]:
+        hi = min(hi, 13000)
+        noder = sorted((i for i in komp if lo <= avst.get(i, 0) <= hi), key=lambda i: -avst[i])
+        for t in noder[:40]:
+            sti = nett.vei(s, t)
+            if not sti or len(sti) < 2:
+                continue
+            kanter = list(zip(sti, sti[1:]))
+            tot = sum(nett.adj[a][b] for a, b in kanter) or 1
+            ikke = sum(nett.adj[a][b] for a, b in kanter if (min(a, b), max(a, b)) in nett.uprep)
+            if 1 - ikke / tot < RETUR_MIN_PREP:
+                continue
+            pts = br.polylinje(nett, sti)
+            pts = pts + pts[::-1][1:]
+            L = br.lengde(pts)
+            if 3000 <= L <= 26000:
+                ut.append((t, pts, L))
+                break
+    return ut
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--osm", action="append", required=True)
@@ -61,6 +89,7 @@ def main():
     ap.add_argument("--skriv", action="store_true")
     ap.add_argument("--per-start", type=int, default=4)
     a = ap.parse_args()
+    bo.Rutenett.min_noder = 60  # standard 300 kaster små nett (f.eks. lysløyper rundt tettsteder); områdene er alt klynget
     nett = bo.Rutenett(bo.last(a.osm, uprep=True))
     valgt = []
     brukt_navn = set()
@@ -75,6 +104,7 @@ def main():
         komp = bo.komponent(nett, s)
         print(f"{sn}: start {math.dist(nett.noder[s], q):.0f} m fra punktet, nett med {len(komp)} noder")
         kand = []
+        tell = {"kandidater": 0, "for stor overlapp": 0, "for mye upreparert": 0, "feil lengde": 0}
         for lo, hi in BANDER:
             nodes = [i for i in komp if lo <= avst.get(i, 0) <= hi]
             nodes = nodes[:: max(1, len(nodes) // 40)]
@@ -82,6 +112,13 @@ def main():
             for t in nodes:
                 pts, L, ov = bl.runde(nett, s, t)
                 up = 1 - bl.runde.belyst  # andel upreparert/bro
+                tell["kandidater"] += 1
+                if ov > br.MAKS_OVERLAPP:
+                    tell["for stor overlapp"] += 1
+                elif up > 0.25:
+                    tell["for mye upreparert"] += 1
+                elif not 3000 <= L <= 26000:
+                    tell["feil lengde"] += 1
                 if ov <= br.MAKS_OVERLAPP and up <= 0.25 and 3000 <= L <= 26000:
                     sc.append((L * (1 - ov / 100) ** 2, pts, L, ov, t))
             sc.sort(key=lambda x: -x[0])
@@ -93,18 +130,29 @@ def main():
                     continue
                 tatt.append((sc, pts, L, ov, t))
                 break
+        if not tatt:  # ingen runde funnet: nettet er trolig et tre (ingen sløyfer) eller for lite preparert. Lag tur-retur i stedet
+            print(f"  {sn}: ingen runde godkjent ({', '.join(f'{k} {v}' for k, v in tell.items())}). Prøver tur-retur")
+            for t, pts, L in retur_kandidater(nett, s, avst, komp):
+                if any(felles(pts, p2) > 0.7 for _, p2, *_ in tatt):
+                    continue
+                tatt.append((0, pts, L, 100, t))
+            retur = True
+        else:
+            retur = False
         for sc, pts, L, ov, t in tatt:
             lonlat = FRA.transform(*nett.noder[t])
             navn = stedsnavn(lonlat, brukt_navn | {sn}) or f"punkt {len(valgt) + 1}"
             brukt_navn.add(navn)
-            print(f"  {sn} – {navn}: {L / 1000:.1f} km, overlapp {ov} %")
-            valgt.append((f"{sn} – {navn}", pts, lonlat))
+            print(f"  {sn} – {navn}: {L / 1000:.1f} km{' tur-retur' if retur else ''}, overlapp {ov} %")
+            valgt.append((f"{sn} – {navn}", pts, lonlat, retur))
     if a.skriv:
         eks = json.load(open(a.ut)) if os.path.exists(a.ut) else []
         nye_ider = set()
-        for navn, pts, mal in valgt:
+        for navn, pts, mal, er_retur in valgt:
             try:
                 t = br.til_trail({"id": bo.id_av(navn), "navn": navn}, pts)
+                if er_retur:
+                    t["type"] = "retur"
             except ValueError as e:
                 print(f"  hopper over {navn}: {e}")
                 continue
@@ -118,7 +166,7 @@ def main():
             eks = eks + [t]
         eks.sort(key=lambda e: (e["navn"], bool(e.get("variantAv"))))
         json.dump(eks, open(a.ut, "w"), ensure_ascii=False, separators=(",", ":"))
-        print("terreng:", " ".join(f'--navn "{n}"' for n, _, _ in valgt))
+        print("terreng:", " ".join(f'--navn "{n}"' for n, *_ in valgt))
 
 
 if __name__ == "__main__":
