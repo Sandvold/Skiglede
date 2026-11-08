@@ -11,7 +11,7 @@ Fylke for hvert område slås opp én gang mot Kartverket (sentrum av området) 
     python -X utf8 scripts/kjor_fylke.py --fylke Telemark
   Flere fylker: --fylke Telemark,Agder.   Med lokal høydemodell: --dtm "data\\dtm\\*.tif"
 """
-import argparse, json, os, subprocess, sys, time, urllib.parse, urllib.request
+import argparse, json, os, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 
 HER = os.path.dirname(os.path.abspath(__file__))
 ROT = os.path.join(HER, "..")
@@ -23,6 +23,10 @@ def fylke_for(lon, lat):
         try:
             d = json.load(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "skiglede"}), timeout=30))
             return d.get("fylkesnavn") or "Ukjent"
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 404):  # punktet ligger utenfor kommunekartet (grensen, sjøen, utlandet)
+                return "Ukjent"
+            time.sleep(2 * (f + 1))
         except Exception:
             time.sleep(2 * (f + 1))
     return None
