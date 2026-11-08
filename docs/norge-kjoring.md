@@ -13,27 +13,27 @@ pip install osmium pyproj scikit-learn scipy numpy rasterio
 
 ## 3. Løyper og steder fra pbf
 ```
-python -I scripts/pbf_til_loyper.py --pbf data\norway-latest.osm.pbf --ut scripts\ut\norge
+python -X utf8 scripts/pbf_til_loyper.py --pbf data\norway-latest.osm.pbf --ut scripts\ut\norge
 ```
 Gir `osm-loyper.json` (alle nordiske pistes) og `steder.json` (hotell, hytter, parkering, tettsteder ...).
 
 ## 4. Del i skiområder
 ```
-python -I scripts/del_i_omrader.py --osm scripts\ut\norge\osm-loyper.json --ut scripts\ut\omrader
+python -X utf8 scripts/del_i_omrader.py --osm scripts\ut\norge\osm-loyper.json --ut scripts\ut\omrader
 ```
 Klynger nettet (eps 2 km, maks 30 km, minst 15 km løype), navngir fra Kartverket og skriver `manifest.json`. Hovden, Nordmarka, Bærumsmarka og Sjusjøen er låst og hoppes over. Se gjennom `manifest.json` og rett navn før neste steg.
 
 ## 5. Bygg alle områder parallelt
 ```
-python -I scripts/kjor_norge.py --mappe scripts\ut\omrader --steder scripts\ut\norge\steder.json --dtm "data\dtm\*.tif" --samtidig 4
+python -X utf8 scripts/kjor_norge.py --mappe scripts\ut\omrader --steder scripts\ut\norge\steder.json --dtm "data\dtm\*.tif" --samtidig 4
 ```
 Kan avbrytes og startes igjen (ferdige områder hoppes over, status i `status.json`). Test først med `--maks 2` eller `--kun id1,id2`. Loggen per område: `scripts\ut\omrader\<id>\bygg.log`. Uten `--dtm` hentes terreng fra Kartverkets API (ca. 1 min per løype, mye tregere).
 
 ### Ett fylke om gangen (anbefalt uten lokal høydemodell)
 ```
-python -I scripts/kjor_fylke.py                          # oversikt: fylker, områder, km, ferdige
-python -I scripts/kjor_fylke.py --fylke Telemark --maks 2   # test
-python -I scripts/kjor_fylke.py --fylke Telemark          # hele fylket (Ctrl+C og start igjen er trygt)
+python -X utf8 scripts/kjor_fylke.py                          # oversikt: fylker, områder, km, ferdige
+python -X utf8 scripts/kjor_fylke.py --fylke Telemark --maks 2   # test
+python -X utf8 scripts/kjor_fylke.py --fylke Telemark          # hele fylket (Ctrl+C og start igjen er trygt)
 ```
 Uten `--dtm` hentes terrenget fra Kartverkets API (tregt, men ingen nedlasting). Fylket slås opp mot Kartverket og lagres i `scripts\ut\omrader\fylker.json`.
 

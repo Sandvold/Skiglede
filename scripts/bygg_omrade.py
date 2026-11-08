@@ -22,7 +22,7 @@ FELLES = 0.7
 
 
 def kjør(*args):
-    r = subprocess.run([sys.executable, "-I", *args], capture_output=True, text=True, cwd=ROT)
+    r = subprocess.run([sys.executable, "-X", "utf8", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROT)
     if r.returncode:
         raise SystemExit(f"feilet: {' '.join(args)[:200]}\n{r.stderr[-1500:]}")
     return r
@@ -138,7 +138,7 @@ def main():
     z = [p[2] for t in ut for p in t["punkter"]]
     lo = statistics.mean(p[0] for t in ut for p in t["punkter"]); la = statistics.mean(p[1] for t in ut for p in t["punkter"])
     karfil = os.path.join(tempfile.gettempdir(), "karantene-" + a.id + ".json")
-    k = subprocess.run(["node", "scripts/kontroller-loyper.mjs", "--karantene", karfil], capture_output=True, text=True, cwd=ROT)
+    k = subprocess.run(["node", "scripts/kontroller-loyper.mjs", "--karantene", karfil], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROT)
     kar = json.load(open(karfil)).get(os.path.basename(fil), [])
     print(k.stdout.strip().splitlines()[-1] if k.stdout.strip() else "", f"| karantene i dette området: {len(kar)}")
     print("\nSQL (kjør i Neon, juster vinter_min/vinter_max, rekkefolge og ref_hoyde_m ved behov):")

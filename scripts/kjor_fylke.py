@@ -4,11 +4,11 @@
 Fylke for hvert område slås opp én gang mot Kartverket (sentrum av området) og lagres i <mappe>/fylker.json.
 
   Oversikt (fylker, antall områder, km, hvor mange som er ferdige):
-    python -I scripts/kjor_fylke.py
+    python -X utf8 scripts/kjor_fylke.py
   Test med to områder i et fylke:
-    python -I scripts/kjor_fylke.py --fylke Telemark --maks 2
+    python -X utf8 scripts/kjor_fylke.py --fylke Telemark --maks 2
   Kjør ett fylke (kan avbrytes med Ctrl+C og startes igjen; ferdige områder hoppes over):
-    python -I scripts/kjor_fylke.py --fylke Telemark
+    python -X utf8 scripts/kjor_fylke.py --fylke Telemark
   Flere fylker: --fylke Telemark,Agder.   Med lokal høydemodell: --dtm "data\\dtm\\*.tif"
 """
 import argparse, json, os, subprocess, sys, time, urllib.parse, urllib.request
@@ -82,7 +82,7 @@ def main():
         sys.exit("Fant ikke fylke: " + ", ".join(sorted(ukjente)) + ". Tilgjengelige: " + ", ".join(sorted(per)))
     ids = [m["id"] for m in man if fylker.get(m["id"], "").lower() in ønsket]
     print(f"{len(ids)} områder i {a.fylke}", flush=True)
-    cmd = [sys.executable, "-I", os.path.join(HER, "kjor_norge.py"), "--mappe", a.mappe, "--steder", a.steder, "--samtidig", str(a.samtidig), "--kun", ",".join(ids)]
+    cmd = [sys.executable, "-X", "utf8", os.path.join(HER, "kjor_norge.py"), "--mappe", a.mappe, "--steder", a.steder, "--samtidig", str(a.samtidig), "--kun", ",".join(ids)]
     if a.dtm:
         cmd += ["--dtm", a.dtm]
     if a.maks:

@@ -27,15 +27,15 @@ def bygg(m, a, steder, status):
     lokale = [x for x in steder if s - mar <= x["lat"] <= n + mar and w - mar * 2 <= x["lon"] <= e + mar * 2]
     sf = os.path.join(mappe, "steder.json")
     json.dump(lokale, open(sf, "w"), ensure_ascii=False)
-    cmd = [sys.executable, "-I", os.path.join(HER, "bygg_omrade.py"), "--id", id_, "--navn", m["navn"], "--osm", os.path.join(mappe, "osm.json"), "--steder", sf, "--overskriv"]
+    cmd = [sys.executable, "-X", "utf8", os.path.join(HER, "bygg_omrade.py"), "--id", id_, "--navn", m["navn"], "--osm", os.path.join(mappe, "osm.json"), "--steder", sf, "--overskriv"]
     if a.dtm:
         cmd += ["--dtm", a.dtm]
     elif a.uten_terreng:
         cmd += ["--uten-terreng"]  # ellers hentes terrenget fra Kartverkets API (tregt)
     t0 = time.time()
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROT, timeout=a.timeout)
-        open(os.path.join(mappe, "bygg.log"), "w").write(r.stdout + "\n" + r.stderr)
+        r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROT, timeout=a.timeout)
+        open(os.path.join(mappe, "bygg.log"), "w", encoding="utf-8").write(r.stdout + "\n" + r.stderr)
         sql = [l for l in r.stdout.splitlines() if l.startswith("insert into public.omrade")]
         ok = r.returncode == 0 and bool(sql)
         status[id_] = dict(ok=ok, sek=round(time.time() - t0), feil=None if ok else (r.stderr or r.stdout)[-300:])
