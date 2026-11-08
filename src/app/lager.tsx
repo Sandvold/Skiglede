@@ -32,7 +32,7 @@ export default function Lager() {
       <PremiumLås tittel="Smørelager">
         <Kort><StedVelger forklaring="Hvert sted har eget smørelager. Valgt sted brukes også på forsiden og i skiparken." /></Kort>
         <ThemedText themeColor="textSecondary">
-          Kryss av det du har, fra alle merker. Har du flere steder, ser du hvor hvert produkt står og kan flytte det mellom stedene. Når du huker av «Bruk min smøring» under smøretipsene, foreslår Skiglede bare det du eier, og bytter det som mangler mot nærmeste du har, på tvers av merker.
+          Kryss av det du har. «Bruk min smøring» på forsiden foreslår da bare det du eier, og bytter det som mangler mot nærmeste du har.
         </ThemedText>
         <View style={styles.rad}>
           {([...MERKE_IDER, 'alle'] as const).map((id) => (

@@ -12,7 +12,7 @@ export function KontoHøyre() {
   const knapp = { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 } as const;
   if (!bruker) {
     return (
-      <View style={{ alignItems: 'flex-end', marginTop: 10, width: 200, flexShrink: 1 }}>
+      <View style={{ alignItems: 'flex-end', marginTop: 10, maxWidth: 200, flexShrink: 1 }}>
         <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[knapp, { backgroundColor: '#F4B73B', opacity: pågår ? 0.6 : 1 }]}>
           <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>{pågår ? 'Logger inn …' : 'Logg inn'}</Text>
         </Pressable>

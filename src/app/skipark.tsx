@@ -147,7 +147,7 @@ export default function Skipark() {
             </View>
           </Kort>
         ))}
-        <ThemedText type="small" themeColor="textSecondary">Skiparken lagres på denne enheten. Innlogging og synk mellom enheter kommer senere.</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">Skiparken lagres på enheten, og på kontoen din når du er logget inn med premium.</ThemedText>
       </PremiumLås>
       </View>
     </ScrollView>

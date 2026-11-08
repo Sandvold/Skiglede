@@ -71,9 +71,9 @@ export function Hero() {
 }
 
 const styles = StyleSheet.create({
-  hero: { width: '100%', minHeight: 340, paddingTop: 24, paddingBottom: 48, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
-  innhold: { width: '100%', maxWidth: MaxContentWidth, paddingHorizontal: Spacing.three, paddingBottom: 34 },
-  tittel: { color: '#FFFFFF', fontSize: 52, fontWeight: '800', letterSpacing: -1 },
+  hero: { width: '100%', minHeight: 340, paddingTop: 24, paddingBottom: 28, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  innhold: { width: '100%', maxWidth: MaxContentWidth, paddingHorizontal: Spacing.three, paddingBottom: 22 },
+  tittel: { color: '#FFFFFF', fontSize: 44, fontWeight: '800', letterSpacing: -1 },
   under: { color: '#BFDDF7', fontSize: 17, marginTop: 4 },
   meny: { flexDirection: 'row', gap: 6, marginTop: 14 },
   menyKnapp: { paddingVertical: 7, paddingHorizontal: 8, borderRadius: 999, flexGrow: 1, flexShrink: 1, alignItems: 'center' },

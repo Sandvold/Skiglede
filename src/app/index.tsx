@@ -429,7 +429,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               <ThemedText type="small">{a.grunn}</ThemedText>
               <ThemedText type="smallBold" themeColor="textSecondary">{skipark.filter((x) => x.stil === a.stil).map((x) => x.navn).join(', ') || 'Ingen ski av denne typen i skiparken ennå'}</ThemedText>
               {ingenSmøring ? (
-                <ThemedText type="small">{`Ingen festevoks eller klister. ${festeLag[0].merknad ?? ''}`}</ThemedText>
+                <ThemedText type="small">{festeLag[0].merknad ?? 'Ingen festevoks eller klister.'}</ThemedText>
               ) : (
                 festeLag.map((l, i) => (
                   <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>

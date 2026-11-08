@@ -59,8 +59,8 @@ export function Loggkort({ grunnlag }: { grunnlag: Omit<NyLogg, 'grep' | 'glid' 
         {GLID_VALG.map((g) => <Chip key={g.v} aktiv={glid === g.v} onPress={() => setGlid(glid === g.v ? null : g.v)}>{g.tekst}</Chip>)}
       </View>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <TextInput value={snø} onChangeText={setSnø} placeholder="Snøtemp °C (valgfritt)" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" style={[felt, { flex: 1 }]} />
-        <TextInput value={luft} onChangeText={setLuft} placeholder="Lufttemp °C (valgfritt)" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" style={[felt, { flex: 1 }]} />
+        <TextInput value={snø} onChangeText={setSnø} placeholder="Snøtemp °C" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" style={[felt, { flex: 1, minWidth: 0 }]} />
+        <TextInput value={luft} onChangeText={setLuft} placeholder="Lufttemp °C" placeholderTextColor={theme.textSecondary} keyboardType="numbers-and-punctuation" style={[felt, { flex: 1, minWidth: 0 }]} />
       </View>
       <TextInput value={kommentar} onChangeText={setKommentar} placeholder="Kommentar: hva du smurte annerledes, preparering, ski, følelse …" placeholderTextColor={theme.textSecondary} multiline style={[felt, { minHeight: 72, textAlignVertical: 'top' }]} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
