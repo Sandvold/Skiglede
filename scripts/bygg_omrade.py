@@ -147,6 +147,10 @@ def main():
     print(f"{len(ut)} løyper etter rydding")
     if not ut:
         raise SystemExit("ingen løyper ble igjen")
+    try:  # navn fra Turrutebasen der løypa følger en navngitt skiløype (hopper over hvis Kartverket ikke svarer)
+        kjør("scripts/navn_fra_turrutebasen.py", fil, "--skriv", "--vis", "20")
+    except SystemExit as e:
+        print("(navn fra Turrutebasen hoppet over:", str(e)[:200], ")")
     if not a.uten_terreng:
         if a.dtm:
             kjør("scripts/hent_terreng_raster.py", "--ut", fil, "--dtm", a.dtm, "--fortsett")
