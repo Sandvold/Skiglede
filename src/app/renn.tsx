@@ -19,6 +19,7 @@ import { StedVelger } from '@/components/ski/sted';
 import * as DocumentPicker from 'expo-document-picker';
 import { byggFraGpx, lesGpx, terrengFor } from '@/data/gpx';
 import { hentLagretRutevær, hentRennRute, hentRutevær, lagreRenn, useErAdmin, useMineRuter, type MinRute } from '@/data/minerute';
+import { useLagret } from '@/data/lagring';
 import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
@@ -68,16 +69,71 @@ function useRenn(): Renn[] {
   return liste;
 }
 
+const MÅNEDER = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+const MND_KORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+const dagnr = (iso: string) => Math.floor(Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) / 86_400_000);
+const idagNr = () => { const n = new Date(); return Math.floor(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / 86_400_000); };
+
+/** Tourrenn som kalender: kommende renn etter dato (nærmeste først), gruppert på måned, så renn uten dato og til slutt tidligere. */
+function Rennkalender({ renn, valgt, velg }: { renn: Renn[]; valgt: string; velg: (id: string) => void }) {
+  const theme = useTheme();
+  const idag = idagNr();
+  const med = renn.filter((r) => r.dato).map((r) => ({ r, d: dagnr(r.dato as string) }));
+  const kommende = med.filter((x) => x.d >= idag).sort((a, b) => a.d - b.d);
+  const tidligere = med.filter((x) => x.d < idag).sort((a, b) => b.d - a.d);
+  const udatert = renn.filter((r) => !r.dato);
+  const rad = (r: Renn, d: number | null) => {
+    const dato = r.dato ? new Date(`${(r.dato as string).slice(0, 10)}T00:00:00Z`) : null;
+    const om = d === null ? '' : d === idag ? 'i dag' : d === idag + 1 ? 'i morgen' : d > idag ? `om ${d - idag} dager` : `${idag - d} dager siden`;
+    return (
+      <Pressable key={r.id} accessibilityRole="button" onPress={() => velg(r.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 14, borderWidth: 1, borderColor: r.id === valgt ? theme.accent : theme.border, backgroundColor: r.id === valgt ? theme.accentSoft : theme.backgroundElement }}>
+        <View style={{ width: 48, alignItems: 'center' }}>
+          <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800' }}>{dato ? dato.getUTCDate() : '–'}</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700' }}>{dato ? MND_KORT[dato.getUTCMonth()].toUpperCase() : 'DATO?'}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>{r.navn}</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 13 }}>{[om, r.lengde_km ? `${Number(r.lengde_km).toFixed(1)} km` : '', r.stil === 'klassisk' ? 'klassisk' : r.stil === 'skoyting' ? 'skøyting' : ''].filter(Boolean).join(' · ')}</Text>
+        </View>
+      </Pressable>
+    );
+  };
+  let sist = '';
+  return (
+    <View style={{ gap: 8 }}>
+      {kommende.length === 0 && udatert.length === 0 ? <ThemedText themeColor="textSecondary">Ingen kommende renn er lagt inn ennå.</ThemedText> : null}
+      {kommende.map(({ r, d }) => {
+        const dt = new Date(`${(r.dato as string).slice(0, 10)}T00:00:00Z`);
+        const mnd = `${MÅNEDER[dt.getUTCMonth()]} ${dt.getUTCFullYear()}`;
+        const overskrift = mnd !== sist;
+        sist = mnd;
+        return (
+          <View key={r.id} style={{ gap: 6 }}>
+            {overskrift ? <ThemedText type="smallBold" themeColor="textSecondary">{mnd.toUpperCase()}</ThemedText> : null}
+            {rad(r, d)}
+          </View>
+        );
+      })}
+      {udatert.length ? <ThemedText type="smallBold" themeColor="textSecondary">UTEN DATO</ThemedText> : null}
+      {udatert.map((r) => rad(r, null))}
+      {tidligere.length ? <ThemedText type="smallBold" themeColor="textSecondary">TIDLIGERE</ThemedText> : null}
+      {tidligere.map(({ r, d }) => rad(r, d))}
+    </View>
+  );
+}
+
 export default function RennSide() {
   const theme = useTheme();
   const router = useRouter();
-  const renn = useRenn();
+  const renn = useRenn().filter((x) => !x.testdata);
+  const [fane, setFane] = useLagret<'tour' | 'mine'>('skiglede.renn.fane', 'tour');
   const [valgt, setValgt] = useState<string>('');
   const [valgtEgen, setValgtEgen] = useState<string>('');
   const { bruker } = usePremium();
   const mine = useMineRuter(!!bruker);
   const egen = mine.ruter.find((x) => x.id === valgtEgen) ?? null;
   const r = renn.find((x) => x.id === valgt) ?? null;
+  const andres = mine.ruter.filter((x) => bruker && x.user_id && x.user_id !== bruker.id);
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
       <Hero />
@@ -86,14 +142,30 @@ export default function RennSide() {
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Tilbake</Text>
         </Pressable>
         <ProLås tittel="Renn">
-          <ThemedText type="smallBold" themeColor="textSecondary">RENN</ThemedText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {renn.map((x) => (
-              <Chip key={x.id} aktiv={x.id === valgt} onPress={() => { setValgt(x.id); setValgtEgen(''); }}>{x.navn}</Chip>
-            ))}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Chip aktiv={fane === 'tour'} onPress={() => setFane('tour')}>Tourrenn</Chip>
+            <Chip aktiv={fane === 'mine'} onPress={() => setFane('mine')}>Mine renn</Chip>
           </View>
-          <EgenRute mine={mine} valgt={valgtEgen} velg={(id) => { setValgtEgen(id); setValgt(''); }} />
-          {egen ? <EgenRuteDetalj key={egen.id} rute={egen} /> : r ? <RennDetalj key={r.id} renn={r} /> : <ThemedText themeColor="textSecondary">Velg et renn eller en av dine egne ruter for å få råd for hele løypa.</ThemedText>}
+          {fane === 'tour' ? (
+            <>
+              <Rennkalender renn={renn} valgt={valgt} velg={(id) => { setValgt(id); setValgtEgen(''); }} />
+              {andres.length ? (
+                <View style={{ gap: 8 }}>
+                  <ThemedText type="smallBold" themeColor="textSecondary">DELT AV ANDRE</ThemedText>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {andres.map((x) => <Chip key={x.id} aktiv={x.id === valgtEgen} onPress={() => { setValgtEgen(x.id); setValgt(''); }}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km`}</Chip>)}
+                  </View>
+                </View>
+              ) : null}
+              <EgenRute modus="admin" mine={mine} valgt={valgtEgen} velg={() => undefined} />
+              {egen && andres.some((x) => x.id === egen.id) ? <EgenRuteDetalj key={egen.id} rute={egen} /> : r ? <RennDetalj key={r.id} renn={r} /> : <ThemedText themeColor="textSecondary">Velg et renn i kalenderen for å få råd for hele løypa.</ThemedText>}
+            </>
+          ) : (
+            <>
+              <EgenRute modus="mine" mine={mine} valgt={valgtEgen} velg={(id) => { setValgtEgen(id); setValgt(''); }} />
+              {egen && !andres.some((x) => x.id === egen.id) ? <EgenRuteDetalj key={egen.id} rute={egen} /> : <ThemedText themeColor="textSecondary">Last opp en GPX eller velg en av dine ruter for å få råd for hele løypa.</ThemedText>}
+            </>
+          )}
         </ProLås>
       </View>
     </ScrollView>
@@ -113,7 +185,7 @@ function RennDetalj({ renn }: { renn: Renn }) {
 }
 
 /** Dine egne ruter: last opp GPX (bare for deg), velg en lagret rute eller slett den. */
-function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>; valgt: string; velg: (id: string) => void }) {
+function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMineRuter>; valgt: string; velg: (id: string) => void; modus: 'mine' | 'admin' }) {
   const theme = useTheme();
   const [status, setStatus] = useState('');
   const [opptatt, setOpptatt] = useState(false);
@@ -174,13 +246,31 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
       setOpptatt(false);
     }
   };
+  const egne = mine.ruter.filter((x) => !bruker || !x.user_id || x.user_id === bruker.id);
+  if (modus === 'admin') {
+    if (!erAdmin) return null;
+    return (
+      <Sammenleggbar id="renn-admin" tittel="Legg inn renn (admin)" standardÅpen={false}>
+        <>
+          <ThemedText type="small" themeColor="textSecondary">F.eks. Hovden Tour: skriv navn og dato, velg stil og last opp arrangørens GPX. Alle Pro-brukere får rennet og løypa under Renn.</ThemedText>
+          <TextInput value={rennNavn} onChangeText={setRennNavn} placeholder="Navn på rennet" placeholderTextColor={theme.textSecondary} style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 10, color: theme.text }} />
+          <TextInput value={rennDato} onChangeText={setRennDato} placeholder="Dato åååå-mm-dd (valgfritt)" placeholderTextColor={theme.textSecondary} style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 10, color: theme.text }} />
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Chip aktiv={rennStil === 'klassisk'} onPress={() => setRennStil(rennStil === 'klassisk' ? '' : 'klassisk')}>Klassisk</Chip>
+            <Chip aktiv={rennStil === 'skoyting'} onPress={() => setRennStil(rennStil === 'skoyting' ? '' : 'skoyting')}>Skøyting</Chip>
+            <Chip aktiv onPress={opptatt ? () => undefined : lastRenn}>{opptatt ? 'Laster opp …' : 'Last opp GPX som renn'}</Chip>
+          </View>
+        </>        {status ? <ThemedText type="small" style={{ color: theme.accent }}>{status}</ThemedText> : null}
+      </Sammenleggbar>
+    );
+  }
   return (
-    <Sammenleggbar id="renn-1" tittel="Mine renn (egne ruter)" standardÅpen={false}>
+    <Sammenleggbar id="renn-1" tittel="Dine egne ruter">
       <ThemedText type="small" themeColor="textSecondary">Last opp en GPX-fil, så regnes råd ut for akkurat denne løypa: vær, snøtemperatur, innstråling og struktur. Ruten lagres på kontoen din. Solskygge regnes fra terrenget (ett punkt per 300 m), så opplasting tar litt tid.</ThemedText>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Chip aktiv onPress={opptatt ? () => undefined : last}>{opptatt ? 'Laster opp …' : 'Last opp GPX'}</Chip>
-        {mine.ruter.map((x) => (
-          <Chip key={x.id} aktiv={x.id === valgt} onPress={() => velg(x.id)}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km${x.user_id && bruker && x.user_id !== bruker.id ? ' · delt' : x.delt ? ' · delt av deg' : ''}`}</Chip>
+        {egne.map((x) => (
+          <Chip key={x.id} aktiv={x.id === valgt} onPress={() => velg(x.id)}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km${x.delt ? ' · delt' : ''}`}</Chip>
         ))}
       </View>
       <Chip aktiv={del} onPress={() => setDel(!del)}>{del ? '✓ Del med andre Pro-brukere' : 'Del med andre Pro-brukere (av)'}</Chip>
@@ -197,19 +287,6 @@ function EgenRute({ mine, valgt, velg }: { mine: ReturnType<typeof useMineRuter>
       })()}
       {status ? <ThemedText type="small" style={{ color: theme.accent }}>{status}</ThemedText> : null}
       {mine.feil ? <ThemedText type="small" style={{ color: theme.accent }}>{mine.feil}</ThemedText> : null}
-      {erAdmin ? (
-        <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }}>
-          <ThemedText type="smallBold">Legg inn renn for alle (admin)</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">F.eks. Hovden Tour: skriv navn og dato, velg stil og last opp arrangørens GPX. Alle Pro-brukere får rennet og løypa under Renn.</ThemedText>
-          <TextInput value={rennNavn} onChangeText={setRennNavn} placeholder="Navn på rennet" placeholderTextColor={theme.textSecondary} style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 10, color: theme.text }} />
-          <TextInput value={rennDato} onChangeText={setRennDato} placeholder="Dato åååå-mm-dd (valgfritt)" placeholderTextColor={theme.textSecondary} style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 10, padding: 10, color: theme.text }} />
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Chip aktiv={rennStil === 'klassisk'} onPress={() => setRennStil(rennStil === 'klassisk' ? '' : 'klassisk')}>Klassisk</Chip>
-            <Chip aktiv={rennStil === 'skoyting'} onPress={() => setRennStil(rennStil === 'skoyting' ? '' : 'skoyting')}>Skøyting</Chip>
-            <Chip aktiv onPress={opptatt ? () => undefined : lastRenn}>{opptatt ? 'Laster opp …' : 'Last opp GPX som renn'}</Chip>
-          </View>
-        </View>
-      ) : null}
     </Sammenleggbar>
   );
 }
