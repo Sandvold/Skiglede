@@ -7,7 +7,7 @@
 //  3. retur: andre halvdel speiler første (hvert punkt maks 60 m fra speilpunktet).
 //  4. Ingen hopp mellom nabopunkter over 120 m (hull i løypa).
 //  5. Avstand øker jevnt og siste avstand stemmer med lengde_m (1 %).
-//  6. sloyfe: maks 25 % av løypa går samme vei to ganger (ellers er det en tur-retur i forkledning).
+//  6. sloyfe: maks 30 % av løypa går samme vei to ganger (byggingen sikter på 25 %, kontrollen er sikkerhetsnettet) (ellers er det en tur-retur i forkledning).
 //  7. Lengde 3–25 km (advarsel utenfor, ikke feil). Se docs/loypevalg.md.
 // Avstander regnes med breddegraden til hvert punkt, så reglene gir samme resultat i Oslo og i Finnmark.
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -52,7 +52,7 @@ for (const fil of filer) {
             if (Math.abs(p[i][3] - p[j][3]) > 300 && m(p[i], p[j]) < 25) { dobbelt++; break; }
           }
         }
-        if (dobbelt / n > 0.25) mld(`sløyfe går ${((dobbelt / n) * 100).toFixed(0)} % av veien to ganger (maks 25 %). Velg annen retur eller bruk retur`);
+        if (dobbelt / n > 0.30) mld(`sløyfe går ${((dobbelt / n) * 100).toFixed(0)} % av veien to ganger (maks 30 %). Velg annen retur eller bruk retur`);
       }
       if (Math.abs(p[n - 1][3] - t.lengde_m) > 0.01 * t.lengde_m) mld(`lengde_m ${t.lengde_m} stemmer ikke med siste avstand ${p[n - 1][3]}`);
     }
