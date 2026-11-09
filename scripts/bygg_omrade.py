@@ -113,7 +113,7 @@ def main():
     ap.add_argument("--navn", required=True)
     ap.add_argument("--osm", action="append", required=True)
     ap.add_argument("--steder")
-    ap.add_argument("--antall", type=int, default=12)
+    ap.add_argument("--antall", type=int, default=8)
     ap.add_argument("--workers", type=int, default=5)
     ap.add_argument("--uten-terreng", action="store_true")
     ap.add_argument("--dtm", help="glob til lokale GeoTIFF-høydefiler (DTM10): terreng regnes lokalt i stedet for via API-et")
@@ -129,7 +129,7 @@ def main():
     steder = os.path.abspath(a.steder) if a.steder else os.path.abspath(f"{a.id}-steder.json")
     if not a.steder:
         hent_steder(osm[0], steder)
-    r = kjør("scripts/finn_startpunkter.py", *osmargs, "--steder", steder, "--maks-avstand", "600", "--min-avstand", "2500", "--antall", str(a.antall))
+    r = kjør("scripts/finn_startpunkter.py", *osmargs, "--steder", steder, "--maks-avstand", "600", "--min-avstand", "3000", "--antall", str(a.antall))
     starter = r.stdout.strip().replace('--start "', "").split('" ') if r.stdout.strip() else []
     starter = [s.strip('"') for s in starter]
     if not starter:  # ingen hytte/parkering/hotell nær løypene: bruk løypepunktet nærmest midten av nettet

@@ -78,6 +78,8 @@ def retur_kandidater(nett, s, avst, komp):
             if 2500 <= L <= 26000:
                 ut.append((t, pts, L))
                 break
+    if len(ut) >= 4:  # maks tre tur-retur per start: dropp den korteste (finnes det lengre, dekker de samme veien og mer)
+        ut = ut[1:]
     return ut
 
 

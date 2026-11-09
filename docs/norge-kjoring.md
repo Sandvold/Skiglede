@@ -47,7 +47,7 @@ Hold oversikt over hvilke fylker som er kjørt: `kjor_fylke.py` uten argumenter 
 
 ## Hva byggeskriptene gjør (kort)
 - Startpunkter fra steder (hotell, parkering, hytte) innen 600 m, minst 2,5 km fra hverandre. Rundløyper: maks 25 % overlapp, ≥75 % preparert, 3–26 km.
-- **Tur-retur som reserve:** finnes ingen runde fra et startpunkt, lages tur-retur ut til det fjerneste punktet i hvert avstandsbånd (1,25–13 km ut), `type: retur`. Små nett (≥30 noder) beholdes.
+- **Tur-retur som reserve:** finnes ingen runde fra et startpunkt, lages tur-retur ut til det fjerneste punktet i avstandsbånd (1,25–13 km ut), `type: retur`, maks tre per start (den korteste droppes når det finnes fire). Standard er 8 startpunkter per område, minst 3 km mellom. Små nett (≥30 noder) beholdes.
 - Ingen startpunkter: midten av nettet brukes.
 - Navn: `navn_fra_turrutebasen.py` kjøres automatisk og gir løypene navn fra Turrutebasen der de følger en navngitt skiløype (kan kjøres på alle filer: `python -X utf8 scripts/navn_fra_turrutebasen.py --alle --skriv`). Mange områder har ingen navngitte løyper der, og beholder «Start – Sted».
 - Kontrollen setter sløyfer med >25 % dobbel vei i karantene (ikke slettet).
