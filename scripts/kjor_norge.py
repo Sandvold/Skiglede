@@ -7,13 +7,16 @@
 
     python3 -I scripts/kjor_norge.py --mappe scripts/ut/omrader --steder scripts/ut/norge/steder.json --dtm "dtm/*.tif" [--samtidig 4] [--kun id,id] [--maks 10]
 """
-import argparse, json, os, subprocess, sys, time
-from concurrent.futures import ThreadPoolExecutor
+import argparse, json, os, subprocess, sys, threading, time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 HER = os.path.dirname(os.path.abspath(__file__))
 ROT = os.path.join(HER, "..")
 sys.path.insert(0, HER)
 from bygg_omrade import bbox_av
+
+
+AKTIVE = {}  # id -> (starttid, loggfil) for områder som bygges nå
 
 
 def bygg(m, a, steder, status):
@@ -33,17 +36,26 @@ def bygg(m, a, steder, status):
     elif a.uten_terreng:
         cmd += ["--uten-terreng"]  # ellers hentes terrenget fra Kartverkets API (tregt)
     t0 = time.time()
+    logg = os.path.join(mappe, "bygg.log")
+    AKTIVE[id_] = (t0, logg)
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROT, timeout=a.timeout)
-        open(os.path.join(mappe, "bygg.log"), "w", encoding="utf-8").write(r.stdout + "\n" + r.stderr)
-        sql = [l for l in r.stdout.splitlines() if l.startswith("insert into public.omrade")]
-        ok = r.returncode == 0 and bool(sql)
-        status[id_] = dict(ok=ok, sek=round(time.time() - t0), feil=None if ok else (r.stderr or r.stdout)[-300:])
+        with open(logg, "w", encoding="utf-8", buffering=1) as lf:  # loggen skrives underveis, så fremdriften kan følges
+            p = subprocess.Popen(cmd, stdout=lf, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", cwd=ROT)
+            try:
+                p.wait(timeout=a.timeout)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                raise
+        tekst = open(logg, encoding="utf-8", errors="replace").read()
+        sql = [l for l in tekst.splitlines() if l.startswith("insert into public.omrade")]
+        ok = p.returncode == 0 and bool(sql)
+        status[id_] = dict(ok=ok, sek=round(time.time() - t0), feil=None if ok else tekst[-300:])
         if ok:
             with open(os.path.join(a.mappe, "omrader.sql"), "a") as f:
                 f.write(sql[0].replace("'Test'", "'" + m["navn"].replace("'", "''") + "'") + "\n")
     except subprocess.TimeoutExpired:
         status[id_] = dict(ok=False, sek=round(time.time() - t0), feil="tidsavbrudd")
+    AKTIVE.pop(id_, None)
     json.dump(status, open(os.path.join(a.mappe, "status.json"), "w"), ensure_ascii=False, indent=1)
     return id_, "ok" if status[id_]["ok"] else "FEILET: " + str(status[id_]["feil"])[:120]
 
@@ -69,9 +81,32 @@ def main():
         man = man[: a.maks]
     steder = json.load(open(a.steder))
     print(f"{len(man)} områder, {a.samtidig} samtidig, {len(steder)} steder", flush=True)
+    ferdig = [0]
+    stopp = threading.Event()
+
+    def fremdrift():
+        """Hvert halve minutt: hvor mange som er ferdige og hva hvert pågående område holder på med (siste linje i bygg.log)."""
+        while not stopp.wait(30):
+            rader = []
+            for id_, (t0, lf) in list(AKTIVE.items()):
+                try:
+                    linjer = [l.strip() for l in open(lf, encoding="utf-8", errors="replace").read().splitlines() if l.strip()]
+                except OSError:
+                    linjer = []
+                steg = next((l for l in reversed(linjer) if l.startswith("$ ")), "starter")[2:]
+                sist = linjer[-1][:60] if linjer else ""
+                rader.append(f"    {id_} ({(time.time() - t0) / 60:.0f} min): {steg} | {sist}")
+            print(f"[{time.strftime('%H:%M')}] {ferdig[0]}/{len(man)} ferdige, {len(rader)} pågår" + ("\n" + "\n".join(rader) if rader else ""), flush=True)
+
+    threading.Thread(target=fremdrift, daemon=True).start()
     with ThreadPoolExecutor(a.samtidig) as ex:
-        for id_, res in ex.map(lambda m: bygg(m, a, steder, status), man):
-            print(f"{id_}: {res}", flush=True)
+        fut = {ex.submit(bygg, m, a, steder, status): m["id"] for m in man}
+        for f in as_completed(fut):  # skriv hvert område straks det er ferdig
+            id_, res = f.result()
+            ferdig[0] += 1
+            sek = status.get(id_, {}).get("sek", 0)
+            print(f"[{time.strftime('%H:%M')}] {ferdig[0]}/{len(man)} {id_}: {res} ({sek // 60} min)", flush=True)
+    stopp.set()
     feilet = [k for k, v in status.items() if not v.get("ok")]
     print(f"ferdig. {sum(1 for v in status.values() if v.get('ok'))} ok, {len(feilet)} feilet" + (": " + ", ".join(feilet) if feilet else ""))
 

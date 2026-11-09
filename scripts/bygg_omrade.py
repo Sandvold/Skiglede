@@ -8,7 +8,7 @@ Mal for agentene i Norge-kjøringen: én kjøring per område, egen utfil, røre
 
 Etterpå (manuelt eller av samle-jobben): kjør SQL-en som skrives ut i Neon, commit og push (opplastingsjobben tar resten).
 """
-import argparse, json, math, os, statistics, subprocess, sys, tempfile, time, urllib.parse, urllib.request
+import threading, argparse, json, math, os, statistics, subprocess, sys, tempfile, time, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 HER = os.path.dirname(os.path.abspath(__file__))
@@ -22,8 +22,19 @@ FELLES = 0.7
 
 
 def kjør(*args):
-    r = subprocess.run([sys.executable, "-X", "utf8", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROT)
-    print(f"$ {os.path.basename(args[0])}\n{r.stdout[-3000:]}", flush=True)  # havner i bygg.log
+    """Kjører et delskript og skriver utskriften linje for linje mens den kommer (bygg.log vokser underveis, så fremdriften kan følges)."""
+    print(f"$ {os.path.basename(args[0])}", flush=True)
+    p = subprocess.Popen([sys.executable, "-X", "utf8", *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", cwd=ROT)
+    feil = []
+    tråd = threading.Thread(target=lambda: feil.extend(p.stderr.readlines()), daemon=True)
+    tråd.start()
+    ut = []
+    for linje in p.stdout:
+        ut.append(linje)
+        print(linje, end="", flush=True)
+    p.wait()
+    tråd.join()
+    r = subprocess.CompletedProcess(p.args, p.returncode, "".join(ut), "".join(feil))
     if r.returncode:
         raise SystemExit(f"feilet: {' '.join(args)[:200]}\n{r.stderr[-1500:]}")
     return r
