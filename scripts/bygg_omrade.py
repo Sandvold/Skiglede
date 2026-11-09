@@ -183,9 +183,9 @@ def main():
     else:
         print("(løypekontrollen kunne ikke kjøres; opplastingsjobben kontrollerer uansett)")
     print(k.stdout.strip().splitlines()[-1] if k and k.stdout.strip() else "", f"| karantene i dette området: {len(kar)}")
-    print("\nSQL (vaer=false: værhistorikk hentes ikke før du slår den på, se docs/norge-kjoring.md; kjør i Neon, juster vinter_min/vinter_max, rekkefolge og ref_hoyde_m ved behov):")
+    print("\nSQL (vaer=true: værjobben samler data fra nå, se docs/norge-kjoring.md; kjør i Neon, juster vinter_min/vinter_max, rekkefolge og ref_hoyde_m ved behov):")
     print(f"insert into public.omrade (id, navn, lat, lon, vis_lon, vis_lat, vis_z, vinter_min, vinter_max, ref_hoyde_m, loypefil, vaer, rekkefolge) values "
-          f"('{a.id}','{a.navn}',{la:.4f},{lo:.4f},{lo:.2f},{la:.2f},11,-20,1,{round(statistics.mean(z))},'{os.path.basename(fil)}',false,100) on conflict (id) do nothing;")
+          f"('{a.id}','{a.navn}',{la:.4f},{lo:.4f},{lo:.2f},{la:.2f},11,-20,1,{round(statistics.mean(z))},'{os.path.basename(fil)}',true,100) on conflict (id) do nothing;")
 
 
 if __name__ == "__main__":
