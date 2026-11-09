@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Henter terrengdata (hellingsretning, helning, horisont i 16 retninger) langs løyper i src/data/trails.json.
 
-For hvert punkt hver 125. meter langs løypa slås høyden opp (Kartverket dtm1) i en liten sirkel (30 m) og langs 16
+For hvert punkt hver 250. meter langs løypa slås høyden opp (Kartverket dtm1) i en liten sirkel (30 m) og langs 16
 retninger ut til 3 km. Resultat per punkt: [avstand_m, hellingsretning_°, helning_°, horisont_°[16]] der horisonten
 er høydevinkelen (°) til terrenget i retning 0°, 22,5°, … (0° = nord, medsols). Lagres som `terreng` på hver løype.
 
@@ -25,7 +25,7 @@ from pyproj import Transformer
 REST = "https://ws.geonorge.no/hoydedata/v1/punkt"
 AZ = [i * 22.5 for i in range(16)]
 RINGER = [50, 100, 200, 400, 800, 1600, 3000]
-STEG = 125
+STEG = 250  # m langs løypa; tur.ts bruker seksjoner à ca. 250 m og slår opp nærmeste terrengpunkt
 
 
 PAUSE = 0.0  # sekunder per kall, settes fra --pause
