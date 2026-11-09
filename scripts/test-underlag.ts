@@ -1,6 +1,6 @@
 import trails from '../src/data/trails.json';
 import vaer from '../src/data/vaer-hovden.json';
-import { analyserSnø, byggStabel, lagSeksjoner, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, delAndel, INGEN_UNDERLAG, type Punkt, type Vær, type Underlag } from '../src/engine';
+import { analyserSnø, byggStabel, lagSeksjoner, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, strukturMedUnderlag, anbefalStruktur, delAndel, INGEN_UNDERLAG, type Punkt, type Vær, type Underlag } from '../src/engine';
 
 let feil = 0;
 const ok = (b: boolean, t: string) => { if (!b) { feil++; console.log('FEIL:', t); } else console.log('ok:', t); };
@@ -12,6 +12,7 @@ const sek = lagSeksjoner(t0.punkter as Punkt[]);
 const tur = planTur({ seksjoner: sek, timer: dag, startTs: dagTs, tempoKmt: 6, refH: vaer.referansehoyde_m });
 // kald nysnø-dag: tving ny snø uten skorpe
 const natur = { ...analyserSnø(timer, dagTs), type: 'ny' as const, skarphet: 5 };
+const snø0 = () => ({ ...natur, type: 'omdannet' as const, skarphet: 80, regn7: 0 });
 const u = (k: Underlag['kunstsnø'], s: Underlag['salt']): Underlag => ({ kunstsnø: k, salt: s });
 ok(delAndel({ på: false, del: 'hele' }) === 0, 'av = 0 andel');
 ok(delAndel({ på: true, del: 'første-halvdel' }) === 0.5, 'halvdel = 0,5');
@@ -36,5 +37,7 @@ const sa = turMedUnderlag(mildt, u({ på: false, del: 'hele' }, { på: true, del
 ok(sa.tMaks === -3 && sa.seksjoner.every((x) => x.tEff === -3) && !sa.sludd, 'salt: snøtemp −3 og ikke sludd når lufta er mild');
 ok(turMedUnderlag(mildt, u({ på: false, del: 'hele' }, { på: true, del: 'første-tredjedel' })) === mildt, 'salt på under halve løypa endrer ikke temperaturen');
 ok(turMedUnderlag(mildt, INGEN_UNDERLAG) === mildt, 'uten salt uendret tur');
+const st = strukturMedUnderlag(anbefalStruktur(-3, snø0(), false, 'klassisk'), u({ på: false, del: 'hele' }, { på: true, del: 'hele' }));
+ok(st.nivå >= 3 && st.navn.includes('grov'), 'salt gir medium til grov rille');
 console.log(feil ? `${feil} feil` : 'Alle sjekker OK');
 process.exit(feil ? 1 : 0);

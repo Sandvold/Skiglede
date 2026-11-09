@@ -369,7 +369,7 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
     const segmenter = seksjoner.map((x, i) => ({ pts: løype.punkter.filter((p) => p[3] >= x.startM && p[3] <= x.endM).map((p) => [p[0], p[1]] as [number, number]), farge: farger[i] }));
     const profil = løype.punkter.map((p) => ({ d: p[3], h: p[2], farge: farger[Math.max(0, seksjoner.findIndex((x) => p[3] <= x.endM))] }));
     const opp = løype.punkter.slice(1).reduce((a, p, i) => a + Math.max(0, p[2] - løype.punkter[i][2]), 0);
-    return { segmenter, profil, opp, tur, snø, stabel, feste, snitt, struktur: strukturMedUnderlag(anbefalStruktur(snitt, snø, tur.sludd, stil), underlag), glid: proGlidelag(tur, SWIX), harVarsel: dekket, startTs };
+    return { segmenter, profil, opp, tur, snø, stabel, feste, snitt, struktur: strukturMedUnderlag(anbefalStruktur(snitt, snø, tur.sludd, stil), underlag, stil as 'klassisk' | 'skoyting'), glid: proGlidelag(tur, SWIX), harVarsel: dekket, startTs };
   }, [løype, utenVær, dato, time, varsel, stil, TIMER, område, værdata, underlag]);
 
   return (
