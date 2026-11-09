@@ -27,4 +27,6 @@ jobs:
       - name: Oppdater værhistorikk
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPEN_METEO_API_KEY: ${{ secrets.OPEN_METEO_API_KEY }}  # valgfri: abonnement (kommersiell bruk) gir egen kvote
+          OPEN_METEO_URL: ${{ secrets.OPEN_METEO_URL }}
         run: python3 -I scripts/oppdater_vaer.py

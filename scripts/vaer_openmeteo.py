@@ -8,7 +8,7 @@ import json, os, time, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 KOLONNER = ["ts", "temp_c", "nedbor_mm", "rh", "vind_ms", "sw_j_m2"]
-URL = os.environ.get("OPEN_METEO_URL", "https://api.open-meteo.com/v1/forecast")
+URL = os.environ.get("OPEN_METEO_URL") or "https://api.open-meteo.com/v1/forecast"  # tom hemmelighet i Actions gir tom streng
 UA = "Skiglede/1.0 (kontakt: sandvold40@gmail.com)"
 
 
