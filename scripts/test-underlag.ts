@@ -1,0 +1,35 @@
+import trails from '../src/data/trails.json';
+import vaer from '../src/data/vaer-hovden.json';
+import { analyserSnø, byggStabel, lagSeksjoner, planTur, snøMedUnderlag, medUnderlag, delAndel, INGEN_UNDERLAG, type Punkt, type Vær, type Underlag } from '../src/engine';
+
+let feil = 0;
+const ok = (b: boolean, t: string) => { if (!b) { feil++; console.log('FEIL:', t); } else console.log('ok:', t); };
+const timer: Vær[] = (vaer.timer as any[]).map((r) => ({ ts: Date.parse(r[0]), temp: r[1], nedbor: r[2], rh: r[3], vind: r[4], sw: r[5] }));
+const dagTs = Date.parse('2026-11-02T09:00:00Z');
+const dag = timer.filter((x) => x.ts >= dagTs - 3 * 3600_000 && x.ts <= dagTs + 12 * 3600_000);
+const t0 = (trails as any[])[0];
+const sek = lagSeksjoner(t0.punkter as Punkt[]);
+const tur = planTur({ seksjoner: sek, timer: dag, startTs: dagTs, tempoKmt: 6, refH: vaer.referansehoyde_m });
+// kald nysnø-dag: tving ny snø uten skorpe
+const natur = { ...analyserSnø(timer, dagTs), type: 'ny' as const, skarphet: 5 };
+const u = (k: Underlag['kunstsnø'], s: Underlag['salt']): Underlag => ({ kunstsnø: k, salt: s });
+ok(delAndel({ på: false, del: 'hele' }) === 0, 'av = 0 andel');
+ok(delAndel({ på: true, del: 'første-halvdel' }) === 0.5, 'halvdel = 0,5');
+ok(snøMedUnderlag(natur, INGEN_UNDERLAG) === natur, 'uten avkrysning er snøen uendret');
+const kun = snøMedUnderlag(natur, u({ på: true, del: 'hele' }, { på: false, del: 'hele' }));
+ok(kun.type === 'omdannet' && kun.skarphet >= 75, 'kunstsnø hele løypa gir omdannet, skarphet ≥ 75');
+const sal = snøMedUnderlag(natur, u({ på: false, del: 'hele' }, { på: true, del: 'siste-halvdel' }));
+ok(sal.type === 'omdannet' && sal.skarphet >= 80, 'salt på halve løypa gir omdannet');
+const lite = snøMedUnderlag(natur, u({ på: true, del: 'første-tredjedel' }, { på: false, del: 'hele' }));
+ok(lite.type === 'ny', 'kunstsnø på en tredjedel endrer ikke snøtypen');
+const a = byggStabel(tur, natur, sek);
+const b = medUnderlag(byggStabel(tur, kun, sek), u({ på: true, del: 'hele' }, { på: false, del: 'hele' }), tur);
+console.log('natur:', a.type, a.lag.map((l) => l.produkt).join(','), '\nkunstsnø:', b.type, b.lag.map((l) => l.produkt).join(','));
+ok(b.begrunnelse.some((x) => x.startsWith('Kunstsnø')) && b.advarsler.some((x) => x.includes('slipende')), 'kunstsnø gir begrunnelse og advarsel');
+const c = medUnderlag(a, u({ på: true, del: 'første-tredjedel' }, { på: false, del: 'hele' }), tur);
+ok(c.advarsler.some((x) => x.includes('bare på første tredjedel')), 'delvis kunstsnø gir advarsel om at resten er natursnø');
+ok(medUnderlag(a, INGEN_UNDERLAG, tur) === a, 'uten avkrysning er stabelen uendret');
+const d = medUnderlag(a, u({ på: false, del: 'hele' }, { på: true, del: 'hele' }), { ...tur, tMaks: -4, tMin: -9 });
+ok(d.advarsler.some((x) => x.includes('Salting virker ikke')), 'salt i kulde gir advarsel');
+console.log(feil ? `${feil} feil` : 'Alle sjekker OK');
+process.exit(feil ? 1 : 0);

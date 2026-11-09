@@ -8,3 +8,4 @@ export * from './terreng';
 export * from './lager';
 export * from './skipark';
 export * from './pro';
+export * from './underlag';

@@ -6,6 +6,7 @@ import { TrailMap } from '@/components/ski/kart';
 import { Hoydeprofil } from '@/components/ski/profil';
 import { Temperaturoversikt, tekstPå, type OversiktVisning } from '@/components/ski/oversikt';
 import { Hero } from '@/components/ski/hero';
+import { UnderlagValg } from '@/components/ski/underlag';
 import { Chip, Kort, Nedtrekk, Sammenleggbar } from '@/components/ski/ui';
 import { byggRute, tilhørende, type Løype } from '@/data/rute';
 import { løypeFeilFor, useLøyper, useLøypeliste, type LøypeInfo } from '@/data/loyper';
@@ -19,7 +20,7 @@ import { usePremium } from '@/data/premium';
 import { Loggkort } from '@/components/ski/loggkort';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
-import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
+import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, snøMedUnderlag, medUnderlag, INGEN_UNDERLAG, type Underlag, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
 /** Værtimer fra 3 t før start. Dekker været ikke starttiden (utdatert prognose), brukes siste timene i stedet for å krasje. */
 const vindu = (alle: Vær[], startTs: number): Vær[] => {
@@ -161,6 +162,10 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   // Uten avkrysning: ren Swix-anbefaling. Med avkrysning: tilpasset smørelageret, på tvers av merker.
   const lagerBruk = brukLager ? lager : TOM_LISTE;
   const [visning, setVisning] = useLagret<'full' | 'enkel'>(NØKKEL_VISNING, 'full');
+  // Kunstsnø huskes bare for i dag (føret endrer seg): lagres med dato og nullstilles neste dag.
+  const [underlagLagret, setUnderlagLagret] = useLagret<{ dato: string; u: Underlag } | null>(`skiglede.underlag.${valgtLøype.id}`, null);
+  const underlag: Underlag = underlagLagret && underlagLagret.dato === osloDato(0) ? underlagLagret.u : INGEN_UNDERLAG;
+  const setUnderlag = (u: Underlag) => setUnderlagLagret({ dato: osloDato(0), u });
   const [skiparkLagret, setSkipark] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const skipark = premium ? skiparkLagret : (TOM_LISTE as Ski[]);
   const [varsel, setVarsel] = useState<Varsel | null>(null);
@@ -197,13 +202,13 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
     // Observert historikk, så Yr-varselet fra der historikken slutter.
     const sisteHist = TIMER[TIMER.length - 1].ts;
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
-    const snø = analyserSnø(alle, startTs, snøStatus);
+    const snø = snøMedUnderlag(analyserSnø(alle, startTs, snøStatus), underlag);
     const turFor = (s: 'klassisk' | 'skoyting') => planTur({ seksjoner, timer: vindu(alle, startTs), startTs, tempoKmt: TEMPO[s][modus], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
     const turK = turFor('klassisk');
     const turS = stil === 'skoyting' ? turFor('skoyting') : null;
     const tur = turS ?? turK;
     const turPer = (st: Stil) => (st === 'skoyting' ? turS ?? turFor('skoyting') : turK);
-    const perStil = Object.fromEntries((['klassisk', 'skoyting', 'felle', 'rubb'] as Stil[]).map((st) => [st, byggMedLager(st, turPer(st), snø, seksjoner, modus === 'Trening', lagerBruk)])) as Record<Stil, Stabel>;
+    const perStil = Object.fromEntries((['klassisk', 'skoyting', 'felle', 'rubb'] as Stil[]).map((st) => [st, medUnderlag(byggMedLager(st, turPer(st), snø, seksjoner, modus === 'Trening', lagerBruk), underlag, turPer(st))])) as Record<Stil, Stabel>;
     const stabel = perStil[stil];
     const farger = tur.seksjoner.map((s) => tempFarge(s.tEff));
     const segmenter = seksjoner.map((s, i) => ({
@@ -220,7 +225,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
       ? byggAlternativer(skipark.map((x) => x.stil), turK, snø, seksjoner, stabel, modus === 'Trening', glideSystemFraLager(lagerBruk))
       : [];
     return { dato, startTs, sisteHist, seksjoner, snø, tur, stabel, perStil, alternativer, segmenter, profil, lav: Math.min(...hs), høy: Math.max(...hs), opp };
-  }, [løype, modus, startTime, dagIdx, varsel, stil, lagerBruk, skipark, område, TIMER, sys, snøStatus]);
+  }, [løype, modus, startTime, dagIdx, varsel, stil, lagerBruk, skipark, område, TIMER, sys, snøStatus, underlag]);
   const vis = r.stabel;
   const enkel = visning === 'enkel';
   const lagLik = (a: { rolle: string; produkt: string }[], b: Stabel) => JSON.stringify(a) === JSON.stringify(b.lag.map((l) => ({ rolle: l.rolle, produkt: l.produkt })));
@@ -386,6 +391,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               {brukLager ? (lager.length ? `Tilpasset smørelageret ditt (${lager.length} produkter, alle merker).` : 'Smørelageret er tomt: kryss av det du har under Smørelager.') : (premium ? 'Anbefaling fra Swix. Kryss av for å bruke det du har i lageret, fra alle merker.' : '🔒 Premium: bruk det du har i smørelageret, fra alle merker.')}
             </ThemedText>
           </Pressable>
+          <UnderlagValg u={underlag} onChange={setUnderlag} />
           <View style={styles.rad}>
             <Chip aktiv={!enkel} onPress={() => setVisning('full')}>Full</Chip>
             <Chip aktiv={enkel} onPress={() => setVisning('enkel')}>Enkel</Chip>
