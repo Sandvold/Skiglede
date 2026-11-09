@@ -63,7 +63,7 @@ export const KLISTER_ANDRE: Produkt[] = [
   { navn: 'KX55', farge: 'Fiolett Extra', hex: '#8E5BC9', omr: [-6, 4], linje: 'K' },
   { navn: 'K21S', farge: 'Universal sølv', hex: '#C8CDD3', omr: [-5, 3], linje: 'K' },
   { navn: 'K22', farge: 'Universal VM', hex: '#D9B84A', omr: [-3, 10], linje: 'K' },
-  { navn: 'KN44', farge: 'Nero', hex: '#5A5A60', omr: [-3, 5], linje: 'K' },
+  { navn: 'KN44', farge: 'Nero', hex: '#5A5A60', omr: [-3, 5], linje: 'K', merknad: 'Racingklister for skiftende føre: tar mindre skitt og ising enn vanlige klistere og holder seg i festesonen (swixsport.com, −3…+5 °C). Ligner KN45 [Bruker]' },
 ];
 
 /** Glidevoks (Swix HS, hydrokarbon uten fluor). Områder fra swixsport.com-produktsidene (HS10 0…+10, HS8 −4…+4, HS7 −8…−2, HS6 −12…−6, HS5 −18…−10). Kaldest først. */
