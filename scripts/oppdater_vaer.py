@@ -10,8 +10,37 @@ from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 import psycopg2
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import vaer_openmeteo
+
 HER = os.path.dirname(os.path.abspath(__file__))
 TIMEOUT_S = 900
+KILDE = "openmeteo"  # eller "met" (OPeNDAP, ett kall per time per område: tregt og feiler ved mange områder)
+
+
+def hent(lat, lon, ref, dager, fil, navn):
+    """Henter værhistorikk for ett punkt. Open-Meteo: ett kall, og referansehøyden er modellens høyde (temperaturene gjelder den). MET: som før via hent_vaer.py."""
+    if KILDE == "openmeteo":
+        try:
+            d = vaer_openmeteo.hent(lat, lon, dager)
+        except Exception as e:
+            print(f"{navn}: henting feilet ({e}), hopper over", file=sys.stderr)
+            return None
+        if len(d["timer"]) < dager * 24 * 0.9:
+            print(f"{navn}: for få timer ({len(d['timer'])}), hopper over", file=sys.stderr)
+            return None
+        d["referansehoyde_m"] = d.pop("grid_hoyde_m") or ref
+        return d
+    try:
+        res = subprocess.run([sys.executable, "-I", os.path.join(HER, "hent_vaer.py"), "--lat", str(lat), "--lon", str(lon), "--days", str(dager),
+                              "--ref-hoyde", str(ref), "--tidligere", fil, "--json", fil, "--workers", "4"], timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        print(f"{navn}: tidsavbrudd, hopper over", file=sys.stderr)
+        return None
+    if res.returncode != 0:
+        print(f"{navn}: henting feilet, hopper over", file=sys.stderr)
+        return None
+    return json.load(open(fil))
 
 
 def område(rad, tmp):
@@ -25,16 +54,9 @@ def område(rad, tmp):
         r = cur.fetchone()
         if r:
             json.dump({"celle": r[0], "referansehoyde_m": r[1], "kolonner": r[2], "timer": r[3]}, open(fil, "w"), separators=(",", ":"))
-        try:
-            res = subprocess.run([sys.executable, "-I", os.path.join(HER, "hent_vaer.py"), "--lat", str(lat), "--lon", str(lon), "--days", "14",
-                                  "--ref-hoyde", str(ref), "--tidligere", fil, "--json", fil, "--workers", "4"], timeout=TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            print(f"{omrade}: tidsavbrudd, hopper over", file=sys.stderr)
+        d = hent(lat, lon, ref, 14, fil, omrade)
+        if d is None:
             return False
-        if res.returncode != 0:
-            print(f"{omrade}: henting feilet, hopper over", file=sys.stderr)
-            return False
-        d = json.load(open(fil))
         cur.execute(
             """insert into public.vaer (omrade, referansehoyde_m, celle, kolonner, timer, oppdatert)
                values (%s, %s, %s, %s, %s, now())
@@ -64,16 +86,9 @@ def rute(rad, tmp):
         r = cur.fetchone()
         if r:
             json.dump({"celle": r[0], "referansehoyde_m": r[1], "kolonner": r[2], "timer": r[3]}, open(fil, "w"), separators=(",", ":"))
-        try:
-            res = subprocess.run([sys.executable, "-I", os.path.join(HER, "hent_vaer.py"), "--lat", str(lat), "--lon", str(lon), "--days", str(dager),
-                                  "--ref-hoyde", str(ref), "--tidligere", fil, "--json", fil, "--workers", "4"], timeout=TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            print(f"rute {rute_id}: tidsavbrudd, hopper over", file=sys.stderr)
+        d = hent(lat, lon, ref, dager, fil, f"rute {rute_id}")
+        if d is None:
             return False
-        if res.returncode != 0:
-            print(f"rute {rute_id}: henting feilet, hopper over", file=sys.stderr)
-            return False
-        d = json.load(open(fil))
         cur.execute(
             """insert into public.rute_vaer (rute_id, referansehoyde_m, celle, kolonner, timer, oppdatert)
                values (%s, %s, %s, %s, %s, now())
@@ -93,7 +108,10 @@ def rute(rad, tmp):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--samtidig", type=int, default=4)
+    ap.add_argument("--kilde", choices=["openmeteo", "met"], default="openmeteo")
     a = ap.parse_args()
+    global KILDE
+    KILDE = a.kilde
     con = psycopg2.connect(os.environ["DATABASE_URL"])
     cur = con.cursor()
     cur.execute("select id, lat, lon, ref_hoyde_m from public.omrade where vaer order by rekkefolge, id")
