@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import hovdenVær from '@/data/vaer-hovden.json';
 import nordmarkaVær from '@/data/vaer-nordmarka.json';
 import baerumVær from '@/data/vaer-baerumsmarka.json';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLagret } from '@/data/lagring';
 import { lesAnonymt } from '@/data/neon';
 
@@ -209,28 +209,76 @@ export function useOmråde(): [Område, (id: OmrådeId) => void, { automatisk: b
 
 type Værdata = Område['vær'];
 const friskVær = new Map<string, Værdata>();
+/** Siste kjente rad i databasen per område (uansett alder), og hvilke områder vi har spurt om. Brukes til å si fra når været er gammelt eller mangler. */
+const sisteVær = new Map<string, { data: Værdata; oppdatert: number }>();
+const værSpurt = new Set<string>();
+export const VÆR_FERSK_DØGN = 4;
+
+export type Værstatus = {
+  data: Værdata;
+  /** false til databasen har svart (eller feilet), så vi ikke viser «mangler» mens vi henter */
+  lastet: boolean;
+  /** Når værjobben sist oppdaterte raden (ms), eller null hvis det ikke finnes noen */
+  oppdatert: number | null;
+  /** Ferske nok data til å gi smøreråd */
+  fersk: boolean;
+  /** Døgn siden siste oppdatering (null hvis ukjent) */
+  alderDøgn: number | null;
+};
+
+/** Værstatus for et område: fersk, gammel eller manglende, slik at løypesiden kan vise løypeinfo uten smøreråd når været ikke er til å stole på. */
+export function useVærstatus(o: Område): Værstatus {
+  const [data, versjon] = useVærMedVersjon(o);
+  // versjon teller hver gang databasen har svart; modulvariablene under endres utenfor React, så den må stå i avhengighetene
+  return useMemo(() => {
+    const sist = sisteVær.get(o.id);
+    const oppdatert = sist?.oppdatert ?? null;
+    const alderDøgn = oppdatert === null ? null : (Date.now() - oppdatert) / 86400_000;
+    const innebygd = !sist && data.timer.length > 0; // innebygd kopi når databasen ikke svarer (Hovden, Nordmarka, Bærumsmarka)
+    const fersk = friskVær.has(o.id) || innebygd;
+    return { data: friskVær.get(o.id) ?? data, lastet: værSpurt.has(o.id), oppdatert, fersk, alderDøgn };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [o.id, data, versjon]);
+}
 
 /** Værhistorikk for området: ferdig innebygd kopi først, byttes mot siste fra databasen (oppdateres hver natt uten nytt bygg). */
 export function useVær(o: Område): Værdata {
-  const [, tving] = useState(0);
+  return useVærMedVersjon(o)[0];
+}
+
+function useVærMedVersjon(o: Område): [Værdata, number] {
+  const [versjon, tving] = useState(0);
   useEffect(() => {
     if (friskVær.has(o.id)) return;
     let avbrutt = false;
+    // Svarer ikke databasen innen 8 s, regnes været som ikke hentet (siden viser da beskjed i stedet for å vente for alltid)
+    const frist = setTimeout(() => {
+      if (!avbrutt) { værSpurt.add(o.id); tving((n) => n + 1); }
+    }, 8000);
     (async () => {
       try {
         const data = ((await lesAnonymt<{ referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string }>(`vaer?select=referansehoyde_m,timer,oppdatert&omrade=eq.${encodeURIComponent(o.id)}`))[0]) as { referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string } | undefined;
         const timer = data?.timer as (string | number)[][] | undefined;
-        if (!avbrutt && timer?.length && Date.parse(String(data!.oppdatert)) > Date.now() - 4 * 86400_000) {
-          friskVær.set(o.id, { referansehoyde_m: data!.referansehoyde_m, timer });
+        if (!avbrutt && timer?.length) {
+          sisteVær.set(o.id, { data: { referansehoyde_m: data!.referansehoyde_m, timer }, oppdatert: Date.parse(String(data!.oppdatert)) });
+          if (Date.parse(String(data!.oppdatert)) > Date.now() - VÆR_FERSK_DØGN * 86400_000) friskVær.set(o.id, { referansehoyde_m: data!.referansehoyde_m, timer });
+        }
+        if (!avbrutt) {
+          værSpurt.add(o.id);
           tving((n) => n + 1);
         }
       } catch {
         // uten nett eller database brukes den innebygde kopien
+        if (!avbrutt) {
+          værSpurt.add(o.id);
+          tving((n) => n + 1);
+        }
       }
     })();
     return () => {
       avbrutt = true;
+      clearTimeout(frist);
     };
   }, [o.id]);
-  return friskVær.get(o.id) ?? o.vær;
+  return [friskVær.get(o.id) ?? o.vær, versjon];
 }

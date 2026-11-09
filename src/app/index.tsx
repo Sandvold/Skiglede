@@ -16,7 +16,7 @@ import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useOmråde, useVær, type Område } from '@/data/omrader';
+import { useOmråde, useVær, useVærstatus, VÆR_FERSK_DØGN, type Område, type Værstatus } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { usePremium } from '@/data/premium';
 import { Loggkort } from '@/components/ski/loggkort';
@@ -102,27 +102,69 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
   );
 }
 
-/** Løypesiden trenger værhistorikk. Et nytt område har ingen før værjobben (hver 4. time) har kjørt: vis beskjed i stedet for å krasje. */
+/** Løypesiden: med ferske værdata vises hele siden. Uten (nytt område, eller værjobben har stoppet) vises løypa uten smøreråd, med beskjed om hvorfor. */
 function Detalj(props: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
-  const theme = useTheme();
-  const værdata = useVær(props.område);
-  if (værdata.timer.length === 0) {
-    return (
-      <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
-        <Hero />
-        <View style={styles.innhold}>
-          <Pressable onPress={props.onTilbake} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-            <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
-          </Pressable>
-          <Kort>
-            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700' }}>{props.område.navn}: værdata mangler</Text>
-            <ThemedText themeColor="textSecondary">Området er nytt, og værhistorikken er ikke hentet ennå. Den kommer automatisk i løpet av noen timer. Prøv igjen senere.</ThemedText>
-          </Kort>
-        </View>
-      </ScrollView>
-    );
-  }
+  const status = useVærstatus(props.område);
+  if (!status.fersk) return <DetaljUtenVær {...props} status={status} />;
   return <DetaljMedVær {...props} />;
+}
+
+/** Løypeinfo som ikke avhenger av vær: kart, lengde, høyde og profil. Smøreråd vises først når været er ferskt (maks 4 døgn gammelt), så ingen får råd bygget på gamle data. */
+function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void; status: Værstatus }) {
+  const theme = useTheme();
+  const gruppe = løype.variantAv ?? løype.id;
+  const varianter = liste.filter((l) => l.id === gruppe || l.variantAv === gruppe);
+  const km = løype.lengde_m / 1000;
+  const hs = løype.punkter.map((p) => p[2]);
+  const opp = løype.punkter.slice(1).reduce((sum, p, i) => sum + Math.max(0, p[2] - løype.punkter[i][2]), 0);
+  const farge = theme.accent;
+  const segmenter = useMemo(() => [{ pts: løype.punkter.map((p) => [p[0], p[1]] as [number, number]), farge }], [løype, farge]);
+  const profil = useMemo(() => løype.punkter.map((p) => ({ d: p[3], h: p[2], farge })), [løype, farge]);
+  const dager = status.alderDøgn === null ? null : Math.floor(status.alderDøgn);
+  const tittel = !status.lastet
+    ? 'Henter værdata …'
+    : dager === null
+      ? 'Værdata er ikke klare ennå'
+      : `Værdata er ${dager} døgn gamle`;
+  const tekst = !status.lastet
+    ? 'Smøretipset vises så snart været er hentet.'
+    : dager === null
+      ? `${område.navn} er nytt, og værjobben har ikke samlet data her ennå. Den kjører hver 4. time, så smøretips kommer automatisk. Løypa er klar til å se på i mellomtiden.`
+      : `Siste oppdatering er for gammel til at vi vil gi smøreråd (grensen er ${VÆR_FERSK_DØGN} døgn). Det kan bety at værtjenesten har stoppet. Tipsene kommer tilbake når nye data er hentet.`;
+  return (
+    <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
+      <Hero />
+      <View style={styles.innhold}>
+        <Pressable onPress={onTilbake} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+          <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
+        </Pressable>
+        <Loypevelger løyper={liste.filter((l) => !l.variantAv)} valgt={gruppe} onVelg={onVelg} />
+        {varianter.length > 1 && (
+          <View style={styles.rad}>
+            {varianter.map((v) => (
+              <Chip key={v.id} aktiv={v.id === løype.id} onPress={() => onVelg(v.id)}>
+                {`${v.type === 'retur' ? 'Tur-retur' : 'Sløyfe'} · ${(v.lengde_m / 1000).toFixed(1)} km`}
+              </Chip>
+            ))}
+          </View>
+        )}
+        <View style={[styles.advarsel, { borderColor: '#E3A64A' }]}>
+          <ThemedText type="smallBold">⚠ {tittel}</ThemedText>
+          <ThemedText type="small">{tekst}</ThemedText>
+        </View>
+        <Kort>
+          <Text style={[styles.h2, { color: theme.text }]}>{løype.navn}</Text>
+          <View style={styles.rad}>
+            <Tall verdi={`${km.toFixed(1)} km`} tekst={løype.type === 'retur' ? 'tur-retur' : løype.type === 'sloyfe' ? 'sløyfe' : 'lengde'} />
+            <Tall verdi={`${Math.round(Math.min(...hs))}–${Math.round(Math.max(...hs))}`} tekst="moh" />
+            <Tall verdi={`${Math.round(opp)} m`} tekst="stigning" />
+          </View>
+          <TrailMap segmenter={segmenter} />
+          <Hoydeprofil punkter={profil} />
+        </Kort>
+      </View>
+    </ScrollView>
+  );
 }
 
 function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake }: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
