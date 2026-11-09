@@ -1,6 +1,6 @@
 import trails from '../src/data/trails.json';
 import vaer from '../src/data/vaer-hovden.json';
-import { analyserSnø, byggStabel, lagSeksjoner, planTur, snøMedUnderlag, medUnderlag, delAndel, INGEN_UNDERLAG, type Punkt, type Vær, type Underlag } from '../src/engine';
+import { analyserSnø, byggStabel, lagSeksjoner, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, delAndel, INGEN_UNDERLAG, type Punkt, type Vær, type Underlag } from '../src/engine';
 
 let feil = 0;
 const ok = (b: boolean, t: string) => { if (!b) { feil++; console.log('FEIL:', t); } else console.log('ok:', t); };
@@ -29,7 +29,12 @@ ok(b.begrunnelse.some((x) => x.startsWith('Kunstsnø')) && b.advarsler.some((x) 
 const c = medUnderlag(a, u({ på: true, del: 'første-tredjedel' }, { på: false, del: 'hele' }), tur);
 ok(c.advarsler.some((x) => x.includes('bare på første tredjedel')), 'delvis kunstsnø gir advarsel om at resten er natursnø');
 ok(medUnderlag(a, INGEN_UNDERLAG, tur) === a, 'uten avkrysning er stabelen uendret');
-const d = medUnderlag(a, u({ på: false, del: 'hele' }, { på: true, del: 'hele' }), { ...tur, tMaks: -4, tMin: -9 });
+const d = medUnderlag(a, u({ på: false, del: 'hele' }, { på: true, del: 'hele' }), { ...tur, tMaksRå: -4, tMinRå: -9 });
 ok(d.advarsler.some((x) => x.includes('Salting virker ikke')), 'salt i kulde gir advarsel');
+const mildt = { ...tur, tMin: 1, tMaks: 3, sludd: true, seksjoner: tur.seksjoner.map((x) => ({ ...x, tEff: 2 })) };
+const sa = turMedUnderlag(mildt, u({ på: false, del: 'hele' }, { på: true, del: 'hele' }));
+ok(sa.tMaks === -3 && sa.seksjoner.every((x) => x.tEff === -3) && !sa.sludd, 'salt: snøtemp −3 og ikke sludd når lufta er mild');
+ok(turMedUnderlag(mildt, u({ på: false, del: 'hele' }, { på: true, del: 'første-tredjedel' })) === mildt, 'salt på under halve løypa endrer ikke temperaturen');
+ok(turMedUnderlag(mildt, INGEN_UNDERLAG) === mildt, 'uten salt uendret tur');
 console.log(feil ? `${feil} feil` : 'Alle sjekker OK');
 process.exit(feil ? 1 : 0);

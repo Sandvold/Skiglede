@@ -1,4 +1,7 @@
 import type { Lag, SnøAnalyse, Stabel, Tur } from './typer';
+
+/** Snøtemperatur på saltet snø (°C) når lufta er rundt null eller mildere [Forslag]. */
+export const SALT_SNØTEMP = -3;
 import type { Struktur } from './pro';
 
 /**
@@ -10,7 +13,8 @@ import type { Struktur } from './pro';
  *   men kunstsnø holder ekstra fuktighet, så ved varmt vær går man litt varmere. Rens og smør skiene rett etter turen, kunstsnø er skitten. Faller det natursnø oppå, gjelder natursnø-valg igjen.
  * - Salting [NSF: «Veiledning i salting av langrennsløyper» og saltveileder v7]: gir hardere og jevnere løype, «stor påvirkning på festesmøring og sålestruktur», staking blir mer fordelaktig enn diagonalgang,
  *   salt virker ikke ved lufttemperatur rundt null eller kaldere, og for mye salt tørker ut snøen. Testing på prøveområde anbefales. NSF gir INGEN konkrete anbefalinger for glider eller struktur på saltet snø.
- *   Det jeg bruker om at saltet løype er hard og iset (skarphet) og om ekstra vann/sug på glid er [Forslag] og må testes.
+ *   Fra brukeren [Bruker]: salt kjøler snøen (saltlaken tar varme fra snøen rundt, bekreftet av Beitostølen-veilederen, som ikke oppgir tall: «flere minusgrader» er brukerens erfaring) og binder fritt vann,
+ *   så løypa blir tørr, trå og slipende, ikke våt og sugende. Derfor settes snøtemperaturen til ca. −3 °C uansett hvor mild lufta er [Forslag på tallet], og sludd slås av. Hard glider, ikke grov struktur mot vann.
  */
 export type Del = 'hele' | 'første-halvdel' | 'siste-halvdel' | 'første-tredjedel' | 'midten' | 'siste-tredjedel';
 export const DEL_VALG: { verdi: Del; tekst: string; fra: number; til: number }[] = [
@@ -37,6 +41,13 @@ export const harUnderlag = (u: Underlag) => u.kunstsnø.på || u.salt.på;
 /** Fra denne andelen av løypa velges smøringen for det harde underlaget [Forslag]. Under: natursnø-valget beholdes, med advarsel. */
 export const UNDERLAG_MIN_ANDEL = 0.5;
 export const SKARPHET = { kunstsnø: 75, salt: 80 };
+
+/** Saltet løype (minst halve løypa): snøen er kaldere enn lufta og tørr. Seksjonenes snøtemperatur settes til −3 °C (eller kaldere hvis den allerede er det), og sludd slås av. Rå-verdiene beholdes til visning. */
+export function turMedUnderlag(tur: Tur, u: Underlag): Tur {
+  if (delAndel(u.salt) < UNDERLAG_MIN_ANDEL) return tur;
+  const f = (t: number) => Math.min(t, 0) + SALT_SNØTEMP;
+  return { ...tur, tMin: f(tur.tMin), tMaks: f(tur.tMaks), sludd: false, seksjoner: tur.seksjoner.map((x) => ({ ...x, tEff: f(x.tEff) })) };
+}
 
 /** Snøanalysen smøringen bygges på. Kunstsnø og salt regnes som hard, omdannet snø når de dekker minst halve løypa. */
 export function snøMedUnderlag(snø: SnøAnalyse, u: Underlag): SnøAnalyse {
@@ -80,11 +91,11 @@ export function medUnderlag(stabel: Stabel, u: Underlag, tur: Tur): Stabel {
     partielt(k, 'Kunstsnø');
   }
   if (s.på) {
-    begrunnelse.push(`Saltet løype${bare(s)}: hard og jevn (NSF). Salting har «stor påvirkning på festesmøring og sålestruktur». ${delAndel(s) >= UNDERLAG_MIN_ANDEL ? 'Smøringen er valgt som for hard, omdannet snø.' : ''}`.trim());
-    if (tur.tMaks < -1) advarsler.push(`Salting virker ikke ved lufttemperatur rundt null eller kaldere (NSF), og det er ned mot ${tur.tMin.toFixed(1)} °C. Sjekk at løypa faktisk er saltet.`);
+    begrunnelse.push(`Saltet løype${bare(s)}: salt kjøler snøen og binder det frie vannet, så løypa blir hard, tørr og slipende (NSF, Beitostølen-veilederen og erfaring). Salting har «stor påvirkning på festesmøring og sålestruktur». ${delAndel(s) >= UNDERLAG_MIN_ANDEL ? `Snøtemperaturen er satt til ca. ${SALT_SNØTEMP} °C uansett lufta [Forslag], og smøringen er valgt som for hard, omdannet snø.` : ''}`.trim());
+    if (tur.tMaksRå < -1) advarsler.push(`Salting virker ikke ved lufttemperatur rundt null eller kaldere (NSF), og det er ned mot ${tur.tMinRå.toFixed(1)} °C. Sjekk at løypa faktisk er saltet.`);
     if (klassisk) advarsler.push('Hard saltet løype: staking får fordel over diagonalgang med festesmøring (NSF). Test festet på et prøvestykke før start, og smør ikke tykkere enn nødvendig.');
-    tillegg.push('Saltet snø er hard og kan holde ekstra vann (brine). [Forslag] Test en grovere struktur og en litt varmere glider mot anbefalingen. NSF gir ingen fasit for glid på saltet snø.');
-    advarsler.push('For mye salt tørker ut snøen, og små saltkorn kan gi en isete skorpe. Be om å få teste ski på prøveområdet.');
+    tillegg.push('Saltet snø er kald, tørr og slipende som sandpapir: velg en hard, slitesterk glider (kald) og ikke gå varmere. Ingen grov struktur for å lede bort vann, det er lite fritt vann i saltet snø.');
+    advarsler.push('Smør etter snøtemperaturen, ikke lufta: smører du etter lufta, kladder og iser festet. Be om å få teste ski på prøveområdet.');
     partielt(s, 'Salt');
   }
   const lag = stabel.lag.map((l) => (erGlid(l) && tillegg.length ? { ...l, merknad: [l.merknad, ...tillegg].filter(Boolean).join(' ') } : l));
@@ -96,6 +107,6 @@ export function strukturMedUnderlag(s: Struktur, u: Underlag): Struktur {
   if (!harUnderlag(u)) return s;
   const del: string[] = [];
   if (u.kunstsnø.på) del.push('Kunstsnø: samme struktur som natursnø ved samme temperatur (SkinnySki/Swix).');
-  if (u.salt.på) del.push('Saltet løype: NSF sier salting påvirker sålestrukturen, men gir ingen anbefaling. [Forslag] Test strukturen ett trinn grovere.');
+  if (u.salt.på) del.push('Saltet løype: snøen er kald og tørr, så strukturen følger snøtemperaturen (ikke grov for å lede bort vann). NSF sier salting påvirker sålestrukturen, men gir ingen fasit.');
   return { ...s, grunn: `${s.grunn} ${del.join(' ')}` };
 }

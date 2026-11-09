@@ -24,7 +24,7 @@ import { useLagret } from '@/data/lagring';
 import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
-import { SWIX, analyserSnø, anbefalStruktur, nabostruktur, byggSmøring, lagSeksjoner, planTur, proGlidelag, snøMedUnderlag, medUnderlag, strukturMedUnderlag, INGEN_UNDERLAG, type Underlag, type Stil, type Tur, type Vær } from '@/engine';
+import { SWIX, analyserSnø, anbefalStruktur, nabostruktur, byggSmøring, lagSeksjoner, planTur, proGlidelag, snøMedUnderlag, turMedUnderlag, medUnderlag, strukturMedUnderlag, INGEN_UNDERLAG, type Underlag, type Stil, type Tur, type Vær } from '@/engine';
 
 type Renn = { id: string; navn: string; omrade: string; dato: string | null; starttid: string | null; stil: string | null; lengde_km: number | null; loype_id: string | null; testdata: boolean; merknad: string | null };
 
@@ -352,7 +352,7 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
     const dekket = ønsket + 6 * 3600_000 <= sisteTs;
     const startTs = dekket ? ønsket : sisteTs - 8 * 3600_000;
     const snø = snøMedUnderlag(analyserSnø(alle, startTs, null), underlag);
-    const tur = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO_RENN[stil], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
+    const tur = turMedUnderlag(planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO_RENN[stil], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted }), underlag);
     const stabel = medUnderlag(byggSmøring(stil as Stil, tur, snø, seksjoner, false, SWIX), underlag, tur);
     // Tre alternativer til test: anbefalt, kaldere og varmere (±2 °C er [Forslag]). Like alternativer slås sammen.
     const forskyv = (d: number): Tur => ({ ...tur, tMin: tur.tMin + d, tMaks: tur.tMaks + d, tMinRå: tur.tMinRå + d, tMaksRå: tur.tMaksRå + d, seksjoner: tur.seksjoner.map((x) => ({ ...x, tEff: x.tEff + d, tLuft: x.tLuft + d })) });
