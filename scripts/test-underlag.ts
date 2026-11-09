@@ -1,6 +1,6 @@
 import trails from '../src/data/trails.json';
 import vaer from '../src/data/vaer-hovden.json';
-import { analyserSnø, byggStabel, lagSeksjoner, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, strukturMedUnderlag, anbefalStruktur, delAndel, INGEN_UNDERLAG, type Punkt, type Vær, type Underlag } from '../src/engine';
+import { analyserSnø, byggStabel, lagSeksjoner, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, strukturMedUnderlag, byggMedLager, anbefalStruktur, delAndel, INGEN_UNDERLAG, type Punkt, type Vær, type Underlag } from '../src/engine';
 
 let feil = 0;
 const ok = (b: boolean, t: string) => { if (!b) { feil++; console.log('FEIL:', t); } else console.log('ok:', t); };
@@ -42,5 +42,13 @@ ok(st.nivå >= 3 && st.navn.includes('grov'), 'salt gir medium til grov rille');
 const eld = u({ på: true, del: 'hele', alder: 'eldre' } as any, { på: false, del: 'hele' });
 ok(snøMedUnderlag(natur, eld) === natur, 'eldre kunstsnø: snøtypen endres ikke');
 ok(medUnderlag(a, eld, tur).begrunnelse.some((x) => x.startsWith('Eldre kunstsnø')), 'eldre kunstsnø: egen begrunnelse');
+const skift = { ...tur, variasjon: 6, tMin: -3, tMaks: 2, sludd: false, seksjoner: tur.seksjoner.map((x) => ({ ...x, tEff: -0.5 })) };
+const hard = { ...natur, type: 'omdannet' as const, skarphet: 70 };
+const medNero = byggMedLager('klassisk', skift, hard, sek, false, ['KB20C', 'KN44', 'K21S', 'KX45N', 'VP45']);
+const utenNero = byggMedLager('klassisk', skift, hard, sek, false, ['KB20C', 'K21S', 'KX45N', 'VP45']);
+const dagK = (st: any) => st.lag.find((l: any) => l.rolle === 'Dagens klister')?.produkt;
+ok(dagK(medNero) === 'KN44', 'KN44 i lageret brukes ved skiftende vær (fikk ' + dagK(medNero) + ')');
+ok(dagK(utenNero) !== 'KN44', 'uten KN44 i lageret brukes den ikke (fikk ' + dagK(utenNero) + ')');
+ok(!medNero.advarsler.some((x: string) => x.includes('men du har den ikke')), 'ingen «har den ikke»-advarsel når KN44 foretrekkes');
 console.log(feil ? `${feil} feil` : 'Alle sjekker OK');
 process.exit(feil ? 1 : 0);

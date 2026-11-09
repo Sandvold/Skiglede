@@ -63,6 +63,7 @@ export function systemFraLager(id: MerkeId, lager: string[]): Smøresystem | nul
     baseKlister: har(sys.baseKlister), isKlister: har(sys.isKlister),
     universalVarm: har(sys.universalVarm), universalKald: har(sys.universalKald),
     sluddKald: har(sys.sluddKald), sluddVarm: har(sys.sluddVarm),
+    foretrekkNero: har(sys.sluddVarm)?.navn === 'KN44',
   };
 }
 
@@ -115,7 +116,7 @@ export function byggMedLager(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner:
   const mitt = dagens(st);
   const advarsler = [...st.advarsler];
   // [Bruker] KX30 og KX35N fungerer nesten likt: bytte mellom dem gir ingen advarsel.
-  const lik = (x: string, y: string) => [x, y].every((n) => n === 'KX30' || n === 'KX35N');
+  const lik = (x: string, y: string) => [x, y].every((n) => n === 'KX30' || n === 'KX35N') || (y === 'KN44' && ['K21S', 'K22'].includes(x)); // [Bruker] KN44 foretrekkes framfor universal ved skiftende vær
   if (mål && mitt && mål !== mitt && !lik(mål, mitt)) advarsler.push(`Anbefalt er ${mål}, men du har den ikke: bruker ${mitt} i stedet.`);
   const begrunnelse = [...st.begrunnelse, `Smøringen er bygget av ${primær.sys.navn}-produktene i smørelageret ditt (ett merke, slik at lagene henger sammen).`];
   return { ...st, advarsler, begrunnelse, alternativer: alt.length ? alt : undefined };

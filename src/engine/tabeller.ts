@@ -180,6 +180,8 @@ export type Smøresystem = {
   universalKald?: Produkt;
   sluddKald?: Produkt;
   sluddVarm?: Produkt;
+  /** [Bruker] Har du KN44 (Nero) i lageret, brukes den ved skiftende vær i stedet for universalklister: den iser mindre og tåler varierende vær bedre. Settes av systemFraLager. */
+  foretrekkNero?: boolean;
   /** Navn på klister brukt som mellomlag (kald, mild). Mangler i lista = ingen mellomlag */
   mellomKlister?: [string, string];
   /** Klister som brukes som ett tykt lag alene, uten mellomlag */

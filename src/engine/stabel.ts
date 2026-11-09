@@ -138,7 +138,9 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   const skiftende = tur.sludd || tur.variasjon >= 4 || tur.tMaks - tur.tMin >= 5;
   const universal = T.varm >= -1 ? sys.universalVarm : sys.universalKald;
   const slud = T.varm >= -0.5 ? sys.sluddVarm : sys.sluddKald;
-  const dagP = tur.sludd ? (slud ?? universal) : skiftende ? universal : undefined;
+  // [Bruker] KN44 (Nero) i lageret: brukes ved skiftende vær i stedet for universal. Den iser mindre og tåler varierende vær bedre.
+  const nero = sys.foretrekkNero && sys.sluddVarm && T.varm >= sys.sluddVarm.omr[0] && T.varm <= sys.sluddVarm.omr[1] ? sys.sluddVarm : undefined;
+  const dagP = tur.sludd ? (slud ?? universal) : skiftende ? (nero ?? universal) : undefined;
   // [Bruker] KX30 (blå isklister) brukes som dagens klister på omdannet snø under 0 °C, med voksdekke over (gjerne Blå Extra). Ikke ved sludd eller skiftende vær.
   const isK = sys.isKlister;
   const kaldDekke = !!isK && !tur.sludd && !skiftende && tur.tMaks <= 0.5 && T.varm >= isK.omr[0] - 1 && T.varm <= isK.omr[1] + 1;
@@ -173,7 +175,7 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
     tur.sludd
       ? `Sludd/bløt snø rundt turen: ${dagP === slud && slud ? 'sludd-klister' : 'universalklister'} (${dag.navn}).`
       : skiftende
-        ? `Skiftende vær (${tur.variasjon.toFixed(1)} °C utslag i lufta, ${(tur.tMaks - tur.tMin).toFixed(1)} °C langs løypa): Universal-klister.`
+        ? `Skiftende vær (${tur.variasjon.toFixed(1)} °C utslag i lufta, ${(tur.tMaks - tur.tMin).toFixed(1)} °C langs løypa): ${dagP === nero && nero ? `${nero.navn} (Nero), som iser mindre og tåler varierende vær bedre [Bruker]` : 'Universal-klister'}.`
         : 'Stabilt vær: vanlig klister.'
   );
   begrunnelse.push(
