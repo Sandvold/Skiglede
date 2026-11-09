@@ -15,7 +15,7 @@ import vaer_openmeteo
 
 HER = os.path.dirname(os.path.abspath(__file__))
 TIMEOUT_S = 900
-KILDE = "openmeteo"  # eller "met" (OPeNDAP, ett kall per time per område: tregt og feiler ved mange områder)
+KILDE = "met"  # MET Nordic via OPeNDAP (gratis; data samles fra nå, se --vekst i hent_vaer.py) eller "openmeteo" (ett kall for hele vinduet; kommersiell bruk krever abonnement)
 
 
 def hent(lat, lon, ref, dager, fil, navn):
@@ -33,7 +33,7 @@ def hent(lat, lon, ref, dager, fil, navn):
         return d
     try:
         res = subprocess.run([sys.executable, "-I", os.path.join(HER, "hent_vaer.py"), "--lat", str(lat), "--lon", str(lon), "--days", str(dager),
-                              "--ref-hoyde", str(ref), "--tidligere", fil, "--json", fil, "--workers", "4"], timeout=TIMEOUT_S)
+                              "--ref-hoyde", str(ref), "--tidligere", fil, "--json", fil, "--workers", "4", "--vekst"], timeout=TIMEOUT_S)
     except subprocess.TimeoutExpired:
         print(f"{navn}: tidsavbrudd, hopper over", file=sys.stderr)
         return None
@@ -108,7 +108,7 @@ def rute(rad, tmp):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--samtidig", type=int, default=4)
-    ap.add_argument("--kilde", choices=["openmeteo", "met"], default="openmeteo")
+    ap.add_argument("--kilde", choices=["openmeteo", "met"], default="met")
     a = ap.parse_args()
     global KILDE
     KILDE = a.kilde

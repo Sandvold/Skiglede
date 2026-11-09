@@ -7,7 +7,7 @@ Eksempel (Hovden, siste 14 dager, skriver SQL til fil):
 Enheter i utdata: temp_c (°C), precip_mm (mm/time), rh (0-1), wind_ms (m/s),
 sw_j_m2 (J/m² integrert over timen).
 """
-import argparse, re, sys, urllib.parse, urllib.request
+import argparse, re, sys, time, urllib.error, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
@@ -26,10 +26,25 @@ VARS = [
 ]
 
 
+UA = "Skiglede/1.0 (kontakt: sandvold40@gmail.com)"  # MET krever identifiserende User-Agent og kaster ut anonyme klienter med mye trafikk
+
+
 def get(url_base, query):
+    """Ett kall mot MET. 404 (filen finnes ikke) går rett videre; 429/5xx/tidsavbrudd prøves på nytt med økende ventetid (og Retry-After)."""
     url = url_base + ".ascii?" + urllib.parse.quote(query, safe=":,_")
-    with urllib.request.urlopen(url, timeout=60) as r:
-        return r.read().decode()
+    for n in range(5):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=60) as r:
+                return r.read().decode()
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 500, 502, 503, 504) or n == 4:
+                raise
+            ra = e.headers.get("Retry-After")
+            time.sleep(min(120, float(ra)) if ra and ra.isdigit() else 5 * 3**n)
+        except (TimeoutError, urllib.error.URLError):
+            if n == 4:
+                raise
+            time.sleep(3 * (n + 1))
 
 
 def candidates(t):
@@ -72,6 +87,7 @@ def main():
     ap.add_argument("--json", help="skriv timesverdier som JSON (formatet src/data/vaer-hovden.json)")
     ap.add_argument("--ref-hoyde", type=float, default=838, help="høyde (m) for temperaturene, lagres i JSON")
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--vekst", action="store_true", help="samle data fra nå: nytt punkt starter med de siste 12 timene, og vinduet vokser mot --days (ingen tung første fylling)")
     ap.add_argument("--tidligere", help="JSON fra forrige kjøring: henter bare nye timer og de siste 6 (færre kall mot MET)")
     a = ap.parse_args()
 
@@ -98,6 +114,10 @@ def main():
             if g.get("celle") == [i, j] and g.get("referansehoyde_m") == a.ref_hoyde:
                 gamle = {r[0]: r for r in g["timer"]}
     iso = lambda t: t.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if a.vekst:
+        # Vinduet starter ved eldste lagrede time (eller 12 timer tilbake for et nytt punkt) og vokser til --days. Hull fylles, eldre historikk hentes ikke.
+        eldste = min(gamle) if gamle else iso(now - timedelta(hours=12))
+        hours = [t for t in hours if iso(t) >= eldste]
     # Gamle timer beholdes; bare manglende timer og de siste 6 (kan bli revidert) hentes på nytt
     skal_hentes = [t for t in hours if iso(t) not in gamle or t >= now - timedelta(hours=6)]
     print(f"henter {len(skal_hentes)} av {len(hours)} timer", file=sys.stderr)
@@ -117,7 +137,7 @@ def main():
         ny = {r[0] for r in timer}
         vindu = {iso(t) for t in hours}
         timer = sorted(timer + [r for k, r in gamle.items() if k in vindu and k not in ny], key=lambda r: r[0])
-        if len(timer) < len(hours) * 0.9:
+        if len(timer) < len(hours) * 0.9 or not timer:
             sys.exit(f"for få timer ({len(timer)} av {len(hours)}), skriver ikke {a.json}")
         with open(a.json, "w") as f:
             json.dump({"celle": [i, j], "referansehoyde_m": a.ref_hoyde,
