@@ -58,7 +58,9 @@ export async function erKjentUtfartssted(lat: number, lon: number): Promise<bool
  * Samme format som områdenes værhistorikk. Open-Meteo er gratis til ikke-kommersiell bruk; ved betalte kunder trengs avtale eller en annen kilde.
  */
 export async function hentRutevær(lat: number, lon: number): Promise<{ referansehoyde_m: number; timer: (string | number)[][] }> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=temperature_2m,precipitation,relative_humidity_2m,wind_speed_10m,shortwave_radiation&past_days=14&forecast_days=1&models=metno_nordic&wind_speed_unit=ms&timezone=UTC`;
+  // MET Nordic dekker bare Norden; ellers lar vi Open-Meteo velge beste modell for stedet (ICON, ECMWF, AROME …)
+  const modell = lat >= 54 && lon >= 2 && lon <= 34 ? '&models=metno_nordic' : '';
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=temperature_2m,precipitation,relative_humidity_2m,wind_speed_10m,shortwave_radiation&past_days=14&forecast_days=1${modell}&wind_speed_unit=ms&timezone=UTC`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Værtjenesten svarte ${r.status}`);
   const j = (await r.json()) as { elevation?: number; hourly?: { time: string[]; temperature_2m: (number | null)[]; precipitation: (number | null)[]; relative_humidity_2m: (number | null)[]; wind_speed_10m: (number | null)[]; shortwave_radiation: (number | null)[] } };

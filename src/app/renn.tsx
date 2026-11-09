@@ -207,7 +207,7 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
       setOpptatt(true);
       const a = r.assets[0];
       const gpx = lesGpx(a.file ? await a.file.text() : await (await fetch(a.uri)).text());
-      setStatus('Henter høyde og skog fra Kartverket …');
+      setStatus('Henter høyde og skog …');
       const løype = await byggFraGpx(gpx.punkter, rennNavn.trim());
       løype.terreng = await terrengFor(løype.punkter, (f, t) => setStatus(`Regner terreng for solskygge … ${Math.round((f / t) * 100)} %`));
       const km = (a_: { sted: { lat: number; lon: number } }) => Math.hypot((a_.sted.lat - løype.start_lat) * 111, (a_.sted.lon - løype.start_lon) * 111 * Math.cos((løype.start_lat * Math.PI) / 180));
@@ -231,7 +231,7 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
       const a = r.assets[0];
       const tekst = a.file ? await a.file.text() : await (await fetch(a.uri)).text();
       const gpx = lesGpx(tekst);
-      setStatus('Henter høyde og skog fra Kartverket …');
+      setStatus('Henter høyde og skog …');
       const navn = (gpx.navn || a.name.replace(/\.gpx$/i, '') || 'Min rute').slice(0, 80);
       const løype = await byggFraGpx(gpx.punkter, navn);
       løype.terreng = await terrengFor(løype.punkter, (f, t) => setStatus(`Regner terreng for solskygge … ${Math.round((f / t) * 100)} %`));

@@ -34,7 +34,7 @@ export function EgneRuter({ mine, bruker, område, onVelg }: { mine: ReturnType<
       setOpptatt(true);
       const a = r.assets[0];
       const gpx = lesGpx(a.file ? await a.file.text() : await (await fetch(a.uri)).text());
-      setStatus('Henter høyde og skog fra Kartverket …');
+      setStatus('Henter høyde og skog …');
       const løype = await byggFraGpx(gpx.punkter, n);
       const avstand = Math.hypot((område.sted.lat - løype.start_lat) * 111, (område.sted.lon - løype.start_lon) * 111 * Math.cos((løype.start_lat * Math.PI) / 180));
       if (avstand > MAKS_KM) return setStatus(`Ruten starter ${Math.round(avstand)} km fra ${område.navn}. Bytt til området den ligger i, så får den riktig vær.`);
