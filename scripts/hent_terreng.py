@@ -18,7 +18,7 @@ fra samme start, nabopunkter og senere kjøringer bruker de samme punktene, så 
 rundes til 1 m (dtm1-oppløsning) for punkter nær løypa og 10 m for ringene utenfor 200 m (horisontvinkelen merker det ikke).
 Kallene deles mellom --workers samtidige tråder (delt kø), med valgfri --pause per kall for å være grei mot API-et.
 """
-import argparse, json, math, os, sqlite3, sys, threading, time, urllib.error, urllib.parse, urllib.request
+import argparse, json, math, os, random, sqlite3, sys, threading, time, urllib.error, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pyproj import Transformer
 
@@ -30,11 +30,22 @@ STEG = 250  # m langs løypa; tur.ts bruker seksjoner à ca. 250 m og slår opp 
 
 PAUSE = 0.0  # sekunder per kall, settes fra --pause
 FORSØK = 8
+_vent_til = [0.0]  # felles pause: får én tråd 429/5xx, venter alle (ellers bruker de andre kallene på å bli avvist)
+_vent_lås = threading.Lock()
+
+
+def _felles_pause():
+    while True:
+        rest = _vent_til[0] - time.time()
+        if rest <= 0:
+            return
+        time.sleep(min(rest, 5))
 
 
 def hent(chunk):
     q = urllib.parse.urlencode({"punkter": json.dumps([[round(x, 1), round(y, 1)] for x, y in chunk]), "koordsys": 25832})
     for forsøk in range(FORSØK):
+        _felles_pause()
         try:
             with urllib.request.urlopen(f"{REST}?{q}", timeout=90) as r:
                 z = [p.get("z") for p in json.load(r)["punkter"]]
@@ -47,7 +58,24 @@ def hent(chunk):
             # 429/5xx: vent lenge (API-et er overbelastet), ellers kort pause med økende ventetid
             kode = e.code if isinstance(e, urllib.error.HTTPError) else 0
             treg = kode in (429, 502, 503, 504) or isinstance(e, TimeoutError) or "timed out" in str(e)  # tjenesten er treg/overbelastet
-            time.sleep(min(30 + 30 * forsøk, 180) if treg else 2 * 2**forsøk)
+            vent = (min(30 + 30 * forsøk, 180) if treg else 2 * 2**forsøk) * random.uniform(0.8, 1.3)  # jitter, så trådene ikke går i takt
+            if treg:
+                with _vent_lås:
+                    _vent_til[0] = max(_vent_til[0], time.time() + vent)
+            time.sleep(vent)
+
+
+def speilet(t):
+    """Er dette en tur-retur der siste halvdel følger første halvdel (samme vei tilbake)? Da trenger bare første halvdel terrengoppslag."""
+    p = t["punkter"]
+    n = len(p)
+    if t.get("type") != "retur" or n < 6:
+        return False
+    for i in range(0, n // 2, max(1, n // 40)):
+        a, b = p[i], p[n - 1 - i]
+        if math.hypot((a[0] - b[0]) * math.cos(math.radians(a[1])) * 111_320, (a[1] - b[1]) * 111_320) > 60:
+            return False
+    return True
 
 
 def lagre(data, fil):
@@ -169,7 +197,11 @@ def main():
         if a.fortsett and t.get("terreng"):
             continue
         valgt, neste = [], 0
+        lengde = t["punkter"][-1][3]
+        halv = speilet(t)  # tur-retur: bare veien ut slås opp, veien tilbake speiles (terrenget avhenger ikke av retningen)
         for p in t["punkter"]:
+            if halv and p[3] > lengde / 2:
+                break
             if p[3] >= neste:
                 valgt.append(p); neste = p[3] + STEG
         sett = [punkter_for(*til.transform(p[0], p[1])) for p in valgt]
@@ -201,9 +233,13 @@ def main():
         print(f'  {t["navn"]}: {len(deler)} kall ({len(flat) - len(mangler)} av {len(flat)} punkter fra cache)', flush=True)
         n = len(sett[0])
         zs = [zflat[i * n:(i + 1) * n] for i in range(len(sett))]
-        t["terreng"] = [r for r in (tolk(p[3], z) for p, z in zip(valgt, zs)) if r]
+        res = [r for r in (tolk(p[3], z) for p, z in zip(valgt, zs)) if r]
+        if halv:
+            res += [[round(lengde - r[0])] + r[1:] for r in res if r[0] < lengde / 2 - 1]
+            res.sort(key=lambda r: r[0])
+        t["terreng"] = res
         lagre(data, a.ut)  # lagrer etter hver løype
-        print(f'{t["navn"]}: {len(t["terreng"])} av {len(valgt)} punkter', flush=True)
+        print(f'{t["navn"]}: {len(t["terreng"])} punkter' + (f' (halve veien slått opp, resten speilet)' if halv else f' av {len(valgt)}'), flush=True)
     if feilet:
         print("\nFeilet (kjør på nytt med --fortsett):\n  " + "\n  ".join(feilet), file=sys.stderr)
         sys.exit(2)

@@ -166,7 +166,15 @@ def main():
         if a.dtm:
             kjør("scripts/hent_terreng_raster.py", "--ut", fil, "--dtm", a.dtm, "--fortsett")
         else:
-            kjør("scripts/hent_terreng.py", "--ut", fil, "--workers", str(a.workers), "--pause", "0.2", "--fortsett")
+            for runde in range(3):  # --fortsett tar bare løyper som mangler; en kort pause lar Kartverket hente seg inn mellom rundene
+                try:
+                    kjør("scripts/hent_terreng.py", "--ut", fil, "--workers", str(a.workers), "--pause", "0.2", "--fortsett")
+                    break
+                except SystemExit:
+                    if runde == 2:
+                        raise
+                    print(f"(terreng ufullstendig, ny runde om 60 s, {runde + 2}/3)", flush=True)
+                    time.sleep(60)
     z = [p[2] for t in ut for p in t["punkter"]]
     lo = statistics.mean(p[0] for t in ut for p in t["punkter"]); la = statistics.mean(p[1] for t in ut for p in t["punkter"])
     karfil = os.path.join(tempfile.gettempdir(), "karantene-" + a.id + ".json")

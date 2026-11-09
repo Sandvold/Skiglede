@@ -111,7 +111,8 @@ def main():
         import json, os
         if os.path.exists(a.tidligere):
             g = json.load(open(a.tidligere))
-            if g.get("celle") == [i, j] and g.get("referansehoyde_m") == a.ref_hoyde:
+            # Samme værcelle = samme historikk, også om referansehøyden er endret (da er timene i cellen fortsatt riktige og skal ikke kastes)
+            if g.get("celle") == [i, j]:
                 gamle = {r[0]: r for r in g["timer"]}
     iso = lambda t: t.strftime("%Y-%m-%dT%H:%M:%SZ")
     if a.vekst:

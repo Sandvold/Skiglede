@@ -24,6 +24,7 @@ def main():
     ap.add_argument("--maks-avstand", type=float, default=300)
     ap.add_argument("--skriv", action="store_true")
     a = ap.parse_args()
+    bo.Rutenett.min_noder = 30  # som i bygg_auto_ruter: standard 300 kaster små nett (lysløyper rundt tettsteder)
     nett = bo.Rutenett(bo.last(a.osm, uprep=True))
     starter = []
     for sd in a.start:

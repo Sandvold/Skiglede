@@ -22,6 +22,7 @@ def main():
     ap.add_argument("--min-avstand", type=float, default=3000)
     ap.add_argument("--maks-avstand", type=float, default=400)
     a = ap.parse_args()
+    bo.Rutenett.min_noder = 30  # som i bygg_auto_ruter: standard 300 kaster små nett (lysløyper rundt tettsteder)
     nett = bo.Rutenett(bo.last(a.osm, uprep=True))
     # Største sammenhengende nett: startpunkter i små, frakoblede biter gir ingen runder
     sett, komp = set(), set()

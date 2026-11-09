@@ -9,7 +9,7 @@ fra OpenStreetMap-stedsnavn (Nominatim) og runden heter «Start – Sted». Rund
     python3 -I scripts/bygg_auto_ruter.py --osm a.json --osm b.json --ut src/data/trails-baerumsmarka.json \
         --start "Fossum=10.6245,59.9605" [--skriv]
 """
-import argparse, json, math, os, sys, time, urllib.parse, urllib.request
+import random, argparse, json, math, os, sys, time, urllib.parse, urllib.request
 sys.path.insert(0, os.path.dirname(__file__))
 import bygg_osm_omrade as bo
 import bygg_osm_runder as br
@@ -29,12 +29,12 @@ NAVNETYPER = {
 def stedsnavn(lonlat, brukt, radius=1500):
     """Naturlig navn på et punkt: nærmeste stedsnavn av en egnet type fra Kartverket (ingen Nominatim, tåler parallelle kjøringer)."""
     q = urllib.parse.urlencode({"nord": lonlat[1], "ost": lonlat[0], "koordsys": 4326, "radius": radius, "treffPerSide": 200, "side": 1, "utkoordsys": 4326})
-    for forsøk in range(3):
+    for forsøk in range(6):
         try:
             d = json.load(urllib.request.urlopen(urllib.request.Request("https://ws.geonorge.no/stedsnavn/v1/punkt?" + q, headers={"User-Agent": "skiglede"}), timeout=30))
             break
         except Exception:
-            time.sleep(2 * (forsøk + 1))
+            time.sleep(min(60, 3 * 2**forsøk) * random.uniform(0.8, 1.3))
     else:
         return None
     kand = []
@@ -48,6 +48,16 @@ def stedsnavn(lonlat, brukt, radius=1500):
 
 
 def felles(a, b, tol=25):
+    """Andel av a (punkter hver 50. m) som ligger innen tol m av b. KD-tre i stedet for dobbel løkke."""
+    import numpy as np
+    from scipy.spatial import cKDTree
+    pa = np.array(br.hh.resample(a, 50))
+    pb = np.array(br.hh.resample(b, 50))
+    d, _ = cKDTree(pb).query(pa, distance_upper_bound=tol)
+    return float(np.isfinite(d).sum()) / len(pa)
+
+
+def felles_gammel(a, b, tol=25):
     pa = br.hh.resample(a, 50)
     pb = br.hh.resample(b, 50)
     return sum(1 for p in pa if any(math.dist(p, q) < tol for q in pb)) / len(pa)
@@ -143,7 +153,7 @@ def main():
             retur = False
         for sc, pts, L, ov, t in tatt:
             lonlat = FRA.transform(*nett.noder[t])
-            navn = stedsnavn(lonlat, brukt_navn | {sn}) or f"punkt {len(valgt) + 1}"
+            navn = stedsnavn(lonlat, brukt_navn | {sn}) or f"tur {len(valgt) + 1}"  # Kartverket svarte ikke etter flere forsøk: startstedets navn + nummer
             brukt_navn.add(navn)
             print(f"  {sn} – {navn}: {L / 1000:.1f} km{' tur-retur' if retur else ''}, overlapp {ov} %")
             valgt.append((f"{sn} – {navn}", pts, lonlat, retur))

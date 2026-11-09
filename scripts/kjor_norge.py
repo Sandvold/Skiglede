@@ -56,6 +56,8 @@ def bygg(m, a, steder, status):
     except subprocess.TimeoutExpired:
         status[id_] = dict(ok=False, sek=round(time.time() - t0), feil="tidsavbrudd")
     AKTIVE.pop(id_, None)
+    if not status[id_]["ok"] and os.path.exists(fil):
+        os.replace(fil, fil + ".feilet")  # en halvferdig løypefil skal aldri havne i en commit; et nytt forsøk bygger på nytt
     json.dump(status, open(os.path.join(a.mappe, "status.json"), "w"), ensure_ascii=False, indent=1)
     return id_, "ok" if status[id_]["ok"] else "FEILET: " + str(status[id_]["feil"])[:120]
 

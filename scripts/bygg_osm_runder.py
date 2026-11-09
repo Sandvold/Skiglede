@@ -107,12 +107,26 @@ def polylinje(nett, sti):
 
 
 def overlapp_pct(pts):
-    """Andel av runden som ligger innen 20 m av en annen del av runden som er langt unna langs løypa."""
+    """Andel av runden som ligger innen 20 m av en annen del av runden som er langt unna langs løypa.
+    Naboer finnes med et KD-tre (i stedet for en full avstandsmatrise): samme svar, mye raskere."""
+    import numpy as np
+    from scipy.spatial import cKDTree
+    pr = np.array(hh.resample(pts, 20))
+    dist = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(pr, axis=0).T))])
+    par = cKDTree(pr).query_pairs(20, output_type="ndarray")
+    if not len(par):
+        return 0
+    langt = np.abs(dist[par[:, 0]] - dist[par[:, 1]]) > 300
+    return round(100 * len(np.unique(par[langt])) / len(pr))
+
+
+def overlapp_pct_gammel(pts):
+    """Den opprinnelige matrisemetoden (beholdt for sammenligning i test)."""
     import numpy as np
     pr = np.array(hh.resample(pts, 20))
     dist = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(pr, axis=0).T))])
     n = 0
-    for i in range(0, len(pr), 400):  # blokkvis, så minnebruket holder seg lavt selv for lange runder
+    for i in range(0, len(pr), 400):
         d = np.hypot(pr[i:i + 400, None, 0] - pr[None, :, 0], pr[i:i + 400, None, 1] - pr[None, :, 1])
         langt = np.abs(dist[i:i + 400, None] - dist[None, :]) > 300
         n += int(((d < 20) & langt).any(axis=1).sum())
