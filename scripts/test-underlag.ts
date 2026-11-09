@@ -39,5 +39,8 @@ ok(turMedUnderlag(mildt, u({ på: false, del: 'hele' }, { på: true, del: 'førs
 ok(turMedUnderlag(mildt, INGEN_UNDERLAG) === mildt, 'uten salt uendret tur');
 const st = strukturMedUnderlag(anbefalStruktur(-3, snø0(), false, 'klassisk'), u({ på: false, del: 'hele' }, { på: true, del: 'hele' }));
 ok(st.nivå >= 3 && st.navn.includes('grov'), 'salt gir medium til grov rille');
+const eld = u({ på: true, del: 'hele', alder: 'eldre' } as any, { på: false, del: 'hele' });
+ok(snøMedUnderlag(natur, eld) === natur, 'eldre kunstsnø: snøtypen endres ikke');
+ok(medUnderlag(a, eld, tur).begrunnelse.some((x) => x.startsWith('Eldre kunstsnø')), 'eldre kunstsnø: egen begrunnelse');
 console.log(feil ? `${feil} feil` : 'Alle sjekker OK');
 process.exit(feil ? 1 : 0);

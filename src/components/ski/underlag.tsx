@@ -1,3 +1,4 @@
+import type React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -6,7 +7,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { DEL_VALG, type Del, type Påvirkning, type Underlag } from '@/engine';
 
-function Rad({ tittel, hjelp, p, onChange }: { tittel: string; hjelp: string; p: Påvirkning; onChange: (p: Påvirkning) => void }) {
+function Rad<T extends Påvirkning>({ tittel, hjelp, p, onChange, ekstra }: { tittel: string; hjelp: string; p: T; onChange: (p: T) => void; ekstra?: React.ReactNode }) {
   const theme = useTheme();
   return (
     <View style={{ gap: 6 }}>
@@ -22,6 +23,7 @@ function Rad({ tittel, hjelp, p, onChange }: { tittel: string; hjelp: string; p:
           <Nedtrekk etikett={`${tittel}: hvor på løypa`} verdi={p.del} valg={DEL_VALG.map((d) => ({ verdi: d.verdi, tekst: d.tekst }))} onVelg={(v) => onChange({ ...p, del: v as Del })} />
         </View>
       ) : null}
+      {p.på && ekstra ? <View style={{ flexDirection: 'row', paddingLeft: 34 }}>{ekstra}</View> : null}
     </View>
   );
 }
@@ -30,7 +32,8 @@ function Rad({ tittel, hjelp, p, onChange }: { tittel: string; hjelp: string; p:
 export function UnderlagValg({ u, onChange, medSalt = false }: { u: Underlag; onChange: (u: Underlag) => void; medSalt?: boolean }) {
   return (
     <View style={{ gap: Spacing.two }}>
-      <Rad tittel="Kunstsnø" hjelp="Kryss av hvis løypa har kunstsnø: smøringen justeres." p={u.kunstsnø} onChange={(p) => onChange({ ...u, kunstsnø: p })} />
+      <Rad tittel="Kunstsnø" hjelp="Kryss av hvis løypa har kunstsnø: smøringen justeres." p={u.kunstsnø} onChange={(p) => onChange({ ...u, kunstsnø: p })}
+        ekstra={<Nedtrekk etikett="Kunstsnø: alder" verdi={u.kunstsnø.alder ?? 'fersk'} valg={[{ verdi: 'fersk', tekst: 'Fersk kunstsnø' }, { verdi: 'eldre', tekst: 'Eldre (noen dager)' }]} onVelg={(v) => onChange({ ...u, kunstsnø: { ...u.kunstsnø, alder: v as 'fersk' | 'eldre' } })} />} />
       {medSalt ? <Rad tittel="Saltet løype" hjelp="Kryss av hvis løypa er saltet." p={u.salt} onChange={(p) => onChange({ ...u, salt: p })} /> : null}
     </View>
   );

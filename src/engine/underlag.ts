@@ -26,8 +26,11 @@ export const DEL_VALG: { verdi: Del; tekst: string; fra: number; til: number }[]
   { verdi: 'siste-tredjedel', tekst: 'Siste tredjedel', fra: 2 / 3, til: 1 },
 ];
 export type Påvirkning = { på: boolean; del: Del };
-export type Underlag = { kunstsnø: Påvirkning; salt: Påvirkning };
-export const INGEN_UNDERLAG: Underlag = { kunstsnø: { på: false, del: 'hele' }, salt: { på: false, del: 'hele' } };
+/** Kunstsnø: fersk er slipende og hard; eldre (noen dager i løypa) er avrundet, og Swix sier at vanlig smøring gjelder igjen. Mangler alder, regnes den som fersk. */
+export type KunstAlder = 'fersk' | 'eldre';
+export type Underlag = { kunstsnø: Påvirkning & { alder?: KunstAlder }; salt: Påvirkning };
+export const INGEN_UNDERLAG: Underlag = { kunstsnø: { på: false, del: 'hele', alder: 'fersk' }, salt: { på: false, del: 'hele' } };
+export const eldreKunst = (u: Underlag) => u.kunstsnø.på && u.kunstsnø.alder === 'eldre';
 
 /** Andel av løypa (0–1) påvirkningen gjelder. */
 export const delAndel = (p: Påvirkning): number => {
@@ -51,7 +54,7 @@ export function turMedUnderlag(tur: Tur, u: Underlag): Tur {
 
 /** Snøanalysen smøringen bygges på. Kunstsnø og salt regnes som hard, omdannet snø når de dekker minst halve løypa. */
 export function snøMedUnderlag(snø: SnøAnalyse, u: Underlag): SnøAnalyse {
-  const ak = delAndel(u.kunstsnø);
+  const ak = eldreKunst(u) ? 0 : delAndel(u.kunstsnø);
   const as = delAndel(u.salt);
   const sk = Math.max(ak >= UNDERLAG_MIN_ANDEL ? SKARPHET.kunstsnø : 0, as >= UNDERLAG_MIN_ANDEL ? SKARPHET.salt : 0);
   if (!sk) return snø;
@@ -81,7 +84,11 @@ export function medUnderlag(stabel: Stabel, u: Underlag, tur: Tur): Stabel {
     }
   };
 
-  if (k.på) {
+  if (k.på && eldreKunst(u)) {
+    begrunnelse.push(`Eldre kunstsnø${bare(k)}: har ligget noen dager, kantene er slitt ned og snøen likner gammel, finkornet natursnø. Swix: glidet blir merkbart bedre og vanlig smøring gjelder igjen. Smøringen er valgt som for natursnø.`);
+    advarsler.push('Eldre kunstsnø er fortsatt tettere og fuktigere enn natursnø: slites festet fort, bruk baseklister/binder hvis det slipper. Velg fersk kunstsnø hvis det nylig er produsert eller lagt ut ny snø.');
+    partielt(k, 'Kunstsnø');
+  } else if (k.på) {
     begrunnelse.push(`Kunstsnø${bare(k)}: oppfører seg som omdannet, gjenfrosset snø (Swix/SkinnySki). ${delAndel(k) >= UNDERLAG_MIN_ANDEL ? 'Smøringen er valgt som for hard, omdannet snø.' : ''}`.trim());
     if (klassisk) {
       advarsler.push('Kunstsnø er slipende: legg baseklister/binder først og hold laget under festet tynt og jevnt, så festet ikke slites bort. Et hardvoksdekke over klisteret holder skitt og løse iskorn unna (kan være litt varmere enn temperaturen tilsier).');
