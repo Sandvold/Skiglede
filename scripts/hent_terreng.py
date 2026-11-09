@@ -29,14 +29,14 @@ STEG = 250  # m langs løypa; tur.ts bruker seksjoner à ca. 250 m og slår opp 
 
 
 PAUSE = 0.0  # sekunder per kall, settes fra --pause
-FORSØK = 5
+FORSØK = 8
 
 
 def hent(chunk):
     q = urllib.parse.urlencode({"punkter": json.dumps([[round(x, 1), round(y, 1)] for x, y in chunk]), "koordsys": 25832})
     for forsøk in range(FORSØK):
         try:
-            with urllib.request.urlopen(f"{REST}?{q}", timeout=60) as r:
+            with urllib.request.urlopen(f"{REST}?{q}", timeout=90) as r:
                 z = [p.get("z") for p in json.load(r)["punkter"]]
             if PAUSE:
                 time.sleep(PAUSE)
@@ -46,7 +46,8 @@ def hent(chunk):
                 raise
             # 429/5xx: vent lenge (API-et er overbelastet), ellers kort pause med økende ventetid
             kode = e.code if isinstance(e, urllib.error.HTTPError) else 0
-            time.sleep(30 + 30 * forsøk if kode in (429, 502, 503, 504) else 2 * 2**forsøk)
+            treg = kode in (429, 502, 503, 504) or isinstance(e, TimeoutError) or "timed out" in str(e)  # tjenesten er treg/overbelastet
+            time.sleep(min(30 + 30 * forsøk, 180) if treg else 2 * 2**forsøk)
 
 
 def lagre(data, fil):
