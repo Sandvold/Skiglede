@@ -41,7 +41,7 @@ Uten `--dtm` hentes terrenget fra Kartverkets API (tregt, men ingen nedlasting).
 ## 6. Inn i appen (per fylke)
 1. **Først** områdene: kjør `INSERT`-radene fra `scripts\ut\omrader\omrader.sql` i Neon (`ON CONFLICT DO NOTHING`). Områdene må finnes i tabellen `omrade` før løypene lastes opp; push alene lager dem ikke. Se opp for dobbelte områder med nesten lik posisjon.
 2. Deretter: `git add src/data/trails-*.json && git commit && git pull --rebase && git push`. Jobben «Last opp løyper til Neon» kontrollerer løypene (dårlige settes i karantene) og laster dem opp.
-3. «Oppdater værhistorikk» i GitHub Actions trengs først før snøsesongen (nye områder får værdata da).
+3. Værhistorikk: områdene settes inn med `vaer = false`, så den planlagte jobben «Oppdater værhistorikk» hopper over dem. (Med `true` forsøkte jobben å hente 14 døgn for 100 nye områder på én gang, brukte 29 min og feilet.) Når snøsesongen nærmer seg: `update public.omrade set vaer = true where id in (...)` i små grupper, og start jobben manuelt og se at den går gjennom.
 
 Hold oversikt over hvilke fylker som er kjørt: `kjor_fylke.py` uten argumenter viser ferdige/feilet per fylke.
 
