@@ -9,8 +9,8 @@ import type { Struktur } from './pro';
  *
  * Kilder (hva som faktisk står der, og hva som er mitt forslag):
  * - Kunstsnø [SkinnySki/Swix-råd]: oppfører seg som omdannet og gjenfrosset snø, så klister er det trygge festevalget. Baseklister (KR20) først beskytter festet mot den slipende snøen,
- *   og et hardvoksdekke over klisteret holder skitt og løse iskorn unna (kan være varmere enn temperaturen tilsier). Glid: velg etter snøtemperatur som ellers, hardere (kaldere) voks tåler slitasje bedre,
- *   men kunstsnø holder ekstra fuktighet, så ved varmt vær går man litt varmere. Rens og smør skiene rett etter turen, kunstsnø er skitten. Faller det natursnø oppå, gjelder natursnø-valg igjen.
+ *   og et hardvoksdekke over klisteret holder skitt og løse iskorn unna (kan være varmere enn temperaturen tilsier). Glid: velg etter snøtemperatur som ellers, hardere (kaldere) voks tåler slitasje bedre.
+ *   Fra brukeren [Bruker]: kunstsnø er mest iskrystaller og føles glatt, så klister gir mening. Hard glider også rundt null og medium til grov struktur er [Forslag] fra en usitert kilde. Rens og smør skiene rett etter turen, kunstsnø er skitten. Faller det natursnø oppå, gjelder natursnø-valg igjen.
  * - Salting [NSF: «Veiledning i salting av langrennsløyper» og saltveileder v7]: gir hardere og jevnere løype, «stor påvirkning på festesmøring og sålestruktur», staking blir mer fordelaktig enn diagonalgang,
  *   salt virker ikke ved lufttemperatur rundt null eller kaldere, og for mye salt tørker ut snøen. Testing på prøveområde anbefales. NSF gir INGEN konkrete anbefalinger for glider eller struktur på saltet snø.
  *   Fra brukeren [Bruker]: salt kjøler snøen (saltlaken tar varme fra snøen rundt, bekreftet av Beitostølen-veilederen, som ikke oppgir tall: «flere minusgrader» er brukerens erfaring) og binder fritt vann,
@@ -87,7 +87,7 @@ export function medUnderlag(stabel: Stabel, u: Underlag, tur: Tur): Stabel {
       advarsler.push('Kunstsnø er slipende: legg baseklister/binder først og hold laget under festet tynt og jevnt, så festet ikke slites bort. Et hardvoksdekke over klisteret holder skitt og løse iskorn unna (kan være litt varmere enn temperaturen tilsier).');
     }
     if (stabel.type === 'hardvoks') advarsler.push('Kunstsnø under −8 °C: hardvoks over binder i stedet for klister. Hvis festet slipper, bytt til klister med voksdekke.');
-    tillegg.push('Kunstsnø slites hardt: kaldere (hardere) glider tåler slitasje bedre, men snøen holder ekstra fuktighet, så ved varme (rundt 0 °C og over) går du heller litt varmere. Rens og smør skiene rett etter turen.');
+    tillegg.push('Kunstsnø er tette, harde iskrystaller som slipende sandpapir: velg en hard, slitesterk glider selv rundt null, og ikke gå varmere. Snøen holder ekstra fuktighet, så test medium til grov struktur mot sug [Forslag]. Rens og smør skiene rett etter turen.');
     partielt(k, 'Kunstsnø');
   }
   if (s.på) {
@@ -106,7 +106,7 @@ export function medUnderlag(stabel: Stabel, u: Underlag, tur: Tur): Stabel {
 export function strukturMedUnderlag(s: Struktur, u: Underlag): Struktur {
   if (!harUnderlag(u)) return s;
   const del: string[] = [];
-  if (u.kunstsnø.på) del.push('Kunstsnø: samme struktur som natursnø ved samme temperatur (SkinnySki/Swix).');
+  if (u.kunstsnø.på) del.push('Kunstsnø: tett og fuktig, med sug under skiene. SkinnySki/Swix sier samme struktur som natursnø; en annen kilde sier medium til grov. [Forslag] Start med anbefalingen og test ett trinn grovere.');
   if (u.salt.på) del.push('Saltet løype: snøen er kald og tørr, så strukturen følger snøtemperaturen (ikke grov for å lede bort vann). NSF sier salting påvirker sålestrukturen, men gir ingen fasit.');
   return { ...s, grunn: `${s.grunn} ${del.join(' ')}` };
 }
