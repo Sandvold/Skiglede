@@ -2,23 +2,40 @@ import Svg, { Circle, Polyline } from 'react-native-svg';
 
 import { mx, my } from './kart';
 import { løypeFarge } from './loypefarger';
-import { ZoomKart } from './zoomkart';
+import { ZoomKart, type KartBoks } from './zoomkart';
 
 export type OversiktLøype = { id: string; navn: string; punkter: number[][] };
+export type NaboLøype = OversiktLøype & { omrade: string };
 
 /** Standardvisning: Hovden-sentrum med Breive, Vidmyr, Lundane og Hartevatn i bildet [Bruker]. */
 export const HOVDEN_VISNING = { lon: 7.3646, lat: 59.5699, z: 12 };
 export type Visning = { lon: number; lat: number; z: number };
 
 /** Kart med alle løyper. Trykk på en løype for å gå til den. Dra og zoom for å se nærmere. */
-export function Oversiktskart({ løyper, onVelg, visning = HOVDEN_VISNING, hoyde = 420 }: { løyper: OversiktLøype[]; visning?: Visning; onVelg: (id: string) => void; hoyde?: number }) {
+export function Oversiktskart({ løyper, naboer = [], onBoks, onVelgNabo, onVelg, visning = HOVDEN_VISNING, hoyde = 420 }: { løyper: OversiktLøype[]; /** Løyper fra områder rundt, vist dempet under områdets egne */ naboer?: NaboLøype[]; onBoks?: (b: KartBoks) => void; onVelgNabo?: (omrade: string, id: string) => void; visning?: Visning; onVelg: (id: string) => void; hoyde?: number }) {
   return (
-    <ZoomKart punkter={løyper.flatMap((l) => l.punkter)} hoyde={hoyde} startZ={15} fast={visning}>
+    <ZoomKart punkter={løyper.flatMap((l) => l.punkter)} hoyde={hoyde} startZ={15} fast={visning} onBoks={onBoks}>
       {({ z, left, top, w, h }) => {
         const xy = (p: number[]) => [mx(p[0], z) - left, my(p[1], z) - top] as const;
         const pts = (l: OversiktLøype) => l.punkter.map((p) => xy(p).map((v) => v.toFixed(1)).join(',')).join(' ');
         return (
           <Svg width={w} height={h} style={{ position: 'absolute', left: 0, top: 0 }}>
+            {naboer.map((l) => (
+              <Polyline key={`n${l.omrade}/${l.id}`} points={pts(l)} fill="none" stroke="#12386B" strokeOpacity={0.55} strokeWidth={z >= 12 ? 3 : 2} strokeLinecap="round" strokeLinejoin="round" />
+            ))}
+            {onVelgNabo && naboer.map((l) => (
+              <Polyline
+                key={`nt${l.omrade}/${l.id}`}
+                points={pts(l)}
+                fill="none"
+                stroke="rgba(0,0,0,0.001)"
+                strokeWidth={18}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                onPress={() => onVelgNabo(l.omrade, l.id)}
+                {...({ cursor: 'pointer' } as object)}
+              />
+            ))}
             {løyper.map((l) => (
               <Polyline key={`h${l.id}`} points={pts(l)} fill="none" stroke="#FFFFFF" strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" />
             ))}

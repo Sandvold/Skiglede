@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, PanResponder, Platform, Pressable, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { TILE, mx, my, tileUrl } from './kart';
+import { TILE, latAv, lonAv, mx, my, tileUrl } from './kart';
 
 const MIN_Z = 8;
 const MAX_Z = 17;
@@ -10,7 +10,9 @@ const MAX_Z = 17;
 export type Utsnitt = { z: number; left: number; top: number; w: number; h: number };
 
 /** Kartramme med Kartverket-fliser, dra for å flytte, knapper/musehjul/klyping for å zoome. */
-export function ZoomKart({ punkter, hoyde, startZ = 16, fast, children }: { punkter: number[][]; hoyde: number; startZ?: number; /** Fast startvisning (senter og zoom) i stedet for å tilpasse til punktene */ fast?: { lon: number; lat: number; z: number }; children: (u: Utsnitt) => ReactNode }) {
+export type KartBoks = { z: number; vest: number; sør: number; øst: number; nord: number };
+
+export function ZoomKart({ punkter, hoyde, startZ = 16, fast, onBoks, children }: { punkter: number[][]; hoyde: number; startZ?: number; /** Får synlig område (og zoom) når kartet flyttes eller zoomes, med litt forsinkelse */ onBoks?: (b: KartBoks) => void; /** Fast startvisning (senter og zoom) i stedet for å tilpasse til punktene */ fast?: { lon: number; lat: number; z: number }; children: (u: Utsnitt) => ReactNode }) {
   const [w, setW] = useState(0);
   const lons = punkter.map((p) => p[0]);
   const lats = punkter.map((p) => p[1]);
@@ -90,6 +92,13 @@ export function ZoomKart({ punkter, hoyde, startZ = 16, fast, children }: { punk
       for (let y = Math.floor(top / TILE); y <= Math.floor((top + hoyde) / TILE); y++) tiles.push({ x, y });
     }
   }
+
+  useEffect(() => {
+    if (!onBoks || w <= 0) return;
+    const t = setTimeout(() => onBoks({ z, vest: lonAv(left, z), øst: lonAv(left + w, z), nord: latAv(top, z), sør: latAv(top + hoyde, z) }), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [z, Math.round(left / 20), Math.round(top / 20), w, hoyde]);
 
   const knapp = (tekst: string, onPress: () => void, av: boolean) => (
     <Pressable onPress={onPress} disabled={av} accessibilityLabel={tekst === '+' ? 'Zoom inn' : 'Zoom ut'} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.92)', opacity: av ? 0.4 : 1 }}>

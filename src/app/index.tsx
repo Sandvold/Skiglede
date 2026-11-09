@@ -16,12 +16,15 @@ import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useOmråde, useVær, useVærstatus, VÆR_FERSK_DØGN, type Område, type Værstatus } from '@/data/omrader';
+import { useNaboløyper } from '@/data/naboloyper';
+import type { KartBoks } from '@/components/ski/zoomkart';
+import { useOmråde, useOmråder, useVær, useVærstatus, VÆR_FERSK_DØGN, type Område, type Værstatus } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { usePremium } from '@/data/premium';
 import { Loggkort } from '@/components/ski/loggkort';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
+import { skrivFraKonto } from '@/data/lagring';
 import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, INGEN_UNDERLAG, type Underlag, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
 /** Værtimer fra 3 t før start. Dekker været ikke starttiden (utdatert prognose), brukes siste timene i stedet for å krasje. */
@@ -651,9 +654,11 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   );
 }
 
-function Oversikt({ område, liste, feil, onVelg, egne }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; onVelg: (id: string) => void; egne: ReturnType<typeof useEgneRuterIOmråde> }) {
+function Oversikt({ område, liste, feil, onVelg, onVelgNabo, egne }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; onVelg: (id: string) => void; onVelgNabo: (omrade: string, id: string) => void; egne: ReturnType<typeof useEgneRuterIOmråde> }) {
   const theme = useTheme();
   const router = useRouter();
+  const [boks, setBoks] = useState<KartBoks | null>(null);
+  const naboer = useNaboløyper(område, useOmråder(), boks);
   const LØYPER = (liste ?? []).filter((l) => !l.variantAv);
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
@@ -661,7 +666,7 @@ function Oversikt({ område, liste, feil, onVelg, egne }: { område: Område; li
       <View style={styles.innhold}>
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>LØYPER {område.navn.toUpperCase()}</ThemedText>
         <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : liste === null ? (feil ? 'Fikk ikke tak i løypene. Sjekk nettforbindelsen og prøv igjen.' : 'Henter løypene …') : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
-        <Oversiktskart key={område.id} løyper={LØYPER.map((l) => ({ id: l.id, navn: l.navn, punkter: l.oversikt }))} visning={område.visning} onVelg={onVelg} />
+        <Oversiktskart key={område.id} løyper={LØYPER.map((l) => ({ id: l.id, navn: l.navn, punkter: l.oversikt }))} naboer={naboer} onBoks={setBoks} onVelgNabo={onVelgNabo} visning={område.visning} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
         <EgneRuter mine={egne.mine} bruker={egne.bruker} område={område} onVelg={onVelg} />
         <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0) og © OpenStreetMap-bidragsytere (ODbL).</ThemedText>
@@ -671,7 +676,7 @@ function Oversikt({ område, liste, feil, onVelg, egne }: { område: Område; li
 }
 
 export default function Hjem() {
-  const [område] = useOmråde();
+  const [område, settOmråde] = useOmråde();
   const [valgt, setValgt] = useLagret<string | null>(`skiglede.loype.${område.id}`, null);
   const { liste: baseListe, feil } = useLøypeliste(område.id);
   const egne = useEgneRuterIOmråde(område);
@@ -682,7 +687,7 @@ export default function Hjem() {
   const [løype] = useLøyper(område.id, liste, info ? [info.id] : [], forsøk);
   const hentFeil = info ? løypeFeilFor(område.id, info.id) : '';
   if (valgt && liste === null && !feil) return <Laster tekst="Henter løypa …" />;
-  if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} onVelg={setValgt} egne={egne} />;
+  if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} onVelg={setValgt} onVelgNabo={(o, id) => { skrivFraKonto(`skiglede.loype.${o}`, JSON.stringify(id)); settOmråde(o); }} egne={egne} />;
   if (!løype) return <Laster tekst={hentFeil ? `Fikk ikke tak i ${info.navn}: ${hentFeil}` : `Henter ${info.navn} …`} onPrøv={hentFeil ? () => setForsøk((n) => n + 1) : undefined} onTilbake={() => setValgt(null)} />;
   return <Detalj key={`${område.id}:${løype.id}`} løype={løype} liste={liste} område={område} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
 }

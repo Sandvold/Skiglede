@@ -11,6 +11,9 @@ export const my = (lat: number, z: number) => {
   return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * TILE * 2 ** z;
 };
 
+export const lonAv = (x: number, z: number) => (x / (TILE * 2 ** z)) * 360 - 180;
+export const latAv = (y: number, z: number) => (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / (TILE * 2 ** z)))) * 180) / Math.PI;
+
 // Kartverket Topo (åpne data, CC BY 4.0)
 export const tileUrl = (z: number, x: number, y: number) =>
   `https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/${z}/${y}/${x}.png`;
