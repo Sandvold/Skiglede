@@ -82,9 +82,15 @@ class Cache:
         self.db = None
         if sti:
             os.makedirs(os.path.dirname(os.path.abspath(sti)), exist_ok=True)
-            self.db = sqlite3.connect(sti, check_same_thread=False)
-            self.db.execute("create table if not exists h (x integer, y integer, z real, primary key (x, y))")
-            self.db.commit()
+            # flere områder kjører samtidig mot samme fil: lang ventetid ved lås, og feil i cachen skal aldri stoppe terrengkjøringen
+            try:
+                self.db = sqlite3.connect(sti, timeout=120, check_same_thread=False)
+                self.db.execute("pragma journal_mode=wal")
+                self.db.execute("create table if not exists h (x integer, y integer, z real, primary key (x, y))")
+                self.db.commit()
+            except sqlite3.Error as e:
+                print(f"  (cache av: {e})", flush=True)
+                self.db = None
 
     @staticmethod
     def nøkkel(pt):
@@ -101,19 +107,25 @@ class Cache:
                 else:
                     rest.append(k)
             if self.db and rest:
-                for i in range(0, len(rest), 400):
-                    del_ = rest[i:i + 400]
-                    q = "select x, y, z from h where " + " or ".join(["(x=? and y=?)"] * len(del_))
-                    for x, y, z in self.db.execute(q, [v for k in del_ for v in k]):
-                        self.minne[(x, y)] = ut[(x, y)] = z
+                try:
+                    for i in range(0, len(rest), 400):
+                        del_ = rest[i:i + 400]
+                        q = "select x, y, z from h where " + " or ".join(["(x=? and y=?)"] * len(del_))
+                        for x, y, z in self.db.execute(q, [v for k in del_ for v in k]):
+                            self.minne[(x, y)] = ut[(x, y)] = z
+                except sqlite3.Error:
+                    pass
         return ut
 
     def lagre(self, par):
         with self.lås:
             self.minne.update(par)
             if self.db:
-                self.db.executemany("insert or replace into h values (?,?,?)", [(k[0], k[1], z) for k, z in par.items()])
-                self.db.commit()
+                try:
+                    self.db.executemany("insert or replace into h values (?,?,?)", [(k[0], k[1], z) for k, z in par.items()])
+                    self.db.commit()
+                except sqlite3.Error:
+                    pass  # minnet har verdiene uansett
 
 
 def tolk(d, z):
