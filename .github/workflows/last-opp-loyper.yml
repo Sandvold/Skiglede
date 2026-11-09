@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'src/data/trails*.json'
+      - 'src/data/omrader.sql'
       - 'scripts/last_opp_loyper.py'
       - 'scripts/kontroller-loyper.mjs'
   workflow_dispatch:

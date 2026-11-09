@@ -35,6 +35,33 @@ def rad_for(t):
     return r, hashlib.sha1(json.dumps(r, sort_keys=True).encode()).hexdigest()
 
 
+def nye_omrader(con):
+    """Setter inn områder fra src/data/omrader.sql (skrives av kjor_norge.py). Bare `insert into public.omrade … on conflict (id) do nothing`
+    godtas, så eksisterende områder aldri endres. Mangler rollen insert-tillatelse, meldes det tydelig og resten av opplastingen fortsetter."""
+    fil = os.path.join(Rot, "omrader.sql")
+    if not os.path.exists(fil):
+        return
+    setninger = [l.strip() for l in open(fil, encoding="utf-8") if l.strip()]
+    ugyldige = [l[:60] for l in setninger if not (l.lower().startswith("insert into public.omrade ") and l.rstrip().endswith("on conflict (id) do nothing;"))]
+    if ugyldige:
+        print(f"omrader.sql: {len(ugyldige)} linjer er ikke godkjente insert-setninger, hopper over hele fila: {ugyldige[0]} …", file=sys.stderr)
+        return
+    with con.cursor() as cur:
+        cur.execute("select count(*) from public.omrade")
+        før = cur.fetchone()[0]
+        try:
+            for l in setninger:
+                cur.execute(l)
+        except psycopg2.errors.InsufficientPrivilege:
+            con.rollback()
+            print("omrader.sql: rollen mangler insert på public.omrade. Kjør én gang som eier: grant insert on public.omrade to vaer_skriver;", file=sys.stderr)
+            return
+        cur.execute("select count(*) from public.omrade")
+        etter = cur.fetchone()[0]
+    con.commit()
+    print(f"omrader.sql: {len(setninger)} områder i fila, {etter - før} nye satt inn")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--karantene")
@@ -43,6 +70,7 @@ def main():
     karantene = json.load(open(a.karantene)) if a.karantene and os.path.exists(a.karantene) else {}
     feilet = []
     with psycopg2.connect(os.environ["DATABASE_URL"]) as con:
+        nye_omrader(con)
         with con.cursor() as cur:
             cur.execute("select id, loypefil from public.omrade where loypefil is not null order by rekkefolge, id")
             områder = cur.fetchall()

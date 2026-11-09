@@ -17,6 +17,7 @@ from bygg_omrade import bbox_av
 
 
 AKTIVE = {}  # id -> (starttid, loggfil) for områder som bygges nå
+SQL_LÅS = threading.Lock()  # én tråd om gangen skriver til src/data/omrader.sql
 
 
 def bygg(m, a, steder, status):
@@ -51,8 +52,16 @@ def bygg(m, a, steder, status):
         ok = p.returncode == 0 and bool(sql)
         status[id_] = dict(ok=ok, sek=round(time.time() - t0), feil=None if ok else tekst[-300:])
         if ok:
+            linje = sql[0].replace("'Test'", "'" + m["navn"].replace("'", "''") + "'")
             with open(os.path.join(a.mappe, "omrader.sql"), "a") as f:
-                f.write(sql[0].replace("'Test'", "'" + m["navn"].replace("'", "''") + "'") + "\n")
+                f.write(linje + "\n")
+            # Samme linje i repoet, så GitHub-jobben setter området inn i Neon når filen pushes (ingen manuell SQL)
+            repo_sql = os.path.join(ROT, "src", "data", "omrader.sql")
+            with SQL_LÅS:
+                finnes = open(repo_sql, encoding="utf-8").read() if os.path.exists(repo_sql) else ""
+                if f"values ('{id_}'," not in finnes:
+                    with open(repo_sql, "a", encoding="utf-8") as f:
+                        f.write(linje + "\n")
     except subprocess.TimeoutExpired:
         status[id_] = dict(ok=False, sek=round(time.time() - t0), feil="tidsavbrudd")
     AKTIVE.pop(id_, None)
