@@ -13,9 +13,12 @@ Eksempel:
 Fremdrift: filen lagres etter hver ferdige løype (via en midlertidig fil, så den aldri blir halvskrevet), så en avbrutt kjøring
 mister bare den løypa den holdt på med. En løype som feiler (etter flere forsøk) beholder gammelt terreng, de andre fortsetter,
 og skriptet avslutter med kode 2 og lister hvilke som mangler. Kjør samme kommando med --fortsett for å ta bare dem.
+Høyder bufres i en lokal SQLite-fil (scripts/ut/hoydecache.sqlite, --cache for annen sti, --ingen-cache for å slå av): tur-retur-løyper
+fra samme start, nabopunkter og senere kjøringer bruker de samme punktene, så bare nye punkter går til Kartverket. Koordinatene
+rundes til 1 m (dtm1-oppløsning) for punkter nær løypa og 10 m for ringene utenfor 200 m (horisontvinkelen merker det ikke).
 Kallene deles mellom --workers samtidige tråder (delt kø), med valgfri --pause per kall for å være grei mot API-et.
 """
-import argparse, json, math, os, sys, threading, time, urllib.error, urllib.parse, urllib.request
+import argparse, json, math, os, sqlite3, sys, threading, time, urllib.error, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pyproj import Transformer
 
@@ -54,13 +57,63 @@ def lagre(data, fil):
     os.replace(tmp, fil)
 
 
+def _rund(v, steg):
+    return round(v / steg) * steg
+
+
 def punkter_for(x, y):
-    """Sentrum, fire punkter 30 m unna (N, Ø, S, V), så ringene i 16 retninger."""
+    """Sentrum, fire punkter 30 m unna (N, Ø, S, V), så ringene i 16 retninger. Rundet til rutenett (1 m nær, 10 m langt unna)
+    så nabopunkter og overlappende løyper treffer de samme koordinatene (og dermed cachen)."""
+    x, y = _rund(x, 1), _rund(y, 1)
     pts = [(x, y), (x, y + 30), (x + 30, y), (x, y - 30), (x - 30, y)]
     for a in AZ:
         for r in RINGER:
-            pts.append((x + r * math.sin(math.radians(a)), y + r * math.cos(math.radians(a))))
+            steg = 1 if r < 200 else 10
+            pts.append((_rund(x + r * math.sin(math.radians(a)), steg), _rund(y + r * math.cos(math.radians(a)), steg)))
     return pts
+
+
+class Cache:
+    """Høydebuffer i SQLite (trådsikker via lås). Uten fil: bare minnet i denne kjøringen."""
+
+    def __init__(self, sti):
+        self.lås = threading.Lock()
+        self.minne = {}
+        self.db = None
+        if sti:
+            os.makedirs(os.path.dirname(os.path.abspath(sti)), exist_ok=True)
+            self.db = sqlite3.connect(sti, check_same_thread=False)
+            self.db.execute("create table if not exists h (x integer, y integer, z real, primary key (x, y))")
+            self.db.commit()
+
+    @staticmethod
+    def nøkkel(pt):
+        return (int(round(pt[0])), int(round(pt[1])))
+
+    def finn(self, nøkler):
+        """Gir {nøkkel: z} for de som finnes (z kan være None = API-et hadde ingen høyde)."""
+        ut = {}
+        with self.lås:
+            rest = []
+            for k in nøkler:
+                if k in self.minne:
+                    ut[k] = self.minne[k]
+                else:
+                    rest.append(k)
+            if self.db and rest:
+                for i in range(0, len(rest), 400):
+                    del_ = rest[i:i + 400]
+                    q = "select x, y, z from h where " + " or ".join(["(x=? and y=?)"] * len(del_))
+                    for x, y, z in self.db.execute(q, [v for k in del_ for v in k]):
+                        self.minne[(x, y)] = ut[(x, y)] = z
+        return ut
+
+    def lagre(self, par):
+        with self.lås:
+            self.minne.update(par)
+            if self.db:
+                self.db.executemany("insert or replace into h values (?,?,?)", [(k[0], k[1], z) for k, z in par.items()])
+                self.db.commit()
 
 
 def tolk(d, z):
@@ -88,9 +141,12 @@ def main():
     ap.add_argument("--navn", action="append")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--pause", type=float, default=0.0, help="sekunder pause per kall i hver tråd")
+    ap.add_argument("--cache", default="scripts/ut/hoydecache.sqlite", help="høydebuffer (SQLite)")
+    ap.add_argument("--ingen-cache", action="store_true", help="slå av bufring")
     ap.add_argument("--fortsett", action="store_true", help="hopp over løyper som alt har terreng")
     a = ap.parse_args()
     PAUSE = a.pause
+    cache = Cache(None if a.ingen_cache else a.cache)
     data = json.load(open(a.ut))
     til = Transformer.from_crs("EPSG:4326", "EPSG:25832", always_xy=True)
     feilet = []
@@ -105,11 +161,15 @@ def main():
                 valgt.append(p); neste = p[3] + STEG
         sett = [punkter_for(*til.transform(p[0], p[1])) for p in valgt]
         flat = [pt for s in sett for pt in s]
-        deler = [flat[i:i + 50] for i in range(0, len(flat), 50)]  # API-et tar maks 50 punkter per kall
+        nøkler = [Cache.nøkkel(pt) for pt in flat]
+        kjent = cache.finn(set(nøkler))
+        mangler = [k for k in dict.fromkeys(nøkler) if k not in kjent]  # unike, i rekkefølge
+        deler = [mangler[i:i + 50] for i in range(0, len(mangler), 50)]  # API-et tar maks 50 punkter per kall
         ferdig, lås = [0], threading.Lock()
 
         def jobb(d):
             z = hent(d)
+            cache.lagre(dict(zip(d, z)))  # lagrer straks, så en avbrutt kjøring beholder det som er hentet
             with lås:
                 ferdig[0] += 1  # teller fullførte (ikke indeks), riktig selv om trådene blir ferdige i ulik rekkefølge
                 if ferdig[0] % 40 == 0:
@@ -118,11 +178,14 @@ def main():
 
         try:
             with ThreadPoolExecutor(a.workers) as ex:  # delt kø: hver tråd tar neste kall når den er ferdig
-                zflat = [z for del_ in ex.map(jobb, deler) for z in del_]
+                list(ex.map(jobb, deler))
         except Exception as e:
             print(f'{t["navn"]}: FEILET ({e}), beholder gammelt terreng', flush=True)
             feilet.append(t["navn"])
             continue
+        høyde = cache.finn(set(nøkler))
+        zflat = [høyde.get(k) for k in nøkler]
+        print(f'  {t["navn"]}: {len(deler)} kall ({len(flat) - len(mangler)} av {len(flat)} punkter fra cache)', flush=True)
         n = len(sett[0])
         zs = [zflat[i * n:(i + 1) * n] for i in range(len(sett))]
         t["terreng"] = [r for r in (tolk(p[3], z) for p, z in zip(valgt, zs)) if r]
