@@ -43,6 +43,16 @@ export function useMineRuter(innlogget: boolean) {
   };
 }
 
+/** Starter ruten ved et kjent utfartssted (innen 300 m fra start på en løype i databasen)? Bare da kan den deles. Samme regel håndheves i databasen. */
+export async function erKjentUtfartssted(lat: number, lon: number): Promise<boolean> {
+  try {
+    const { data, error } = await neon().rpc('er_kjent_utfartssted', { p_lat: lat, p_lon: lon });
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Været for akkurat denne ruten: 14 døgn historikk fra MET Nordic (via Open-Meteo), regnet for rutens start. Prognosen kommer fra MET direkte (hentVarsel).
  * Samme format som områdenes værhistorikk. Open-Meteo er gratis til ikke-kommersiell bruk; ved betalte kunder trengs avtale eller en annen kilde.

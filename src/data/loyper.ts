@@ -27,7 +27,13 @@ const lagreLokalt = (n: string, v: unknown) => {
 };
 
 const lister = new Map<string, LøypeInfo[]>();
+
 const full = new Map<string, Løype & { oppdatert: string }>();
+
+/** Legger en løype som ikke ligger i `loype`-tabellen (brukerens egen GPX-rute) i minnet, så useLøyper finner den uten å spørre databasen. */
+export function registrerLøype(område: string, l: Løype & { oppdatert: string }) {
+  full.set(`${område}/${l.id}`, l);
+}
 
 /** Løypene i et område (lett). Viser lagret kopi umiddelbart og oppdaterer fra databasen. */
 export function useLøypeliste(område: string): { liste: LøypeInfo[] | null; feil: boolean } {

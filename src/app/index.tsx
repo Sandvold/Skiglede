@@ -10,6 +10,8 @@ import { UnderlagValg } from '@/components/ski/underlag';
 import { Chip, Kort, Nedtrekk, Sammenleggbar } from '@/components/ski/ui';
 import { byggRute, tilhørende, type Løype } from '@/data/rute';
 import { løypeFeilFor, useLøyper, useLøypeliste, type LøypeInfo } from '@/data/loyper';
+import { EgneRuter } from '@/components/ski/egne-ruter';
+import { useEgneRuterIOmråde } from '@/data/egneruter';
 import { Loypevelger } from '@/components/ski/loypevelger';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
@@ -607,7 +609,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   );
 }
 
-function Oversikt({ område, liste, feil, onVelg }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; onVelg: (id: string) => void }) {
+function Oversikt({ område, liste, feil, onVelg, egne }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; onVelg: (id: string) => void; egne: ReturnType<typeof useEgneRuterIOmråde> }) {
   const theme = useTheme();
   const router = useRouter();
   const LØYPER = (liste ?? []).filter((l) => !l.variantAv);
@@ -619,6 +621,7 @@ function Oversikt({ område, liste, feil, onVelg }: { område: Område; liste: L
         <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : liste === null ? (feil ? 'Fikk ikke tak i løypene. Sjekk nettforbindelsen og prøv igjen.' : 'Henter løypene …') : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
         <Oversiktskart key={område.id} løyper={LØYPER.map((l) => ({ id: l.id, navn: l.navn, punkter: l.oversikt }))} visning={område.visning} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
+        <EgneRuter mine={egne.mine} bruker={egne.bruker} område={område} onVelg={onVelg} />
         <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0) og © OpenStreetMap-bidragsytere (ODbL).</ThemedText>
       </View>
     </ScrollView>
@@ -628,13 +631,16 @@ function Oversikt({ område, liste, feil, onVelg }: { område: Område; liste: L
 export default function Hjem() {
   const [område] = useOmråde();
   const [valgt, setValgt] = useLagret<string | null>(`skiglede.loype.${område.id}`, null);
-  const { liste, feil } = useLøypeliste(område.id);
+  const { liste: baseListe, feil } = useLøypeliste(område.id);
+  const egne = useEgneRuterIOmråde(område);
+  // Egne GPX-ruter (og delte fra kjente utfartssteder) legges inn i samme liste som områdets løyper.
+  const liste = useMemo(() => (baseListe ? [...baseListe, ...egne.infos] : egne.infos.length ? egne.infos : baseListe), [baseListe, egne.infos]);
   const info = valgt ? liste?.find((l) => l.id === valgt) : undefined;
   const [forsøk, setForsøk] = useState(0);
   const [løype] = useLøyper(område.id, liste, info ? [info.id] : [], forsøk);
   const hentFeil = info ? løypeFeilFor(område.id, info.id) : '';
   if (valgt && liste === null && !feil) return <Laster tekst="Henter løypa …" />;
-  if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} onVelg={setValgt} />;
+  if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} onVelg={setValgt} egne={egne} />;
   if (!løype) return <Laster tekst={hentFeil ? `Fikk ikke tak i ${info.navn}: ${hentFeil}` : `Henter ${info.navn} …`} onPrøv={hentFeil ? () => setForsøk((n) => n + 1) : undefined} onTilbake={() => setValgt(null)} />;
   return <Detalj key={`${område.id}:${løype.id}`} løype={løype} liste={liste} område={område} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
 }
