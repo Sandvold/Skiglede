@@ -52,8 +52,8 @@ def område(rad, tmp):
         cur = con.cursor()
         cur.execute("select celle, referansehoyde_m, kolonner, timer from public.vaer where omrade = %s", (omrade,))
         r = cur.fetchone()
-        if r:
-            json.dump({"celle": r[0], "referansehoyde_m": r[1], "kolonner": r[2], "timer": r[3]}, open(fil, "w"), separators=(",", ":"))
+        if r:  # lat/lon legges inn så hent_vaer gjenbruker lagret værcelle (flyttes et område, må raden i `vaer` slettes)
+            json.dump({"celle": r[0], "lat": lat, "lon": lon, "referansehoyde_m": r[1], "kolonner": r[2], "timer": r[3]}, open(fil, "w"), separators=(",", ":"))
         d = hent(lat, lon, ref, 14, fil, omrade)
         if d is None:
             return False
@@ -84,8 +84,8 @@ def rute(rad, tmp):
         cur = con.cursor()
         cur.execute("select celle, referansehoyde_m, kolonner, timer from public.rute_vaer where rute_id = %s", (str(rute_id),))
         r = cur.fetchone()
-        if r:
-            json.dump({"celle": r[0], "referansehoyde_m": r[1], "kolonner": r[2], "timer": r[3]}, open(fil, "w"), separators=(",", ":"))
+        if r:  # lat/lon legges inn så hent_vaer gjenbruker lagret værcelle (flyttes et område, må raden i `vaer` slettes)
+            json.dump({"celle": r[0], "lat": lat, "lon": lon, "referansehoyde_m": r[1], "kolonner": r[2], "timer": r[3]}, open(fil, "w"), separators=(",", ":"))
         d = hent(lat, lon, ref, dager, fil, f"rute {rute_id}")
         if d is None:
             return False

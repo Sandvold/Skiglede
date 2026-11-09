@@ -93,27 +93,35 @@ def main():
 
     now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     hours = [now - timedelta(hours=h) for h in range(a.days * 24, -1, -1)]
-    # referansefil: en nylig time i metpplatest for å finne rutenettet
-    ref = None
-    for h in range(1, 12):
-        c = f"{ROOT}/metpplatest/" + FILE.format(ts=(now - timedelta(hours=h)).strftime("%Y%m%dT%HZ"))
-        try:
-            get(c, "x[0:1:0]"); ref = c; break
-        except Exception:
-            continue
-    if ref is None:
-        sys.exit("fant ingen referansefil")
-    i, j = grid_cell(a.lat, a.lon, ref)
-    print(f"rute i={i} j={j}", file=sys.stderr)
-
-    gamle = {}
+    # Forrige JSON: gir gamle timer, og værcellen kan gjenbrukes (rutenettet endrer seg ikke) så vi sparer referansefil + x/y-kall
+    g = {}
     if a.tidligere:
         import json, os
         if os.path.exists(a.tidligere):
-            g = json.load(open(a.tidligere))
-            # Samme værcelle = samme historikk, også om referansehøyden er endret (da er timene i cellen fortsatt riktige og skal ikke kastes)
-            if g.get("celle") == [i, j]:
-                gamle = {r[0]: r for r in g["timer"]}
+            try:
+                g = json.load(open(a.tidligere))
+            except ValueError:
+                g = {}
+    if g.get("celle") and g.get("lat") is not None and abs(g["lat"] - a.lat) < 1e-6 and abs(g.get("lon", 0) - a.lon) < 1e-6:
+        i, j = g["celle"]
+        print(f"gjenbruker rute i={i} j={j}", file=sys.stderr)
+    else:
+        # referansefil: en nylig time i metpplatest for å finne rutenettet
+        ref = None
+        for h in range(1, 12):
+            c = f"{ROOT}/metpplatest/" + FILE.format(ts=(now - timedelta(hours=h)).strftime("%Y%m%dT%HZ"))
+            try:
+                get(c, "x[0:1:0]"); ref = c; break
+            except Exception:
+                continue
+        if ref is None:
+            sys.exit("fant ingen referansefil")
+        i, j = grid_cell(a.lat, a.lon, ref)
+        print(f"rute i={i} j={j}", file=sys.stderr)
+
+    gamle = {}
+    if g.get("celle") == [i, j]:  # samme værcelle = samme historikk, også om referansehøyden er endret
+        gamle = {r[0]: r for r in g["timer"]}
     iso = lambda t: t.strftime("%Y-%m-%dT%H:%M:%SZ")
     if a.vekst:
         # Vinduet starter ved eldste lagrede time (eller 12 timer tilbake for et nytt punkt) og vokser til --days. Hull fylles, eldre historikk hentes ikke.
@@ -141,7 +149,7 @@ def main():
         if len(timer) < len(hours) * 0.9 or not timer:
             sys.exit(f"for få timer ({len(timer)} av {len(hours)}), skriver ikke {a.json}")
         with open(a.json, "w") as f:
-            json.dump({"celle": [i, j], "referansehoyde_m": a.ref_hoyde,
+            json.dump({"celle": [i, j], "lat": a.lat, "lon": a.lon, "referansehoyde_m": a.ref_hoyde,
                        "kolonner": ["ts", "temp_c", "nedbor_mm", "rh", "vind_ms", "sw_j_m2"], "timer": timer}, f, separators=(",", ":"))
         print(f"skrev {len(timer)} timer til {a.json}", file=sys.stderr)
 

@@ -80,21 +80,25 @@ def resample(pts, step):
     return out
 
 
-def hoyder(pts, batch=50):
-    res = []
-    for i in range(0, len(pts), batch):
-        chunk = [[round(x, 2), round(y, 2)] for x, y in pts[i:i + batch]]
+def hoyder(pts, batch=50, workers=3):
+    """Høyder for punktene (maks 50 per kall). Parallelt (få tråder) og med lange ventetider ved 429/5xx/tidsavbrudd, som hent_terreng."""
+    import random
+    from concurrent.futures import ThreadPoolExecutor
+    deler = [[[round(x, 2), round(y, 2)] for x, y in pts[i:i + batch]] for i in range(0, len(pts), batch)]
+
+    def hent(chunk):
         q = urllib.parse.urlencode({"punkter": json.dumps(chunk), "koordsys": 25832})
-        for forsøk in range(5):  # API-et gir av og til 429/5xx: vent og prøv igjen
+        for forsøk in range(8):
             try:
-                with urllib.request.urlopen(f"{REST}?{q}", timeout=60) as r:
-                    res += json.load(r)["punkter"]
-                break
+                with urllib.request.urlopen(f"{REST}?{q}", timeout=90) as r:
+                    return json.load(r)["punkter"]
             except Exception:
-                if forsøk == 4:
+                if forsøk == 7:
                     raise
-                time.sleep(10 * (forsøk + 1))
-    return res
+                time.sleep(min(30 + 30 * forsøk, 180) * random.uniform(0.8, 1.3))
+
+    with ThreadPoolExecutor(workers) as ex:
+        return [p for d in ex.map(hent, deler) for p in d]  # map beholder rekkefølgen
 
 
 def main():
