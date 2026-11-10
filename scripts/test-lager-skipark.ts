@@ -119,10 +119,10 @@ sjekk('rute: avstanden øker jevnt', rute.punkter.every((q, i) => i === 0 || q[3
 sjekk('rute: ender ved start', [rute.punkter[0][0], rute.punkter[0][1]], [rute.punkter[rute.punkter.length - 1][0], rute.punkter[rute.punkter.length - 1][1]]);
 sjekk('rute: uten ekstra er den uendret', byggRute(lund, []), lund);
 
-// Forenklet: bare base og dagens smøring
+// Forenklet: bare dagens smøring (ingen base, mellomlag eller dekke) [Bruker]
 const full = stabel('hardvoks', [['Binder', 'VG35'], ['Base (kaldere)', 'VP40'], ['Dagens voks', 'VP45'], ['Dekke 1', 'VP40']]);
-sjekk('forenklet hardvoks: binder + dagens', forenklet(full).lag.map((l) => l.produkt), ['VG35', 'VP45']);
-sjekk('forenklet klister: baseklister + dagens', forenklet(stabel('klister', [['Baseklister', 'KB20C'], ['Isklister', 'KX30'], ['Mellomlag', 'KX45N'], ['Dagens klister', 'KX65']])).lag.map((l) => l.produkt), ['KB20C', 'KX65']);
+sjekk('forenklet hardvoks: bare dagens', forenklet(full).lag.map((l) => l.produkt), ['VP45']);
+sjekk('forenklet klister: bare dagens', forenklet(stabel('klister', [['Baseklister', 'KB20C'], ['Isklister', 'KX30'], ['Mellomlag', 'KX45N'], ['Dagens klister', 'KX65']])).lag.map((l) => l.produkt), ['KX65']);
 sjekk('forenklet glider uendret', forenklet(stabel('glider', [['Glider', 'HS7']])).lag.map((l) => l.produkt), ['HS7']);
 sjekk('forenklet rører ikke originalen', full.lag.length, 4);
 
