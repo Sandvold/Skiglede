@@ -365,7 +365,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>TUREN</ThemedText>
         <View style={styles.rad}>
           {DAGER.map((i) => (
-            <Chip key={i} aktiv={harPrognose ? i === dagIdx : false} onPress={() => harPrognose && setDagIdx(i)}>{dagNavn(osloDato(i), i)}</Chip>
+            <Chip key={i} aktiv={i === dagIdx} onPress={() => setDagIdx(i)}>{dagNavn(osloDato(i), i)}</Chip>
           ))}
         </View>
         <View style={styles.rad}>
