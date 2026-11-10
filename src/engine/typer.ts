@@ -87,6 +87,8 @@ export type Stabel = {
   alternativ?: Stabel;
   /** Tilsvarende dagens smøring med andre merker du har i lageret, f.eks. «Toko: Toko Rød». */
   alternativer?: string[];
+  /** Satt når smøringen du har i lageret ikke passer føret godt (mangler produkt eller er utenfor temperaturområdet). Appen foreslår da felleski/rubbski hvis du har det. */
+  lagerPasserIkke?: string;
   /** Snøtemperatur (snitt langs turen), brukt til å vurdere om en glider som allerede ligger på kan beholdes. */
   tSnitt?: number;
 };

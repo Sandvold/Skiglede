@@ -64,7 +64,7 @@ export function byggMedLager(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner:
   // Swix først hvis brukbart, ellers flest relevante produkter
   const rekke = [...brukbare].sort((a, b) => (a.id === 'swix' ? -1 : b.id === 'swix' ? 1 : bruker(b) - bruker(a)));
   if (!rekke.length) {
-    return { ...ideal, advarsler: [...ideal.advarsler, `Du har ingen ${trengs} i smørelageret. Anbefalingen er fra Swix: kjøp inn eller bruk det du har av annet.`] };
+    return { ...ideal, advarsler: [...ideal.advarsler, `Du har ingen ${trengs} i smørelageret. Anbefalingen er fra Swix: kjøp inn eller bruk det du har av annet.`], lagerPasserIkke: ideal.type === 'hardvoks' || ideal.type === 'klister' ? `du har ingen ${trengs} i smørelageret` : undefined };
   }
   // Bygg fra hvert brukbart merke. Glidesonen kan hentes fra et annet merke.
   const bygg = (x: { id: MerkeId; sys: Smøresystem }) => {
@@ -86,8 +86,10 @@ export function byggMedLager(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner:
   // [Bruker] KX30 og KX35N fungerer nesten likt: bytte mellom dem gir ingen advarsel.
   const lik = (x: string, y: string) => [x, y].every((n) => n === 'KX30' || n === 'KX35N') || (y === 'KN44' && ['K21S', 'K22'].includes(x)); // [Bruker] KN44 foretrekkes framfor universal ved skiftende vær
   if (mål && mitt && mål !== mitt && !lik(mål, mitt)) advarsler.push(`Anbefalt er ${mål}, men du har den ikke: bruker ${mitt} i stedet.`);
+  const utenforTemp = st.advarsler.find((a) => a.includes('dekker ikke'));
+  const lagerPasserIkke = st.type === 'hardvoks' || st.type === 'klister' ? (mål && mitt && mål !== mitt && !lik(mål, mitt) ? `anbefalt er ${mål}, men du har bare ${mitt}` : utenforTemp) : undefined;
   const begrunnelse = [...st.begrunnelse, `Smøringen er bygget av ${primær.sys.navn}-produktene i smørelageret ditt (ett merke, slik at lagene henger sammen).`];
-  return { ...st, advarsler, begrunnelse, alternativer: alt.length ? alt : undefined };
+  return { ...st, advarsler, begrunnelse, alternativer: alt.length ? alt : undefined, lagerPasserIkke };
 }
 
 export type Innkjøp = { produkt: Produkt; grunn: string };

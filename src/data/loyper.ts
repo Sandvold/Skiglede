@@ -36,9 +36,10 @@ export function registrerLøype(område: string, l: Løype & { oppdatert: string
 }
 
 /** Løypene i et område (lett). Viser lagret kopi umiddelbart og oppdaterer fra databasen. */
-export function useLøypeliste(område: string): { liste: LøypeInfo[] | null; feil: boolean } {
+export function useLøypeliste(område: string): { liste: LøypeInfo[] | null; feil: boolean; prøvIgjen: () => void } {
   const [, tving] = useState(0);
   const [feil, setFeil] = useState(false);
+  const [forsøk, setForsøk] = useState(0);
   useEffect(() => {
     let avbrutt = false;
     if (!lister.has(område)) {
@@ -67,8 +68,8 @@ export function useLøypeliste(område: string): { liste: LøypeInfo[] | null; f
     return () => {
       avbrutt = true;
     };
-  }, [område]);
-  return { liste: lister.get(område) ?? null, feil };
+  }, [område, forsøk]);
+  return { liste: lister.get(område) ?? null, feil, prøvIgjen: () => { setFeil(false); setForsøk((n) => n + 1); } };
 }
 
 /** Hele løyper (punkter og terreng) for de gitte id-ene. Hentes bare når de trengs, og lagres på enheten. */

@@ -43,6 +43,7 @@ const tilOmråde = (r: OmrådeRad): Område => ({
 
 let områdeliste: Område[] | null = null;
 let områdeHenting: Promise<void> | null = null;
+let områdeFeil = false; // siste henting fra databasen feilet: lista kan være ufullstendig
 const områdeLyttere = new Set<() => void>();
 function lastOmråder() {
   if (områdeHenting) return;
@@ -50,12 +51,15 @@ function lastOmråder() {
     try {
       const data = await lesAnonymt('omrade?select=*&order=rekkefolge.asc,navn.asc');
       if (data?.length) {
+        områdeFeil = false;
         områdeliste = (data as OmrådeRad[]).map(tilOmråde);
         lagreOmråderLokalt(data as OmrådeRad[]);
         områdeLyttere.forEach((f) => f());
       }
     } catch {
       områdeHenting = null; // prøv igjen neste gang
+      områdeFeil = true;
+      områdeLyttere.forEach((f) => f());
     }
   })();
 }
@@ -74,6 +78,13 @@ function lesOmråderLokalt(): Område[] | null {
   } catch {
     return null;
   }
+}
+
+/** Prøver å hente områdelista fra databasen på nytt. */
+export function prøvOmråderIgjen() {
+  områdeFeil = false;
+  områdeLyttere.forEach((f) => f());
+  lastOmråder();
 }
 
 /** Alle områder: lagret kopi (eller innebygd) med en gang, og siste fra databasen så snart den svarer. */
@@ -95,6 +106,17 @@ export function useOmråder(): Område[] {
     };
   }, []);
   return områdeliste ?? INNEBYGD;
+}
+
+/** Sant når områdelista ikke kunne hentes fra databasen (da vises bare lagret kopi eller de innebygde områdene). */
+export function useOmrådeFeil(): boolean {
+  const [, tving] = useState(0);
+  useEffect(() => {
+    const f = () => tving((n) => n + 1);
+    områdeLyttere.add(f);
+    return () => { områdeLyttere.delete(f); };
+  }, []);
+  return områdeFeil && !(områdeliste && områdeliste.length > INNEBYGD.length);
 }
 
 export const NØKKEL_FAVORITTER = 'skiglede.favoritter';

@@ -319,6 +319,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const glidesone = vis.lag.find(erGlidesone);
   const dagensP = produkt(dagens(vis)?.produkt ?? '');
   const smøreMerke = dagensP ? SYSTEMER[merkeAv(dagensP)].navn : sys.navn;
+  const felleRubbSki = skipark.filter((x) => x.stil === 'felle' || x.stil === 'rubb');
   const baseAnbefaling = vis.lag.find((l) => l.rolle === 'Binder' || l.rolle === 'Baseklister')?.produkt;
 
   return (
@@ -446,6 +447,12 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           ) : ingenPrognose ? (
             <ThemedText type="small">Ingen smøretips uten prognose for valgt tid. Se advarselen under «Turen».</ThemedText>
           ) : (<>
+          {brukLager && vis.lagerPasserIkke && felleRubbSki.length ? (
+            <View style={[styles.advarsel, { borderColor: '#C0392B' }]}>
+              <ThemedText type="smallBold">⚠ I dag passer ikke smøringen du har i lageret godt ({vis.lagerPasserIkke}). Du har {felleRubbSki.map((x) => x.navn).join(' og ')}: vurder {felleRubbSki.some((x) => x.stil === 'felle') && felleRubbSki.some((x) => x.stil === 'rubb') ? 'felleski eller rubbski' : felleRubbSki[0].stil === 'felle' ? 'felleski' : 'rubbski'} i stedet for å smøre.</ThemedText>
+              <ThemedText type="small">{r.alternativer.length ? r.alternativer.map((a) => a.grunn).join(' ') : 'Rubbski passer bare ved sludd uten fare for ordentlig minus, felleski er trygt når føret er utfordrende. Vurder ut fra føret og hva du vil ha på beina.'}</ThemedText>
+            </View>
+          ) : null}
           <GliderBoks lag={glidesone} />
           <ThemedText type="small" themeColor="textSecondary">{vis.lag.filter((l) => !erGlidesone(l)).length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Øverst = siste lag. Bygg nedenfra og opp.' : 'Ingen smøring på festesonen.'}</ThemedText>
           <View style={{ gap: 6 }}>
@@ -670,7 +677,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   );
 }
 
-function Oversikt({ område, liste, feil, onVelg, onVelgNabo, egne }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; onVelg: (id: string) => void; onVelgNabo: (omrade: string, id: string) => void; egne: ReturnType<typeof useEgneRuterIOmråde> }) {
+function Oversikt({ område, liste, feil, prøvIgjen, onVelg, onVelgNabo, egne }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; prøvIgjen: () => void; onVelg: (id: string) => void; onVelgNabo: (omrade: string, id: string) => void; egne: ReturnType<typeof useEgneRuterIOmråde> }) {
   const theme = useTheme();
   const router = useRouter();
   const [boks, setBoks] = useState<KartBoks | null>(null);
@@ -682,6 +689,7 @@ function Oversikt({ område, liste, feil, onVelg, onVelgNabo, egne }: { område:
       <View style={styles.innhold}>
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>LØYPER {område.navn.toUpperCase()}</ThemedText>
         <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : liste === null ? (feil ? 'Fikk ikke tak i løypene. Sjekk nettforbindelsen og prøv igjen.' : 'Henter løypene …') : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
+        {feil && liste === null ? <View style={styles.rad}><Chip aktiv={false} onPress={prøvIgjen}>↻ Prøv igjen</Chip></View> : null}
         <Oversiktskart key={område.id} løyper={LØYPER.map((l) => ({ id: l.id, navn: l.navn, punkter: l.oversikt }))} naboer={naboer} onBoks={setBoks} onVelgNabo={onVelgNabo} visning={område.visning} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
         <EgneRuter mine={egne.mine} bruker={egne.bruker} område={område} onVelg={onVelg} />
@@ -694,7 +702,7 @@ function Oversikt({ område, liste, feil, onVelg, onVelgNabo, egne }: { område:
 export default function Hjem() {
   const [område, settOmråde] = useOmråde();
   const [valgt, setValgt] = useLagret<string | null>(`skiglede.loype.${område.id}`, null);
-  const { liste: baseListe, feil } = useLøypeliste(område.id);
+  const { liste: baseListe, feil, prøvIgjen } = useLøypeliste(område.id);
   const egne = useEgneRuterIOmråde(område);
   // Egne GPX-ruter (og delte fra kjente utfartssteder) legges inn i samme liste som områdets løyper.
   const liste = useMemo(() => (baseListe ? [...baseListe, ...egne.infos] : egne.infos.length ? egne.infos : baseListe), [baseListe, egne.infos]);
@@ -703,7 +711,7 @@ export default function Hjem() {
   const [løype] = useLøyper(område.id, liste, info ? [info.id] : [], forsøk);
   const hentFeil = info ? løypeFeilFor(område.id, info.id) : '';
   if (valgt && liste === null && !feil) return <Laster tekst="Henter løypa …" />;
-  if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} onVelg={setValgt} onVelgNabo={(o, id) => { skrivFraKonto(`skiglede.loype.${o}`, JSON.stringify(id)); settOmråde(o); }} egne={egne} />;
+  if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} prøvIgjen={prøvIgjen} onVelg={setValgt} onVelgNabo={(o, id) => { skrivFraKonto(`skiglede.loype.${o}`, JSON.stringify(id)); settOmråde(o); }} egne={egne} />;
   if (!løype) return <Laster tekst={hentFeil ? `Fikk ikke tak i ${info.navn}: ${hentFeil}` : `Henter ${info.navn} …`} onPrøv={hentFeil ? () => setForsøk((n) => n + 1) : undefined} onTilbake={() => setValgt(null)} />;
   return <Detalj key={`${område.id}:${løype.id}`} løype={løype} liste={liste} område={område} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
 }

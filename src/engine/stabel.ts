@@ -18,7 +18,7 @@ export const MELLOM2_KALDERE = 2;
  * Lagantall i festesonen [Bruker, fra research nov 2026]: kald snø 4–6 lag, over 30 km opptil 8, rundt 0 °C 2–4 lag, klister 2–3 lag totalt.
  * Motoren reduserer selv i stedet for å anbefale mer.
  */
-export const LAG = { kald: 6, langTur: 8, langTurKm: 30, rundt0: 4, rundt0Fra: -1, klister: 3 };
+export const LAG = { kald: 6, langTur: 8, langTurKm: 30, rundt0: 5, rundt0Fra: -1, klister: 3 };
 export const MAKS_LAG = LAG.langTur; // absolutt øvre grense
 export const lagGrense = (varm: number, lengdeKm: number) => (varm >= LAG.rundt0Fra ? LAG.rundt0 : lengdeKm >= LAG.langTurKm ? LAG.langTur : LAG.kald);
 /** Klister brukes bare når snøen er omdannet/skarp (snøtype styrer). Kaldere enn dette brukes hardvoks med binder [Bruker, Nystad: kaldføre er −8 °C og kaldere]. */
@@ -57,8 +57,9 @@ function begrensLag(lag: Lag[], grense: number): string | null {
   sett((r) => r.startsWith('Base'), '1 lag', 'ett lag i hvert base-trinn');
   sett((r) => r === 'Binder', '1 lag', 'ett lag binder');
   sett((r) => r === 'Dagens voks', '3 lag', 'tre lag dagens voks');
-  fjern((r) => r === 'Base (mellomlag)' || r === 'Base (kaldere)', 'færre base-trinn');
+  fjern((r) => r === 'Base (kaldere)', 'færre base-trinn');
   sett((r) => r === 'Dagens voks', '2 lag', 'to lag dagens voks');
+  fjern((r) => r === 'Base (mellomlag)', 'uten ekstra mellomlag');
   fjern((r) => r === 'Base (blå extra)', 'uten blå extra-trinn');
   fjern((r) => r.startsWith('Dekke'), 'uten dekke');
   return kutt.join(', ');
@@ -185,7 +186,7 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   if (lett) begrunnelse.push('Trening: færre og tynnere lag enn på tur, og ingen mellomtrinn i basen.');
   const grense = lagGrense(varm, lengdeKm);
   const redusert = begrensLag(lag, grense);
-  begrunnelse.push(`Lagantall: høyst ${grense} tynne lag i festesonen (${grense === LAG.rundt0 ? 'rundt 0 °C: 2–4 lag' : grense === LAG.langTur ? `kald snø og over ${LAG.langTurKm} km: opptil ${LAG.langTur}` : 'kald snø: 4–6 lag'})${redusert ? `. Redusert: ${redusert}` : ''}.`);
+  begrunnelse.push(`Lagantall: høyst ${grense} tynne lag i festesonen (${grense === LAG.rundt0 ? 'rundt 0 °C: 2–5 lag' : grense === LAG.langTur ? `kald snø og over ${LAG.langTurKm} km: opptil ${LAG.langTur}` : 'kald snø: 4–6 lag'})${redusert ? `. Redusert: ${redusert}` : ''}.`);
   return { type: 'hardvoks', lag, begrunnelse, advarsler };
 }
 

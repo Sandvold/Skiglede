@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
 
-import { avstandKm, avstandTil, sorterOmråder, useFavoritter, useOmråde, useOmråder } from '@/data/omrader';
+import { avstandKm, avstandTil, prøvOmråderIgjen, sorterOmråder, useFavoritter, useOmråde, useOmråder, useOmrådeFeil } from '@/data/omrader';
 import { usePosisjonNå } from '@/data/posisjon';
 
 type Sted = { navn: string; type: string; kommune: string; lat: number; lon: number };
@@ -50,6 +50,7 @@ const åpneIGoogleMaps = (s: Sted) => {
 export function Områdevelger() {
   const [område, setOmråde, { automatisk, nærmeste }] = useOmråde();
   const liste = useOmråder();
+  const listeFeil = useOmrådeFeil();
   const [fav, bytt] = useFavoritter();
   const pos = usePosisjonNå();
   const [åpen, setÅpen] = useState(false);
@@ -78,6 +79,14 @@ export function Områdevelger() {
       </Pressable>
       {åpen ? (
         <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 6, minWidth: 260, maxWidth: 420 }}>
+          {listeFeil ? (
+            <View style={{ backgroundColor: '#FFF3D6', paddingVertical: 8, paddingHorizontal: 14, gap: 4 }}>
+              <Text style={{ color: '#6B4A00', fontSize: 13, fontWeight: '700' }}>Fikk ikke hentet alle områdene. Du ser bare noen få.</Text>
+              <Pressable accessibilityRole="button" onPress={prøvOmråderIgjen}>
+                <Text style={{ color: '#1F6FEB', fontSize: 13, fontWeight: '700' }}>Prøv igjen</Text>
+              </Pressable>
+            </View>
+          ) : null}
           {liste.length > 8 ? (
             <TextInput value={søk} onChangeText={setSøk} placeholder="Søk etter område eller sted" style={{ margin: 8, borderWidth: 1, borderColor: '#C9D6E6', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, fontSize: 15, color: '#12386B' }} />
           ) : null}
