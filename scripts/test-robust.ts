@@ -31,6 +31,8 @@ ok(fryser.some((x) => x.startsWith('Rubb: passer ikke') && x.includes('fryse på
 const høyde = nullFøreRåd(sl(0, false, -3));
 ok(høyde.some((x) => x.startsWith('Rubb: passer ikke')) && høyde.some((x) => x.includes('kaldere luft')), 'sludd med kaldere høyde: ikke rubb, ikke klister');
 ok(!!byggSmøring('klassisk', sl(2, false), snø, seksjoner, false).vanskeligFøre, 'klassisk stabel får vanskeligFøre ved sludd');
+const nysl = byggSmøring('klassisk', sl(2, false), { ...snø, type: 'ny', skarphet: 10 }, seksjoner, false);
+ok(nysl.type === 'hardvoks' && nysl.advarsler.some((a) => a.includes('myk hardvoks')) && nysl.lag.some((l) => l.rolle === 'Klister under (valgfritt)'), 'sludd og ny snø: myk hardvoks med valgfritt tynt klister under');
 const tørr: any = mk(-3); tørr.sludd = false;
 ok(!byggSmøring('klassisk', tørr, snø, seksjoner, false).vanskeligFøre, 'ingen NB uten sludd');
 console.log(feil ? 'FEIL' : 'Robusthet OK'); if (feil) process.exit(1);

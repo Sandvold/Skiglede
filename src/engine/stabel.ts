@@ -57,6 +57,7 @@ function begrensLag(lag: Lag[], grense: number): string | null {
   sett((r) => r.startsWith('Base'), '1 lag', 'ett lag i hvert base-trinn');
   sett((r) => r === 'Binder', '1 lag', 'ett lag binder');
   sett((r) => r === 'Dagens voks', '3 lag', 'tre lag dagens voks');
+  fjern((r) => r.startsWith('Klister under'), 'uten klister under');
   fjern((r) => r === 'Base (kaldere)', 'færre base-trinn');
   sett((r) => r === 'Dagens voks', '2 lag', 'to lag dagens voks');
   fjern((r) => r === 'Base (mellomlag)', 'uten ekstra mellomlag');
@@ -109,7 +110,8 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   if (klisterFøre) advarsler.push('Føret tilsier klister, men du har ikke noe i smørelageret: hardvoks er foreslått i stedet. Det kan bli dårlig feste.');
 
   // ---- Hardvoks ----
-  const dag = hardvoksFor(varm, sys);
+  // Fallende eller ny snø rundt 0 °C: en myk hardvoks, valgt for den varmeste delen av turen [Swix kap. 20, Bruker]
+  const dag = hardvoksFor(tur.sludd ? Math.max(varm, tur.tMaks) : varm, sys);
   const kaldIdx = hardvoksFor(kald, sys);
   const dagVoks = HARDVOKS[dag];
   const [lo] = dagVoks.omr;
@@ -169,7 +171,16 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   begrunnelse.push(`Dagens voks ${dagVoks.navn} velges for varm del (${varm.toFixed(1)} °C).`);
   const ute = utenfor(dagVoks, varm, 'varm del av løypa');
   if (ute) advarsler.push(ute);
-  if (tur.sludd) advarsler.push('Nedbør rundt 0 °C: hardvoks kan snøballe og islegge seg i sludd. Vurder klister, felleski eller rubb.');
+  if (tur.sludd) {
+    advarsler.push('Nedbør rundt 0 °C og snøen er ikke omdannet: bruk en myk hardvoks (Swix). Den tåler ising bedre enn klister, som er for mykt til fallende eller ny snø. Hardvoks kan likevel snøballe i regn eller våt snø: ha felleski eller rubb som plan B.');
+    // Valgfritt: tynt klister under hardvoksen som demper og gir bedre feste [Swix kap. 20]
+    const kl = sys.universalVarm ?? sys.baseKlister;
+    if (kl && !lett) {
+      const iDag = lag.findIndex((l) => l.rolle === 'Dagens voks');
+      lag.splice(Math.max(0, iDag), 0, { rolle: 'Klister under (valgfritt)', produkt: kl.navn, antall: '1 tynt lag', merknad: 'Tynt klister demper hardvoksen og gir bedre feste. Hardvoksen holder ising unna. La det herde først' });
+      begrunnelse.push('Sludd og ikke omdannet snø: myk hardvoks, med valgfritt tynt klister under (Swix).');
+    }
+  }
 
   if (blirVarmt && dag > 0) {
     let trinn = kmKaldt >= DEKKE.toTrinnMinKm || minKaldt >= DEKKE.toTrinnMinMin ? 2 : 1;
@@ -336,7 +347,7 @@ export function nullFøreRåd(tur: Tur): string[] {
   if (tur.fryserPå || kaldereOppe) ut.push('Klister: fungerer dårlig når turen går opp i kaldere luft eller det fryser på underveis. Velg heller hardvoks med binder, eller felleski.');
   else if (varmere) ut.push('Klister: kan fungere når det blir varmere.');
   else ut.push('Klister: kan fungere hvis det holder seg rundt og over 0 °C hele turen.');
-  ut.push('Hardvoks: ved fallende eller ny snø rundt 0 °C anbefaler Swix en myk hardvoks, eventuelt med tynt klister under. Klister er for mykt til ny snø og virker først når snøen er omdannet og har fritt vann.');
+  ut.push('Hardvoks: ved fallende eller ny snø rundt 0 °C er en myk hardvoks valget (Swix), eventuelt med tynt klister under. Klister er for mykt til ny snø og virker først når snøen er omdannet og har fritt vann.');
   ut.push('Felleski: det tryggeste valget. Fungerer alltid, men glir aldri perfekt.');
   return ut;
 }
