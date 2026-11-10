@@ -46,6 +46,7 @@ export function useLøypeliste(område: string): { liste: LøypeInfo[] | null; f
       const lagret = lesJson<LøypeInfo[]>(listeNøkkel(område));
       if (lagret) {
         lister.set(område, lagret);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- lagret kopi vises med en gang, så oppdateres den fra databasen
         tving((n) => n + 1);
       }
     }

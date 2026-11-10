@@ -33,12 +33,13 @@ export function ZoomKart({ punkter, hoyde, startZ = 16, fast, onBoks, children }
   const z = Math.max(MIN_Z, Math.min(MAX_Z, passZ + dz));
 
   const ref = useRef({ z, w, passZ });
-  ref.current = { z, w, passZ };
+  useEffect(() => { ref.current = { z, w, passZ }; });
   const zoom = (d: number) => setDz((v) => Math.max(MIN_Z - ref.current.passZ, Math.min(MAX_Z - ref.current.passZ, v + d)));
 
   const gest = useRef({ sist: [0, 0], avstand: 0 });
   const pan = useMemo(
     () =>
+      // eslint-disable-next-line react-hooks/refs -- refene leses bare inne i gesture-funksjonene, aldri under visning
       PanResponder.create({
         onStartShouldSetPanResponder: () => false,
         onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) + Math.abs(g.dy) > 6,
@@ -66,7 +67,7 @@ export function ZoomKart({ punkter, hoyde, startZ = 16, fast, onBoks, children }
     [],
   );
 
-  const boks = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const boks = useRef<any>(null);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const el = boks.current as unknown as HTMLElement | null;

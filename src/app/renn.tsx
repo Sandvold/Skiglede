@@ -99,15 +99,13 @@ function Rennkalender({ renn, valgt, velg }: { renn: Renn[]; valgt: string; velg
       </Pressable>
     );
   };
-  let sist = '';
+  const måned = (r: { dato?: unknown }) => { const dt = new Date(`${(r.dato as string).slice(0, 10)}T00:00:00Z`); return `${MÅNEDER[dt.getUTCMonth()]} ${dt.getUTCFullYear()}`; };
   return (
     <View style={{ gap: 8 }}>
       {kommende.length === 0 && udatert.length === 0 ? <ThemedText themeColor="textSecondary">Ingen kommende renn er lagt inn ennå.</ThemedText> : null}
-      {kommende.map(({ r, d }) => {
-        const dt = new Date(`${(r.dato as string).slice(0, 10)}T00:00:00Z`);
-        const mnd = `${MÅNEDER[dt.getUTCMonth()]} ${dt.getUTCFullYear()}`;
-        const overskrift = mnd !== sist;
-        sist = mnd;
+      {kommende.map(({ r, d }, i) => {
+        const mnd = måned(r);
+        const overskrift = i === 0 || mnd !== måned(kommende[i - 1].r);
         return (
           <View key={r.id} style={{ gap: 6 }}>
             {overskrift ? <ThemedText type="smallBold" themeColor="textSecondary">{mnd.toUpperCase()}</ThemedText> : null}
@@ -174,7 +172,6 @@ export default function RennSide() {
 }
 
 function RennDetalj({ renn }: { renn: Renn }) {
-  const theme = useTheme();
   const områder = useOmråder();
   const område = områder.find((o) => o.id === renn.omrade);
   const [opplastet, setOpplastet] = useState<Løype | undefined>(undefined);
@@ -335,6 +332,7 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
   const valgteSki = valgte.map((id) => mine.find((x) => x.id === id)).filter((x): x is Ski => !!x);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lagret prognose vises med en gang, ny hentes ved områdebytte
     setVarsel(lesVarselCache(område));
     hentVarsel(område).then(setVarsel).catch(() => undefined);
   }, [område.id]);

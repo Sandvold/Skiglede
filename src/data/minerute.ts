@@ -20,6 +20,7 @@ export function useMineRuter(innlogget: boolean) {
     }
   }, [innlogget]);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- henter egne ruter fra databasen
     last();
   }, [last]);
   return {
@@ -86,10 +87,10 @@ export async function hentLagretRutevær(ruteId: string): Promise<{ referansehoy
 export function useErAdmin(innlogget: boolean): boolean {
   const [er, setEr] = useState(false);
   useEffect(() => {
-    if (!innlogget) return setEr(false);
+    if (!innlogget) return;
     neon().from('admin').select('user_id').limit(1).then(({ data }: { data: unknown[] | null }) => setEr(!!data?.length));
   }, [innlogget]);
-  return er;
+  return innlogget && er;
 }
 
 /** GPX-løypa som admin har lagt til et renn (synlig for Pro-brukere), eller null. */

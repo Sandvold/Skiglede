@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
 import { erBrukerdata, lesLokal, påSkriv, skrivFraKonto } from '@/data/lagring';
 import { neon } from '@/data/neon';
@@ -73,6 +73,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- henter innlogging og profil ved oppstart
     hent();
   }, [hent]);
 

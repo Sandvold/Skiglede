@@ -255,6 +255,7 @@ export function useVærstatus(o: Område): Værstatus {
   return useMemo(() => {
     const sist = sisteVær.get(o.id);
     const oppdatert = sist?.oppdatert ?? null;
+    // eslint-disable-next-line react-hooks/purity -- alderen regnes ut når værdata endres (versjon), ikke for hver visning
     const alderDøgn = oppdatert === null ? null : (Date.now() - oppdatert) / 86400_000;
     const innebygd = !sist && data.timer.length > 0; // innebygd kopi når databasen ikke svarer (Hovden, Nordmarka, Bærumsmarka)
     const fersk = friskVær.has(o.id) || innebygd;

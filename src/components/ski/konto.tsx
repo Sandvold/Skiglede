@@ -65,7 +65,7 @@ export const LåsKort = Kort;
 /** Viser innholdet bare for pro (konkurranse); ellers forklaring og bryter. Pro bygger på premium. */
 export function ProLås({ tittel, children }: { tittel: string; children: React.ReactNode }) {
   const theme = useTheme();
-  const { klar, bruker, premium, pro, feil, loggInnMedGoogle, byttPremium, byttPro } = usePremium();
+  const { klar, bruker, pro, feil, loggInnMedGoogle, byttPro } = usePremium();
   if (pro) return <>{children}</>;
   return (
     <Kort>

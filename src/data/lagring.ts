@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
-import { MERKE_IDER, SYSTEMER, type MerkeId, type Smøresystem, type Smøring, type Stil, type Temperatursone } from '@/engine';
+import { type Smøring, type Stil, type Temperatursone } from '@/engine';
 
 // Brukerdata (smørelager og skipark) lagres foreløpig lokalt i nettleseren, per enhet. Uten innlogging er det ikke delt mellom enheter.
 // Kan senere byttes mot konto og database (premium) uten å røre skjermene, siden alt går gjennom useLagret.

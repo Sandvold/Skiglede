@@ -11,7 +11,7 @@ function useStedssøk(q: string): Sted[] {
   const [treff, setTreff] = useState<Sted[]>([]);
   useEffect(() => {
     const t = q.trim();
-    if (t.length < 3) { setTreff([]); return; }
+    if (t.length < 3) return;
     const ctrl = new AbortController();
     const timer = setTimeout(async () => {
       try {

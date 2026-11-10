@@ -51,6 +51,7 @@ export function useLoggliste(på: boolean) {
     if (error) setFeil(error.message ?? 'Kunne ikke hente loggen');
     else { setFeil(''); setListe((data ?? []) as Logg[]); }
   }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- henter loggen fra databasen når den slås på
   useEffect(() => { if (på) void last(); }, [på, last]);
   const slett = useCallback(async (id: string) => {
     await neon().from('smoring_logg').delete().eq('id', id);

@@ -9,9 +9,8 @@ import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { StedVelger } from '@/components/ski/sted';
 import { foreslåSki } from '@/data/skimodeller';
-import { SONER, SONE_NAVN, type Temperatursone } from '@/engine';
 import { NØKKEL_SKIPARK, TOM_LISTE, flyttSki, useSteder, useStedData, type Ski } from '@/data/lagring';
-import { produkt, type Stil } from '@/engine';
+import { SONER, SONE_NAVN, produkt, type Stil, type Temperatursone } from '@/engine';
 import { useTheme } from '@/hooks/use-theme';
 
 const STIL_NAVN: Record<Stil, string> = { klassisk: 'Klassisk (voks/klister)', felle: 'Felleski', rubb: 'Rubbski', skoyting: 'Skøyting' };

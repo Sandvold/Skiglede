@@ -1,8 +1,8 @@
+import type { Struktur } from './pro';
 import type { Lag, SnøAnalyse, Stabel, Tur } from './typer';
 
 /** Snøtemperatur på saltet snø (°C) når lufta er rundt null eller mildere [Forslag]. */
 export const SALT_SNØTEMP = -3;
-import type { Struktur } from './pro';
 
 /**
  * Underlag som ikke er vanlig natursnø: kunstsnø og saltet løype. Bare brukerens avkrysning styrer dette; værdata kan ikke se det.

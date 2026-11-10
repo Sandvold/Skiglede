@@ -25,7 +25,7 @@ import { Loggkort } from '@/components/ski/loggkort';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
 import { skrivFraKonto } from '@/data/lagring';
-import { SWIX, SYSTEMER, merkeAv, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, INGEN_UNDERLAG, type Underlag, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
+import { SWIX, SYSTEMER, merkeAv, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, INGEN_UNDERLAG, type Underlag, vurderPåfylling, type SnøStatus, type Stabel, type Stil, type Vær } from '@/engine';
 
 /** Værtimer fra 3 t før start. Dekker været ikke starttiden (utdatert prognose), brukes siste timene i stedet for å krasje. */
 const vindu = (alle: Vær[], startTs: number): Vær[] => {
@@ -232,7 +232,8 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
       .finally(() => { setHenter(false); setNå(Date.now()); });
   };
   useEffect(() => {
-    setVarsel(lesVarselCache(område)); // sist lagrede prognose vises mens ny hentes
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lagret prognose vises med en gang, ny hentes ved områdebytte
+    setVarsel(lesVarselCache(område));
     oppdaterVær();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [område.id]);
@@ -679,7 +680,6 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
 
 function Oversikt({ område, liste, feil, prøvIgjen, onVelg, onVelgNabo, egne }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; prøvIgjen: () => void; onVelg: (id: string) => void; onVelgNabo: (omrade: string, id: string) => void; egne: ReturnType<typeof useEgneRuterIOmråde> }) {
   const theme = useTheme();
-  const router = useRouter();
   const [boks, setBoks] = useState<KartBoks | null>(null);
   const naboer = useNaboløyper(område, useOmråder(), boks);
   const LØYPER = (liste ?? []).filter((l) => !l.variantAv);
