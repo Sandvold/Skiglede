@@ -279,7 +279,7 @@ export function byggGlider(tur: Tur, sys: Smøresystem = SWIX): Stabel {
 }
 
 /** Rubbski: bare sludd, aldri ved fare for ordentlig minus [Bruker; −2 °C er Forslag]. */
-export const RUBB = { minLuft: -2 };
+export const RUBB = { minLuft: -0.5 }; // [Bruker: rubb er for kaldt så snart det er minus. −0,5 gir slingringsmonn for målestøy i prognosen]
 
 function glidesone(tur: Tur, sys: Smøresystem): Lag | null {
   if (!sys.glider.length) return null;
@@ -315,7 +315,7 @@ function rubbGrunner(tur: Tur): string[] {
   if (!tur.sludd) grunner.push('Rubb brukes bare på sluddføre (nedbør rundt 0 °C). Det er ikke meldt sludd rundt turen.');
   const kaldest = Math.min(tur.luftMin, tur.tMin);
   if (kaldest < RUBB.minLuft) {
-    grunner.push(`Fare for ordentlig minus: ned mot ${kaldest.toFixed(1)} °C rundt turen eller høyere opp i løypa (grense ${RUBB.minLuft} °C). Rubben iser og klabber.`);
+    grunner.push(`For kaldt for rubb: ned mot ${kaldest.toFixed(1)} °C rundt turen eller høyere opp i løypa (grense ${RUBB.minLuft} °C). Rubb passer ved ca. 0 til noen få plussgrader; ved minus iser og klabber den.`);
   }
   if (tur.fryserPå) grunner.push('Det ser ut til å fryse på i løpet av turen: våt rubb fryser til is og klabber.');
   return grunner;
@@ -331,11 +331,12 @@ export function nullFøreRåd(tur: Tur): string[] {
   const rubbNei = rubbGrunner(tur);
   const kaldereOppe = tur.tMin < -1 || tur.luftMin < -1; // høyere opp eller kaldere snø: klister fryser og iser
   const varmere = tur.luftTrend >= 1 && !tur.fryserPå;
-  if (!rubbNei.length) ut.push(varmere ? 'Rubb: blir varmere under turen, og da gir rubbski ofte mening. Proffene tar ofte rubb i slikt føre.' : 'Rubb: passer i dag (ikke fare for at det fryser på eller blir for kaldt i snøen), og er ofte det proffene velger i slikt føre.');
+  if (!rubbNei.length) ut.push(varmere ? 'Rubb: blir varmere under turen, og da gir rubbski ofte mening. Proffene tar ofte rubb i slikt føre.' : 'Rubb: passer i dag (ikke minus, og ikke fare for at det fryser på), og er ofte det proffene velger i slikt føre. Stopper nedbøren eller går den over til regn, blir sporet blankt og festet dårligere, og på lange turer er rubb risikabelt fordi føret kan endre seg.');
   else ut.push(`Rubb: passer ikke i dag. ${rubbNei.filter((g) => !g.startsWith('Rubb brukes bare')).join(' ') || 'Det er ikke meldt sludd.'}`);
   if (tur.fryserPå || kaldereOppe) ut.push('Klister: fungerer dårlig når turen går opp i kaldere luft eller det fryser på underveis. Velg heller hardvoks med binder, eller felleski.');
   else if (varmere) ut.push('Klister: kan fungere når det blir varmere.');
   else ut.push('Klister: kan fungere hvis det holder seg rundt og over 0 °C hele turen.');
+  ut.push('Hardvoks: ved fallende eller ny snø rundt 0 °C anbefaler Swix en myk hardvoks, eventuelt med tynt klister under. Klister er for mykt til ny snø og virker først når snøen er omdannet og har fritt vann.');
   ut.push('Felleski: det tryggeste valget. Fungerer alltid, men glir aldri perfekt.');
   return ut;
 }
@@ -355,7 +356,7 @@ export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett
   return {
     type: 'rubb',
     lag: [
-      { rolle: 'Festesone', produkt: 'Rubb', antall: 'Ingen smøring', merknad: 'Børst opp med sandpapir (grovt midt under, finere ytterst). Ingen festevoks eller klister' },
+      { rolle: 'Festesone', produkt: 'Rubb', antall: 'Ingen smøring', merknad: 'Børst opp med sandpapir (f.eks. 80 midt i festesonen og 120 ytterst, grovere jo våtere føre). Antiis-spray reduserer ising. Ingen festevoks eller klister' },
       ...(glidesone(tur, sys) ? [glidesone(tur, sys)!] : []),
     ],
     begrunnelse: [`Sluddføre rundt 0 °C uten fare for ordentlig minus (lufta ned til ${tur.luftMin.toFixed(1)} °C): rubb passer.`],
