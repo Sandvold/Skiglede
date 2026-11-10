@@ -40,3 +40,19 @@ ok(byggStabel(tur3, snø, sek).advarsler.some((a) => a.includes('Mye skygge')), 
 (tur3 as any).skyggeAndel = 0.24;
 ok(!byggStabel(tur3, snø, sek).advarsler.some((a) => a.includes('Mye skygge')), 'skygge 24 % gir ikke rådet');
 console.log('Alle sjekker OK');
+
+// Blå extra som mellomlag under varmere dagsvoks (violett) [Bruker]
+(async () => {
+  const { SWIX } = await import('../src/engine');
+  const varm = mk(Array(20).fill(0.5));
+  const t4 = planTur({ seksjoner: varm, timer: dag, startTs: Date.parse('2026-11-02T09:00:00Z'), tempoKmt: 7, refH: 800 });
+  t4.seksjoner.forEach((s) => { s.tEff = -0.5; });
+  const mildSnø = { ...snø, type: 'ny' as const, skarphet: 10 };
+  const s4 = byggStabel(t4, mildSnø, varm, false, SWIX);
+  const navn = s4.lag.map((l) => l.produkt);
+  console.log(s4.lag.map((l) => `${l.rolle}:${l.produkt}(${l.antall})`).join(' | '));
+  ok(navn.includes('VP45') && navn.indexOf('VP45') > navn.findIndex((n) => n.startsWith('VG')) && navn.indexOf('VP45') < navn.indexOf('VP55'), 'blå extra (VP45) ligger mellom binder og violett');
+  const l4 = byggStabel(t4, mildSnø, varm, true, SWIX);
+  ok(!l4.lag.some((l) => l.produkt === 'VP45'), 'Trening (lett) har ikke blå extra-mellomlag');
+  console.log('Blå extra OK');
+})();

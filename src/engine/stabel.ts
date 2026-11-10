@@ -9,6 +9,8 @@ export const FESTE_MIN_STIGNING = -0.05;
 /** Mye skygge: fra denne andelen av løypa (og et temperaturspenn på minst SKYGGE_SPENN °C mellom kaldeste og varmeste del) gis egen råd om blandet føre [Forslag]. */
 export const SKYGGE_MYE_ANDEL = 0.25;
 export const SKYGGE_SPENN = 4;
+/** Swix-voksen brukeren bruker som «blå extra»-mellomlag under varmere hardvoks (Pro blå/fiolett, −5 til −1 °C; V-linjens V40 Blå Extra tilsvarer) [Bruker]. */
+export const BLÅ_EXTRA_SWIX = 'VP45';
 /**
  * Lagantall i festesonen [Bruker, fra research nov 2026]: kald snø 4–6 lag, over 30 km opptil 8, rundt 0 °C 2–4 lag, klister 2–3 lag totalt.
  * Motoren reduserer selv i stedet for å anbefale mer.
@@ -119,7 +121,16 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   // Base fra kaldt til varmt (maks to mellomtrinn)
   const mellom: number[] = [];
   if (!lett) for (let i = Math.min(kaldIdx, dag); i < dag && mellom.length < 2; i++) mellom.push(i);
-  mellom.forEach((i) => lag.push({ rolle: 'Base (kaldere)', produkt: HARDVOKS[i].navn, antall: '1–2 lag' }));
+  // Blå extra som mellomlag under varmere dagsvoks (violett o.l.), som KX35N under klister [Bruker]: binder, blå extra, så dagens voks
+  const blåIdx = sys.id === 'swix' ? HARDVOKS.findIndex((x) => x.navn === BLÅ_EXTRA_SWIX) : -1;
+  const medBlå = !lett && blåIdx >= 0 && dag > blåIdx && !mellom.includes(blåIdx);
+  if (medBlå) {
+    mellom.push(blåIdx);
+    mellom.sort((a, b) => a - b);
+    while (mellom.length > 2) mellom.shift(); // maks to mellomtrinn: kaldeste faller bort
+    begrunnelse.push(`Blå extra (${BLÅ_EXTRA_SWIX}) som mellomlag mellom binder og ${HARDVOKS[dag].navn}: varmere voks får bedre feste og holder lenger oppå en hardere blå base.`);
+  }
+  mellom.forEach((i) => lag.push({ rolle: i === blåIdx ? 'Base (blå extra)' : 'Base (kaldere)', produkt: HARDVOKS[i].navn, antall: '1–2 lag' }));
   lag.push({ rolle: 'Dagens voks', produkt: dagVoks.navn, antall: lett ? '2–3 lag' : '3–4 lag', merknad: `Passer ${dagVoks.omr[0]} til ${dagVoks.omr[1]} °C` });
   begrunnelse.push(`Dagens voks ${dagVoks.navn} velges for varm del (${varm.toFixed(1)} °C).`);
   const ute = utenfor(dagVoks, varm, 'varm del av løypa');

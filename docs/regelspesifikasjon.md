@@ -118,6 +118,8 @@ Løypa deles i biter på 250 m med egen snøtemperatur. Kaldeste og varmeste tem
 
 **Mye skygge** [Forslag]: fra 25 % skygge (`SKYGGE_MYE_ANDEL`) og minst 4 °C mellom kaldeste og varmeste del (`SKYGGE_SPENN`) gir appen en egen advarsel: kald base og tynt topplag av den varme voksen (aldri kald oppå varm), tynne lag og god korking, fordi bakglatt kommer av for hard voks i sola og klabb av tykke lag eller fuktige ski som kommer inn i kald skygge.
 
+**Blå extra som mellomlag** [Bruker]: ligger dagens hardvoks varmere enn blå extra (Swix VP45 Pro blå/fiolett, −5 til −1 °C; V40 Blå Extra tilsvarer i V-linjen), legges VP45 som mellomlag mellom binder og dagens voks, på samme måte som KX35N under klister. Bare i Full (ikke Trening) og bare for Swix. Maks to mellomtrinn: det kaldeste faller bort hvis det blir tre. Laget regnes som base og kuttes til ett lag først når lagantallet må begrenses (`BLÅ_EXTRA_SWIX` i `engine/stabel.ts`).
+
 ### Utvide turen med flere løyper [Bruker]
 Velger man en løype, kan man legge til løyper som starter ved samme sted (startpunktene innen 300 m, `tilhørende` i `data/rute.ts`): Galten og Lundane, Rørvikåsen og Ny Lysløype, Hovden fjellpark og Hovden lysløype, Auversvatn og Remestøylsflotti. Turen blir hovedløypa, så hver valgt ekstra løype, og tilbake til start (`byggRute`; rett kobling hvis startene ikke er identiske). Avstander og terrengdata forskyves, og smøringen regnes for hele turen. Løyper som bare krysser hverandre midt i løypa er ikke med ennå.
 
