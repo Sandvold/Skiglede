@@ -20,10 +20,15 @@ AKTIVE = {}  # id -> (starttid, loggfil) for områder som bygges nå
 SQL_LÅS = threading.Lock()  # én tråd om gangen skriver til src/data/omrader.sql
 
 
+# Områder som var håndbygde før landspipelinen: de gamle løypene (bl.a. tur-retur fra Sognsvann/Holmenkollen til hyttene) beholdes og de nye legges til
+BEHOLD_GAMLE = {"baerumsmarka", "nordmarka", "sjusjoen"}
+
+
 def bygg(m, a, steder, status):
     id_ = m["id"]
     mappe = os.path.join(a.mappe, id_)
     fil = os.path.join(ROT, "src", "data", f"trails-{id_}.json")
+    gamle = json.load(open(fil, encoding="utf-8")) if id_ in BEHOLD_GAMLE and os.path.exists(fil) else []
     if status.get(id_, {}).get("ok") and os.path.exists(fil):
         return id_, "hoppet (ferdig fra før)"
     s, w, n, e = bbox_av(os.path.join(mappe, "osm.json"))
@@ -51,6 +56,10 @@ def bygg(m, a, steder, status):
         sql = [l for l in tekst.splitlines() if l.startswith("insert into public.omrade")]
         ok = p.returncode == 0 and bool(sql)
         status[id_] = dict(ok=ok, sek=round(time.time() - t0), feil=None if ok else tekst[-300:])
+        if ok and gamle and os.path.exists(fil):
+            nye = json.load(open(fil, encoding="utf-8"))
+            ider = {t["id"] for t in nye}
+            json.dump([t for t in gamle if t["id"] not in ider] + nye, open(fil, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
         if ok:
             linje = sql[0].replace("'Test'", "'" + m["navn"].replace("'", "''") + "'")
             with open(os.path.join(a.mappe, "omrader.sql"), "a") as f:
@@ -65,7 +74,9 @@ def bygg(m, a, steder, status):
     except subprocess.TimeoutExpired:
         status[id_] = dict(ok=False, sek=round(time.time() - t0), feil="tidsavbrudd")
     AKTIVE.pop(id_, None)
-    if not status[id_]["ok"] and os.path.exists(fil):
+    if not status[id_]["ok"] and gamle:
+        json.dump(gamle, open(fil, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))  # aldri mist de gamle løypene
+    elif not status[id_]["ok"] and os.path.exists(fil):
         os.replace(fil, fil + ".feilet")  # en halvferdig løypefil skal aldri havne i en commit; et nytt forsøk bygger på nytt
     json.dump(status, open(os.path.join(a.mappe, "status.json"), "w"), ensure_ascii=False, indent=1)
     return id_, "ok" if status[id_]["ok"] else "FEILET: " + str(status[id_]["feil"])[:120]
