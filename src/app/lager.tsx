@@ -15,6 +15,7 @@ import { useTheme } from '@/hooks/use-theme';
 export default function Lager() {
   const theme = useTheme();
   const [visMerke, setVisMerke] = useState<MerkeId | 'alle'>('swix'); // Swix vises først; de andre merkene velges med chips
+  const [bekreftTøm, setBekreftTøm] = useState(false); // «Tøm alt» krever bekreftelse
   const GRUPPER = MERKE_IDER.filter((id) => visMerke === 'alle' || id === visMerke).flatMap((id) => SYSTEMER[id].oversikt.map((g) => ({ tittel: visMerke === 'alle' ? `${SYSTEMER[id].navn}: ${g.tittel}` : g.tittel, liste: g.liste })));
   const [lager, setLager] = useStedData<string[]>(NØKKEL_LAGER, TOM_LISTE);
   const { steder, aktiv } = useSteder();
@@ -41,7 +42,12 @@ export default function Lager() {
         </View>
         <View style={styles.rad}>
           <Chip aktiv={false} onPress={() => setLager([...new Set([...lager, ...GRUPPER.flatMap((g) => g.liste.map((p) => p.navn))])])}>{visMerke === 'alle' ? 'Velg alle' : `Velg alle ${SYSTEMER[visMerke].navn}`}</Chip>
-          <Chip aktiv={false} onPress={() => setLager([])}>Tøm alt</Chip>
+          {bekreftTøm ? (<>
+            <Chip aktiv onPress={() => { setLager([]); setBekreftTøm(false); }}>{`Ja, tøm ${lager.length} produkter`}</Chip>
+            <Chip aktiv={false} onPress={() => setBekreftTøm(false)}>Avbryt</Chip>
+          </>) : (
+            <Chip aktiv={false} onPress={() => (lager.length ? setBekreftTøm(true) : null)}>Tøm alt</Chip>
+          )}
           <ThemedText type="smallBold" themeColor="textSecondary">{lager.length} produkter totalt</ThemedText>
         </View>
         {GRUPPER.map((g) => (

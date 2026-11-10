@@ -14,10 +14,11 @@ export function Loypevelger({ løyper, valgt, onVelg, maksListe = 8 }: { løyper
   const [åpen, setÅpen] = useState(false);
   const sortert = løyper.map((l, i) => ({ ...l, farge: løypeFarge(i) }));
 
-  const Rad = ({ l, onPress }: { l: (typeof sortert)[number]; onPress: () => void }) => {
+  const rad = (l: (typeof sortert)[number], onPress: () => void) => { // vanlig funksjon, ikke komponent: ellers bygges radene opp på nytt ved hver visning
     const aktiv = l.id === valgt;
     return (
       <Pressable
+        key={l.id}
         onPress={onPress}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: aktiv ? theme.backgroundSelected : 'transparent' }}>
         <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: l.farge }} />
@@ -34,7 +35,7 @@ export function Loypevelger({ løyper, valgt, onVelg, maksListe = 8 }: { løyper
     return (
       <View style={ramme}>
         {sortert.map((l) => (
-          <Rad key={l.id} l={l} onPress={() => onVelg(l.id)} />
+          rad(l, () => onVelg(l.id))
         ))}
       </View>
     );
@@ -53,14 +54,10 @@ export function Loypevelger({ løyper, valgt, onVelg, maksListe = 8 }: { løyper
       {åpen && (
         <ScrollView style={[ramme, { maxHeight: 360 }]} nestedScrollEnabled>
           {sortert.map((l) => (
-            <Rad
-              key={l.id}
-              l={l}
-              onPress={() => {
-                setÅpen(false);
-                onVelg(l.id);
-              }}
-            />
+            rad(l, () => {
+              setÅpen(false);
+              onVelg(l.id);
+            })
           ))}
         </ScrollView>
       )}

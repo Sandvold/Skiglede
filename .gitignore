@@ -46,3 +46,4 @@ __pycache__/
 
 # store nedlastinger for norgeskjøringen (OSM-pbf og høydemodell)
 /data/
+*.feilet

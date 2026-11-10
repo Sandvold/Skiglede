@@ -4,7 +4,7 @@ import { byggRute, tilhørende } from '../src/data/rute';
 import { vektetPersentil } from '../src/engine/tur';
 import { terrengFaktor } from '../src/engine/terreng';
 import type { SnøAnalyse } from '../src/engine/typer';
-import { analyserSnø, byggAlternativer, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, tilpassTilLager, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
+import { analyserSnø, byggAlternativer, byggSmøring, forenklet, glideFor, lagSeksjoner, planTur, vurderPåfylling, type Punkt, type Smøring, type Stabel, type Vær } from '../src/engine';
 
 let feil = 0;
 const sjekk = (navn: string, faktisk: unknown, forventet: unknown) => {
@@ -19,14 +19,7 @@ for (const [t, h] of [[-20, 'HS5'], [-14, 'HS5'], [-9, 'HS6'], [-5, 'HS7'], [-3,
 const stabel = (type: Stabel['type'], lag: [string, string][]): Stabel => ({ type, lag: lag.map(([rolle, produkt]) => ({ rolle, produkt, antall: '1' })), begrunnelse: [], advarsler: [] });
 const smør = (type: Smøring['type'], lag: [string, string][], turer = 1, dagerSiden = 1): Smøring => ({ stil: type === 'glider' ? 'skoyting' : 'klassisk', type, lag: lag.map(([rolle, produkt]) => ({ rolle, produkt })), ts: Date.now() - dagerSiden * 86_400_000, turer });
 
-// Lager: erstatter med nærmeste i samme kategori, kaldest ved likhet
 const rec = stabel('hardvoks', [['Binder', 'VG35'], ['Dagens voks', 'VP45']]);
-const t1 = tilpassTilLager(rec, ['VG35', 'VP40', 'VP50']);
-sjekk('lager: VP45 -> VP50 (senter −1,5 er nærmere −3 enn VP40 −7)', t1.lag[1].produkt, 'VP50');
-sjekk('lager: uavgjort (HS7 og HS10 like langt fra HS8) -> kaldest = HS7', tilpassTilLager(stabel('glider', [['Glider', 'HS8']]), ['HS7', 'HS10']).lag[0].produkt, 'HS7');
-sjekk('lager: tomt lager endrer ingenting', tilpassTilLager(rec, []).lag.map((l) => l.produkt), ['VG35', 'VP45']);
-sjekk('lager: glider kun fra glidere', tilpassTilLager(stabel('glider', [['Glider', 'HS7']]), ['HS8', 'VP40']).lag[0].produkt, 'HS8');
-sjekk('lager: mangler helt gir advarsel', tilpassTilLager(stabel('klister', [['Dagens klister', 'KX65']]), ['VP40']).advarsler.length, 1);
 
 // Skipark
 const ny = stabel('hardvoks', [['Dagens voks', 'VP45']]);
@@ -78,8 +71,6 @@ for (const [navn, f] of [['kaldt', () => ({ temp: -12 })], ['sludd', () => ({ te
   sjekk(`felle: virker alltid (${navn})`, fl.egnet && fl.lag[0].produkt === 'Felle', true);
 }
 sjekk('felle: ingen advarsler om feil smøring', kjør('felle', () => ({ temp: -12 })).advarsler.length, 0);
-sjekk('lager: «Felle» meldes ikke som manglende produkt (glideren kan det)', tilpassTilLager(kjør('felle', () => ({ temp: -5 })), ['VP40']).advarsler.some((a) => a.includes('Felle')), false);
-sjekk('lager: alternativ tilpasses også', tilpassTilLager(tørt, ['VP40']).alternativ?.advarsler.length, (tilpassTilLager(tørt.alternativ!, ['VP40'])).advarsler.length);
 
 // Alternativer fra skiparken (klassisk tur)
 const alt = (eier: ('felle' | 'rubb' | 'klassisk')[], f: (h: number) => Partial<Vær>) => {
@@ -130,7 +121,7 @@ if (feil) { console.error(`${feil} feil`); process.exit(1); }
 console.log('Alle sjekker OK');
 
 // ---- Merker ----
-import { MERKE_IDER, SYSTEMER, ALLE_PRODUKTER, alternativFraLager, glideFor as gF, hardvoksFor as hF, klisterFor as kF, produkt as pr, type Smøresystem } from '../src/engine';
+import { MERKE_IDER, SYSTEMER, ALLE_PRODUKTER, glideFor as gF, hardvoksFor as hF, klisterFor as kF, produkt as pr, type Smøresystem } from '../src/engine';
 const kjørMerke = (stil: 'klassisk' | 'skoyting', temp: number, sys: Smøresystem, fuktig = false) => {
   const t = døgn(() => ({ temp, nedbor: fuktig ? 0.8 : 0 }));
   const sn = analyserSnø(t, start);
@@ -156,10 +147,7 @@ sjekk('Toko −5: rød', SYSTEMER.toko.hardvoks[hF(-5, SYSTEMER.toko)].navn, 'To
 sjekk('Rode 2 °C: P50', SYSTEMER.rode.hardvoks[hF(2, SYSTEMER.rode)].navn, 'Rode P50');
 sjekk('Ski Go −15 glider: blå', gF(-15, SYSTEMER.skigo).navn, 'Skigo XC glider blå');
 sjekk('klisterFor gir gyldig produkt for alle merker', MERKE_IDER.every((id) => !!SYSTEMER[id].klister[kF(1, SYSTEMER[id])]), true);
-sjekk('lager prefererer samme merke', alternativFraLager('Toko Rød', ['Rode P40', 'Toko Gul'])?.navn, 'Toko Gul');
 console.log('Merketester ferdig');
-sjekk('bland merker: nærmeste på tvers av merker', alternativFraLager('Toko Rød', ['Rode P40', 'Toko Gul'], true)?.navn, 'Rode P40');
-sjekk('baseklister erstatter ikke dagens klister', alternativFraLager('K22', ['Rode K90'], true), undefined);
 import { innkjøpsforslag } from '../src/engine';
 const kjøp0 = innkjøpsforslag([-12, 2], []);
 sjekk('innkjøp: tomt lager foreslår hardvoks, klister, glider og binder', ['hard', 'klister', 'glid', 'binder'].every((k) => kjøp0.some((x) => (k === 'hard' ? x.produkt.linje === 'VP' || x.produkt.linje === 'V' && !x.produkt.rolle : k === 'klister' ? x.produkt.linje === 'K' : k === 'glid' ? x.produkt.linje === 'G' : x.produkt.rolle === 'binder'))), true);

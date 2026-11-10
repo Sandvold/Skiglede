@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import { kategori, type Innkjøp, type Produkt, type Smøresystem } from '@/engine';
+import { MERKE_IDER, SYSTEMER, kategori, type Innkjøp, type Produkt, type Smøresystem } from '@/engine';
 
 const MIN = -25;
 const MAX = 15;
@@ -68,7 +68,8 @@ const KAT_TITTEL = { hard: 'Hardvoks', binder: 'Binder', klister: 'Klister og ba
 export function Temperaturoversikt({ tMin, tMaks, brukt, sys, visning = 'alle', lager = [], kjøp = [] }: { tMin: number; tMaks: number; brukt: string[]; sys: Smøresystem; visning?: OversiktVisning; lager?: string[]; kjøp?: Innkjøp[] }) {
   const theme = useTheme();
   let grupper = sys.oversikt;
-  if (visning === 'mine') grupper = sys.oversikt.map((g) => ({ ...g, liste: g.liste.filter((p) => lager.includes(p.navn)) })).filter((g) => g.liste.length);
+  // «Mine produkter» viser alt du har, fra alle merker
+  if (visning === 'mine') grupper = MERKE_IDER.flatMap((id) => SYSTEMER[id].oversikt.map((g) => ({ tittel: `${SYSTEMER[id].navn}: ${g.tittel}`, liste: g.liste.filter((p) => lager.includes(p.navn)) }))).filter((g) => g.liste.length);
   if (visning === 'kjop') {
     const kat = (['hard', 'binder', 'klister', 'glid'] as const).map((k) => ({ tittel: KAT_TITTEL[k], liste: kjøp.filter((x) => kategori(x.produkt) === k).map((x) => x.produkt) }));
     grupper = kat.filter((g) => g.liste.length);
@@ -85,7 +86,7 @@ export function Temperaturoversikt({ tMin, tMaks, brukt, sys, visning = 'alle', 
         </View>
       </View>
       {visning === 'mine' && !grupper.length ? (
-        <ThemedText type="small" themeColor="textSecondary">Du har ingen produkter fra {sys.navn} i smørelageret ennå. Kryss av det du har under Smørelager.</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">Du har ingen produkter i smørelageret ennå. Kryss av det du har under Smørelager.</ThemedText>
       ) : null}
       {visning === 'kjop' && !grupper.length ? (
         <ThemedText type="small" themeColor="textSecondary">Du har allerede produkter som dekker de vanlige snøtemperaturene fra desember til april. Ingenting å kjøpe.</ThemedText>

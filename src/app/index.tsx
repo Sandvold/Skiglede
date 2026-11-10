@@ -25,7 +25,7 @@ import { Loggkort } from '@/components/ski/loggkort';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
 import { skrivFraKonto } from '@/data/lagring';
-import { SWIX, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, INGEN_UNDERLAG, type Underlag, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
+import { SWIX, SYSTEMER, merkeAv, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, INGEN_UNDERLAG, type Underlag, vurderPåfylling, type Punkt, type SnøStatus, type Stabel, type Stil, type Terreng, type Vær } from '@/engine';
 
 /** Værtimer fra 3 t før start. Dekker været ikke starttiden (utdatert prognose), brukes siste timene i stedet for å krasje. */
 const vindu = (alle: Vær[], startTs: number): Vær[] => {
@@ -35,8 +35,6 @@ const vindu = (alle: Vær[], startTs: number): Vær[] => {
 const timerI = (v: Område['vær']): Vær[] => v.timer.map((r) => ({
   ts: Date.parse(r[0] as string), temp: r[1] as number, nedbor: r[2] as number, rh: r[3] as number, vind: r[4] as number, sw: r[5] as number,
 }));
-// Reserve hvis Yr-varselet ikke kommer: observert 2. nov.
-const RESERVE_DATO = '2026-11-02';
 
 /** Dato (ÅÅÅÅ-MM-DD) i Oslo, `dager` frem i tid. */
 const osloDato = (dager: number) =>
@@ -188,16 +186,24 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
     [valgtLøype, mulige, ekstraIds, ekstraFull],
   );
   const [modus, setModus] = useLagret<Modus>('skiglede.modus', 'Tur');
-  const [startTime, setStartTime] = useLagret<number>('skiglede.start', 10);
+  // Starttid: i dag er standard én time frem (aldri før nå), andre dager 10:00. Valget huskes ikke mellom besøk, for «nå» endrer seg.
+  const [startValgt, setStartValgt] = useState<number | null>(null);
   const [debug, setDebug] = useState(false);
   const [dagDato, setDagDato] = useLagret<string>('skiglede.dag', '');
+  const [nå, setNå] = useState(() => Date.now());
+  useEffect(() => { const id = setInterval(() => setNå(Date.now()), 60_000); return () => clearInterval(id); }, []);
   const dagIdx = Math.max(0, DAGER.findIndex((i) => osloDato(i) === dagDato)); // utløpt dag → i dag
-  const setDagIdx = (i: number) => setDagDato(osloDato(i));
+  const setDagIdx = (i: number) => { setDagDato(osloDato(i)); setStartValgt(null); };
+  const osloTimeNå = (() => { const d = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(nå).split(':'); return Number(d[0]) + Number(d[1]) / 60; })();
+  const tidligstI_dag = Math.min(23, Math.ceil(osloTimeNå * 2) / 2);
+  const startTider = dagIdx === 0 ? STARTTIDER.filter((h) => h >= tidligstI_dag) : STARTTIDER;
+  const startStandard = dagIdx === 0 ? startTider.find((h) => h >= osloTimeNå + 1) ?? startTider[startTider.length - 1] : 10;
+  const startTime = startValgt !== null && startTider.includes(startValgt) ? startValgt : startStandard;
+  const setStartTime = (h: number) => setStartValgt(h);
   const router = useRouter();
   const [stil, setStil] = useLagret<Stil>('skiglede.stil', 'klassisk');
   const [valgteLagret, setValgte] = useStedData<string[]>(NØKKEL_VALGTE, TOM_LISTE);
   const valgte = premium ? valgteLagret : TOM_LISTE;
-  const [nå, setNå] = useState(() => Date.now());
   const [lagerLagret] = useStedData<string[]>(NØKKEL_LAGER, TOM_LISTE);
   const lager = premium ? lagerLagret : TOM_LISTE; // smørelageret er premium
   const [oversiktValgt, setOversiktVisning] = useState<OversiktVisning>('alle');
@@ -244,7 +250,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
 
   const r = useMemo(() => {
     const seksjoner = lagSeksjoner(løype.punkter);
-    const dato = varsel ? osloDato(dagIdx) : RESERVE_DATO;
+    const dato = osloDato(dagIdx);
     const startTs = osloTs(dato, startTime);
     // Observert historikk, så Yr-varselet fra der historikken slutter.
     const sisteHist = TIMER[TIMER.length - 1].ts;
@@ -301,7 +307,8 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const dagens = (st: Stabel) => st.lag.find((l) => ['Dagens voks', 'Dagens klister', 'Glider', 'Festesone'].includes(l.rolle));
 
   const harPrognose = !!varsel && varsel.timer.length > 0 && varsel.timer[varsel.timer.length - 1].ts > r.startTs;
-  const ingenPrognose = varselFeil && !harPrognose;
+  const lasterPrognose = !varsel && !varselFeil; // ingen smøretips før prognosen er hentet
+  const ingenPrognose = !lasterPrognose && !harPrognose;
   const prognoseAlderT = varsel ? (nå - varsel.hentet) / 3600_000 : 0;
   const prognoseGammel = !!varsel && prognoseAlderT > VARSEL_GAMMELT_T;
   const historikkGammel = (nå - r.sisteHist) / 3600_000 > HISTORIKK_GAMMEL_T;
@@ -310,6 +317,8 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const minutter = Math.round((km / tempo[modus]) * 60);
   const stabelVisning = [...(enkel ? forenklet(vis) : vis).lag].filter((l) => !erGlidesone(l)).reverse(); // øverste lag først, uten glider
   const glidesone = vis.lag.find(erGlidesone);
+  const dagensP = produkt(dagens(vis)?.produkt ?? '');
+  const smøreMerke = dagensP ? SYSTEMER[merkeAv(dagensP)].navn : sys.navn;
   const baseAnbefaling = vis.lag.find((l) => l.rolle === 'Binder' || l.rolle === 'Baseklister')?.produkt;
 
   return (
@@ -347,21 +356,6 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           </View>
         )}
 
-        {/* Kart og profil */}
-        <Kort>
-          <Text style={[styles.h2, { color: theme.text }]}>{løype.navn}</Text>
-          <View style={styles.rad}>
-            <Tall verdi={`${km.toFixed(1)} km`} tekst={løype.type === 'retur' ? 'tur-retur' : løype.type === 'sloyfe' ? 'sløyfe' : 'lengde'} />
-            <Tall verdi={`${Math.round(r.lav)}–${Math.round(r.høy)}`} tekst="moh" />
-            <Tall verdi={`${Math.round(r.opp)} m`} tekst="stigning" />
-          </View>
-          <TrailMap segmenter={r.segmenter} />
-          <ThemedText type="small" themeColor="textSecondary">
-            Fargen viser beregnet snøtemperatur langs løypa: blå er kaldt, sand er mildt og sol.
-          </ThemedText>
-          <Hoydeprofil punkter={r.profil} />
-        </Kort>
-
         {/* Tur */}
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>TUREN</ThemedText>
         <View style={styles.rad}>
@@ -390,10 +384,10 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
                 onChange: (e: { target: { value: string } }) => setStartTime(Number(e.target.value)),
                 style: { fontSize: 17, fontWeight: 600, padding: '10px 14px', borderRadius: 12, border: `1px solid ${theme.border}`, background: theme.backgroundElement, color: theme.text, minWidth: 130 },
               },
-              ...STARTTIDER.map((h) => createElement('option', { key: h, value: String(h) }, `🕒 ${klokke(h)}`))
+              ...startTider.map((h) => createElement('option', { key: h, value: String(h) }, `🕒 ${klokke(h)}`))
             )
           ) : (
-            <Nedtrekk etikett="Starttidspunkt for turen" verdi={String(startTime)} valg={STARTTIDER.map((h) => ({ verdi: String(h), tekst: `🕒 ${klokke(h)}` }))} onVelg={(v) => setStartTime(Number(v))} />
+            <Nedtrekk etikett="Starttidspunkt for turen" verdi={String(startTime)} valg={startTider.map((h) => ({ verdi: String(h), tekst: `🕒 ${klokke(h)}` }))} onVelg={(v) => setStartTime(Number(v))} />
           )}
         </View>
         <ThemedText type="small" themeColor="textSecondary">
@@ -409,7 +403,9 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
         </ThemedText>
         {ingenPrognose ? (
           <View style={[styles.advarsel, { borderColor: '#C0392B' }]}>
-            <ThemedText type="smallBold">⚠ Fikk ikke hentet prognosen fra Yr, og det finnes ingen brukbar lagret prognose. Smøretipset vises ikke før været er hentet. Prøv «Oppdater vær».</ThemedText>
+            <ThemedText type="smallBold">{varselFeil && !varsel
+              ? '⚠ Fikk ikke hentet prognosen fra Yr, og det finnes ingen brukbar lagret prognose. Smøretipset vises ikke før været er hentet. Prøv «Oppdater vær».'
+              : '⚠ Prognosen rekker ikke fram til valgt tidspunkt, så smøretipset vises ikke. Velg en tidligere dag eller tid, eller trykk «Oppdater vær».'}</ThemedText>
           </View>
         ) : null}
         {varselFeil && harPrognose ? <ThemedText type="small">⚠ Fikk ikke hentet ny prognose. Viser den sist lagrede.</ThemedText> : null}
@@ -445,8 +441,10 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
             <Chip aktiv={enkel} onPress={() => setVisning('enkel')}>Enkel</Chip>
             {enkel ? <ThemedText type="small" themeColor="textSecondary">Bare dagens smøring og glidesonen. Det er bare dette som lagres på ski.</ThemedText> : null}
           </View>
-          {ingenPrognose ? (
-            <ThemedText type="small">Ingen smøretips uten prognose. Se advarselen under «Turen».</ThemedText>
+          {lasterPrognose ? (
+            <ThemedText type="small">Henter prognose fra Yr …</ThemedText>
+          ) : ingenPrognose ? (
+            <ThemedText type="small">Ingen smøretips uten prognose for valgt tid. Se advarselen under «Turen».</ThemedText>
           ) : (<>
           <GliderBoks lag={glidesone} />
           <ThemedText type="small" themeColor="textSecondary">{vis.lag.filter((l) => !erGlidesone(l)).length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Øverst = siste lag. Bygg nedenfra og opp.' : 'Ingen smøring på festesonen.'}</ThemedText>
@@ -471,11 +469,11 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           ))}
           </>)}
           <ThemedText type="small" themeColor="textSecondary">
-            Utkast: temperaturområdene er hentet fra produsentene ({sys.navn}), men tersklene i reglene er foreløpige og justeres mot erfaring.
+            Utkast: temperaturområdene er hentet fra produsentene ({smøreMerke}), men tersklene i reglene er foreløpige og justeres mot erfaring.
           </ThemedText>
         </Kort>
 
-        {!ingenPrognose && r.alternativer.map((a) => {
+        {!ingenPrognose && !lasterPrognose && r.alternativer.map((a) => {
           const festeLag = a.stabel.lag.filter((l) => !erGlidesone(l));
           const ingenSmøring = festeLag.length > 0 && festeLag.every((l) => l.antall === 'Ingen smøring');
           const alt = a.stabel.lag.find(erGlidesone);
@@ -505,6 +503,21 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           );
         })}
 
+        {/* Kart og profil */}
+        <Kort>
+          <Text style={[styles.h2, { color: theme.text }]}>{løype.navn}</Text>
+          <View style={styles.rad}>
+            <Tall verdi={`${km.toFixed(1)} km`} tekst={løype.type === 'retur' ? 'tur-retur' : løype.type === 'sloyfe' ? 'sløyfe' : 'lengde'} />
+            <Tall verdi={`${Math.round(r.lav)}–${Math.round(r.høy)}`} tekst="moh" />
+            <Tall verdi={`${Math.round(r.opp)} m`} tekst="stigning" />
+          </View>
+          <TrailMap segmenter={r.segmenter} />
+          <ThemedText type="small" themeColor="textSecondary">
+            Fargen viser beregnet snøtemperatur langs løypa: blå er kaldt, sand er mildt og sol.
+          </ThemedText>
+          <Hoydeprofil punkter={r.profil} />
+        </Kort>
+
         {/* Ski */}
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>SKI JEG SMØRER I DAG</ThemedText>
         <View style={styles.rad}>
@@ -518,7 +531,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
             <Text style={{ color: theme.text, fontWeight: '600', fontSize: 15 }}>{pro ? 'Renn' : '🔒 Renn (pro)'}</Text>
           </Pressable>
         </View>
-        {valgteSki.length > 0 && !ingenPrognose && (
+        {valgteSki.length > 0 && !ingenPrognose && !lasterPrognose && (
           <Kort style={{ gap: 0, paddingVertical: Spacing.two }}>
             {valgteSki.map(({ ski, st, vurdering, lagret, sone }, i) => {
               const åpen = åpne.includes(ski.id);

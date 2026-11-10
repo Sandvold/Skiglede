@@ -31,6 +31,12 @@ const LOKAL_NØKLER = () => {
   }
 };
 
+/** Norsk feilmelding: nettfeil fra nettleseren («Failed to fetch») vises ikke rått. */
+const feilTekst = (e: unknown): string => {
+  const m = String((e as Error)?.message ?? e);
+  return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'Fikk ikke kontakt med innloggingen. Sjekk nettforbindelsen.' : m;
+};
+
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const [klar, setKlar] = useState(false);
   const [bruker, setBruker] = useState<Bruker | null>(null);
@@ -60,7 +66,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       setPremium(!!rad.premium);
       setPro(!!rad.pro);
     } catch (e) {
-      setFeil(String((e as Error)?.message ?? e));
+      setFeil(feilTekst(e));
     } finally {
       setKlar(true);
     }
@@ -93,7 +99,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {
         synket.current = false;
-        setFeil(`Synk feilet: ${String((e as Error)?.message ?? e)}`);
+        setFeil(`Synk feilet: ${feilTekst(e)}`);
       }
     })();
   }, [bruker, premium]);
@@ -113,7 +119,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         if (fulle.length) await db.from('brukerdata').upsert(fulle.map(([n, v]) => ({ nokkel: n, verdi: JSON.parse(v), oppdatert: new Date().toISOString() })), { onConflict: 'user_id,nokkel' });
         if (tomme.length) await db.from('brukerdata').delete().in('nokkel', tomme);
       } catch (e) {
-        setFeil(`Synk feilet: ${String((e as Error)?.message ?? e)}`);
+        setFeil(`Synk feilet: ${feilTekst(e)}`);
       }
     };
     const av = påSkriv((n, v) => {
@@ -137,7 +143,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         if (melding) setFeil(melding);
         await hent();
       } catch (e) {
-        setFeil(String((e as Error)?.message ?? e));
+        setFeil(feilTekst(e));
       } finally {
         setPågår(false);
       }
@@ -152,7 +158,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     try {
       await neon().auth.signOut();
     } catch (e) {
-      setFeil(`Utlogging: ${String((e as Error)?.message ?? e)}`);
+      setFeil(`Utlogging: ${feilTekst(e)}`);
     }
     synket.current = false;
     setBruker(null);

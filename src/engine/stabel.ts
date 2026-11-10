@@ -57,8 +57,9 @@ function begrensLag(lag: Lag[], grense: number): string | null {
   sett((r) => r.startsWith('Base'), '1 lag', 'ett lag i hvert base-trinn');
   sett((r) => r === 'Binder', '1 lag', 'ett lag binder');
   sett((r) => r === 'Dagens voks', '3 lag', 'tre lag dagens voks');
-  fjern((r) => r === 'Base (kaldere)', 'færre base-trinn');
+  fjern((r) => r === 'Base (mellomlag)' || r === 'Base (kaldere)', 'færre base-trinn');
   sett((r) => r === 'Dagens voks', '2 lag', 'to lag dagens voks');
+  fjern((r) => r === 'Base (blå extra)', 'uten blå extra-trinn');
   fjern((r) => r.startsWith('Dekke'), 'uten dekke');
   return kutt.join(', ');
 }
@@ -94,7 +95,17 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   if (skarpSnø && !klisterFøre) {
     begrunnelse.push(`Skarp/omdannet snø, men varmeste del er ${tur.tMaks.toFixed(1)} °C (under ${KLISTER_KALDGRENSE} °C): hardvoks over binder, ikke klister.`);
   }
-  if (klisterFøre) return klisterStabel(tur, snø, { kald, midt, varm }, begrunnelse, advarsler, lett, sys);
+  if (klisterFøre && sys.klister.length) return klisterStabel(tur, snø, { kald, midt, varm }, begrunnelse, advarsler, lett, sys);
+  if (!HARDVOKS.length && sys.klister.length) {
+    advarsler.push('Du har ingen hardvoks i smørelageret: klister er foreslått i stedet.');
+    return klisterStabel(tur, snø, { kald, midt, varm }, begrunnelse, advarsler, lett, sys);
+  }
+  if (!HARDVOKS.length) {
+    // Ingenting å smøre med i lageret (for dette føret): bare glidesone, med en tydelig beskjed i stedet for krasj
+    const g0 = glidesone(tur, sys);
+    return { type: klisterFøre ? 'klister' : 'hardvoks', lag: g0 ? [g0] : [], begrunnelse: [...begrunnelse, 'Ingen festevoks eller klister i smørelageret som passer.'], advarsler: [...advarsler, klisterFøre ? 'Føret krever klister, men du har ikke noe i smørelageret.' : 'Du har ingen hardvoks i smørelageret.'] };
+  }
+  if (klisterFøre) advarsler.push('Føret tilsier klister, men du har ikke noe i smørelageret: hardvoks er foreslått i stedet. Det kan bli dårlig feste.');
 
   // ---- Hardvoks ----
   const dag = hardvoksFor(varm, sys);
@@ -129,7 +140,8 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   // Er dagsvoksen rød eller varmere (underkant ≥ MELLOM2_FRA), kommer også et fiolett-trinn imellom [Bruker: «ofte fiolett også»].
   const mellomPå = (): { p: Produkt; rolle: string }[] => {
     if (lett) return [];
-    const be = sys.blåExtra?.[0];
+    const be0 = sys.blåExtra?.[0];
+    const be = be0 && (HARDVOKS.find((h) => h.navn === be0.navn) ?? be0); // områdene justeres for omdannet snø
     let første: Produkt | null = null;
     if (be && dagVoks.omr[0] > be.omr[0] && dagVoks.navn !== be.navn) første = be;
     else for (let i = dag - 1; i >= 0; i--) if (HARDVOKS[i].omr[0] <= dagVoks.omr[0] - MELLOM_KALDERE) { første = HARDVOKS[i]; break; }
@@ -214,7 +226,7 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   if (medDekke) {
     const hv = sys.hardvoks;
     const i = Math.max(0, hardvoksFor(T.varm, sys) - 1); // litt hardere enn temperaturen tilsier [Swix]
-    if (hv[i]) {
+    if (hv[i] && !utenfor(hv[i], T.varm, 'varm del av løypa')) { // dekke bare når voksen tåler varmen (ellers baller den)
       lag.push({ rolle: 'Voksdekke (over klister)', produkt: hv[i].navn, antall: '2–3 lag', merknad: 'La klisteret herde ca. 5 min (gjerne ute) først. Tynne lag, kork mellom hvert' });
       begrunnelse.push(`Klister med dekke: ${tur.tMaks <= 0.5 ? `snøen er under 0 °C (varmest ${tur.tMaks.toFixed(1)} °C)` : `${snø.nysnøOppå.toFixed(0)} cm nysnø kan ligge i sporet`}. 2–3 tynne lag ${hv[i].navn} over klisteret hindrer ising og demper klisteret. Voksdekket slites av etter ca. 1–2 mil.`);
     }
@@ -307,7 +319,7 @@ export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett
       begrunnelse: ['Rubbski passer ikke i dag. Vanlig klassisk smøring er foreslått i stedet.'],
       advarsler: grunner,
       egnet: false,
-      alternativ: byggStabel(tur, snø, seksjoner, lett, sys),
+      alternativ: sys.hardvoks.length || sys.klister.length ? byggStabel(tur, snø, seksjoner, lett, sys) : undefined,
     };
   }
   return {

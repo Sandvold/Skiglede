@@ -40,7 +40,14 @@ export async function hentVarsel(område: Område): Promise<Varsel> {
   const lon = Math.round(område.sted.lon * 100) / 100;
   const hoyde = Math.round(område.hoyde || 0);
   const erNett = typeof document !== 'undefined';
-  const r = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}&altitude=${hoyde}`, erNett ? undefined : { headers: { 'User-Agent': 'Skiglede/0.1 github.com/Sandvold/Skiglede' } });
+  const avbryt = new AbortController();
+  const frist = setTimeout(() => avbryt.abort(), 10_000); // ingen evig «Henter …»
+  let r: Response;
+  try {
+    r = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat}&lon=${lon}&altitude=${hoyde}`, erNett ? { signal: avbryt.signal } : { signal: avbryt.signal, headers: { 'User-Agent': 'Skiglede/0.1 github.com/Sandvold/Skiglede' } });
+  } finally {
+    clearTimeout(frist);
+  }
   if (!r.ok) throw new Error(`MET svarte ${r.status}`);
   const j = (await r.json()) as { properties: { meta: { updated_at: string }; timeseries: { time: string; data: { instant: { details: Record<string, number> }; next_1_hours?: { details: { precipitation_amount?: number } } } }[] } };
   const timer: Rå['timer'] = [];

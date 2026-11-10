@@ -2,7 +2,7 @@
 
 Gjelder løyper i `src/data/trails.json`, bygget av `scripts/hent_loyper.py` og kontrollert av `scripts/kontroller-loyper.mjs`. Tenk som en skiløper: hva ville du faktisk gått?
 
-## Må (kontrollen feiler bygget)
+## Må (kontrollen setter løypa i karantene ved opplasting)
 1. **Start og slutt er samme punkt** (maks 15 m, samme høyde). Ingen enveisløyper.
 2. **Formen er `retur` eller `sloyfe`.** I landsdekkende kjøring lages tur-retur (`retur`) som reserve der nettet ikke gir noen runde fra et startpunkt. Runde slår tur-retur: går man ut til enden, tas en annen løype tilbake hvis nettet har en som ikke bruker samme løype og er kortere enn 75 % av løypa. `retur-ren` tvinger samme vei tilbake.
 3. **En sløyfe går maks 25 % av veien to ganger (kontrollen godtar opptil 30 %).** Mer enn det er en tur-retur i forkledning (målt: sløyfene våre ligger på 2–6 %, tur-retur på 98 %).
