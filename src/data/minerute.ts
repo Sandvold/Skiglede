@@ -37,9 +37,10 @@ export function useMineRuter(innlogget: boolean) {
       await neon().from('bruker_rute').update({ delt }).eq('id', id);
       await last();
     },
-    async slett(id: string) {
-      await neon().from('bruker_rute').delete().eq('id', id);
+    async slett(id: string): Promise<string | null> {
+      const { error } = await neon().from('bruker_rute').delete().eq('id', id);
       await last();
+      return error?.message ?? null;
     },
   };
 }

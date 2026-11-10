@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { createElement, useState } from 'react';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
@@ -32,6 +32,22 @@ export function Sammenleggbar({ id, tittel, standardÅpen = true, topp, children
       </Pressable>
       {åpen ? children : null}
     </Kort>
+  );
+}
+
+/** Nedtrekk som ser likt ut overalt: <select> på nett, modal på mobil. */
+export function Valgboks({ verdi, valg, onVelg, etikett }: { verdi: string; valg: { verdi: string; tekst: string }[]; onVelg: (v: string) => void; etikett: string }) {
+  const theme = useTheme();
+  if (Platform.OS !== 'web') return <Nedtrekk verdi={verdi} valg={valg} onVelg={onVelg} etikett={etikett} />;
+  return createElement(
+    'select',
+    {
+      value: verdi,
+      'aria-label': etikett,
+      onChange: (e: { target: { value: string } }) => onVelg(e.target.value),
+      style: { fontSize: 14, fontWeight: 600, padding: '6px 10px', borderRadius: 999, border: `1px solid ${theme.border}`, background: theme.backgroundElement, color: theme.text },
+    },
+    ...valg.map((v) => createElement('option', { key: v.verdi, value: v.verdi }, v.tekst)),
   );
 }
 

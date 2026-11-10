@@ -1,5 +1,5 @@
-import { createElement, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { TrailMap } from '@/components/ski/kart';
@@ -7,7 +7,7 @@ import { Hoydeprofil } from '@/components/ski/profil';
 import { Temperaturoversikt, tekstPå, type OversiktVisning } from '@/components/ski/oversikt';
 import { Hero } from '@/components/ski/hero';
 import { UnderlagValg } from '@/components/ski/underlag';
-import { Chip, Kort, Nedtrekk, Sammenleggbar } from '@/components/ski/ui';
+import { Chip, Kort, Sammenleggbar, Valgboks } from '@/components/ski/ui';
 import { byggRute, tilhørende, type Løype } from '@/data/rute';
 import { løypeFeilFor, useLøyper, useLøypeliste, type LøypeInfo } from '@/data/loyper';
 import { EgneRuter } from '@/components/ski/egne-ruter';
@@ -185,7 +185,10 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
     () => byggRute(valgtLøype, mulige.filter((x) => ekstraIds.includes(x.id)).map((x) => ekstraFull.find((f) => f.id === x.id)).filter((l): l is Løype => !!l)),
     [valgtLøype, mulige, ekstraIds, ekstraFull],
   );
-  const [modus, setModus] = useLagret<Modus>('skiglede.modus', 'Tur');
+  // Tempo: standard hentes fra innstillingene (Tur om ikke annet er valgt). Valget her gjelder bare denne økten.
+  const [standardModus] = useLagret<Modus>('skiglede.standardModus', 'Tur');
+  const [modusValgt, setModus] = useState<Modus | null>(null);
+  const modus: Modus = modusValgt ?? (standardModus === 'Trening' ? 'Trening' : 'Tur');
   // Starttid: i dag er standard én time frem (aldri før nå), andre dager 10:00. Valget huskes ikke mellom besøk, for «nå» endrer seg.
   const [startValgt, setStartValgt] = useState<number | null>(null);
   const [debug, setDebug] = useState(false);
@@ -369,24 +372,9 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           {(['klassisk', 'skoyting'] as Stil[]).map((x) => (
             <Chip liten key={x} aktiv={x === stil} onPress={() => setStil(x)}>{STIL_NAVN[x]}</Chip>
           ))}
-          {MODI.map((m) => (
-            <Chip liten key={m} aktiv={m === modus} onPress={() => setModus(m)}>{`${m} · ${tempo[m]} km/t`}</Chip>
-          ))}
+          <Valgboks etikett="Tempo" verdi={modus} valg={MODI.map((m) => ({ verdi: m, tekst: `${m} · ${tempo[m]} km/t` }))} onVelg={(v) => setModus(v as Modus)} />
           <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14 }}>Start</Text>
-          {Platform.OS === 'web' ? (
-            createElement(
-              'select',
-              {
-                value: String(startTime),
-                'aria-label': 'Starttidspunkt for turen',
-                onChange: (e: { target: { value: string } }) => setStartTime(Number(e.target.value)),
-                style: { fontSize: 14, fontWeight: 600, padding: '5px 8px', borderRadius: 999, border: `1px solid ${theme.border}`, background: theme.backgroundElement, color: theme.text },
-              },
-              ...startTider.map((h) => createElement('option', { key: h, value: String(h) }, `🕒 ${klokke(h)}`))
-            )
-          ) : (
-            <Nedtrekk etikett="Starttidspunkt for turen" verdi={String(startTime)} valg={startTider.map((h) => ({ verdi: String(h), tekst: `🕒 ${klokke(h)}` }))} onVelg={(v) => setStartTime(Number(v))} />
-          )}
+          <Valgboks etikett="Starttidspunkt for turen" verdi={String(startTime)} valg={startTider.map((h) => ({ verdi: String(h), tekst: `🕒 ${klokke(h)}` }))} onVelg={(v) => setStartTime(Number(v))} />
         </View>
         <ThemedText type="small" themeColor="textSecondary">
           Ca. {Math.floor(minutter / 60)} t {minutter % 60} min · {tid(r.tur.startTs)}–{tid(r.tur.sluttTs)} · {Math.round(r.tur.skyggeAndel * 100)} % av løypa i terrengskygge
