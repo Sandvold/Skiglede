@@ -60,7 +60,6 @@ export function systemFraLager(id: MerkeId, lager: string[]): Smøresystem | nul
   return {
     ...sys,
     hardvoks, klister, glider, binder,
-    blåExtra: sys.blåExtra?.filter((p) => lager.includes(p.navn)),
     baseKlister: har(sys.baseKlister), isKlister: har(sys.isKlister),
     universalVarm: har(sys.universalVarm), universalKald: har(sys.universalKald),
     sluddKald: har(sys.sluddKald), sluddVarm: har(sys.sluddVarm),

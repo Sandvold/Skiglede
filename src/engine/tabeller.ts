@@ -175,8 +175,6 @@ export type Smøresystem = {
   glider: Produkt[];
   binder?: { mild: Produkt; skarp: Produkt };
   baseKlister?: Produkt;
-  /** [Bruker] Blå extra-voksen som mellomlag under varmere dagsvoks, i prioritert rekkefølge (første du har brukes). Mangler merket en slik, brukes nærmeste kaldere hardvoks som mellomlag. */
-  blåExtra?: Produkt[];
   isKlister?: Produkt;
   universalVarm?: Produkt;
   universalKald?: Produkt;
@@ -200,7 +198,6 @@ export const SWIX: Smøresystem = {
   klister: KLISTER, glider: GLIDER,
   binder: { mild: BINDER[0], skarp: BINDER[1] },
   baseKlister: BASEKLISTER, isKlister: KLISTER[0],
-  blåExtra: [HARDVOKS.find((p) => p.navn === 'VP45')!, V_LINJE.find((p) => p.navn === 'V40')!],
   universalVarm: KLISTER_ANDRE[3], universalKald: KLISTER_ANDRE[2],
   sluddKald: KLISTER_ANDRE[0], sluddVarm: KLISTER_ANDRE[4],
   mellomKlister: ['KX35N', 'KX45N'], utenMellomlag: ['KX45N', 'KX35N'],
@@ -236,7 +233,6 @@ export const RODE: Smøresystem = {
   id: 'rode', navn: 'Rode',
   hardvoks: RODE_HARDVOKS, klister: RODE_KLISTER, glider: RODE_GLIDER,
   baseKlister: RODE_BASEKLISTER,
-  blåExtra: [RODE_ANDRE.find((p) => p.navn === 'Rode P38')!], // Blå Super Extra (P38)
   universalVarm: RODE_UNIVERSAL, universalKald: RODE_UNIVERSAL,
   utenMellomlag: [],
   ising: 'Minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
