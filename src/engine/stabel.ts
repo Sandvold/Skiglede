@@ -4,8 +4,8 @@ import type { Lag, Seksjon, SnøAnalyse, Stabel, Stil, Tur } from './typer';
 // Tidsgrenser for dekketrinn [Forslag, åpent punkt 2]
 // Dekketrinn styres av det kalde partiet før det blir varmt: begge kriteriene teller [Forslag, åpent punkt 2/8]
 export const DEKKE = { toTrinnMinKm: 6, toTrinnMinMin: 90 };
-/** Festet regnes ut fra alle seksjoner der du trenger grep: flatt, svake stigninger og stigninger. Bare tydelig utforkjøring (brattere enn dette, grader ≈ −4 %) teller ikke [Forslag]. */
-export const FESTE_MIN_STIGNING = -2.3;
+/** Festet regnes ut fra seksjonene der du trenger grep: flatt og stigninger (svake og bratte). Alt som går nedover teller ikke, selv 0,1 %: der staker man, og da er det glid som gjelder [Bruker]. −0,05° ≈ −0,1 % gir slingringsmonn for målestøy i høydedata. */
+export const FESTE_MIN_STIGNING = -0.05;
 /** Mye skygge: fra denne andelen av løypa (og et temperaturspenn på minst SKYGGE_SPENN °C mellom kaldeste og varmeste del) gis egen råd om blandet føre [Forslag]. */
 export const SKYGGE_MYE_ANDEL = 0.3;
 export const SKYGGE_SPENN = 4;
@@ -63,7 +63,7 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   const HARDVOKS = hardvoksForSnø(sys0, snø.type === 'omdannet'); // Swix' dobbelte områder velges automatisk etter snøtype
   const sys: Smøresystem = { ...sys0, hardvoks: HARDVOKS };
   const tAlle = tur.seksjoner.map((x) => x.tEff);
-  // Festet trenger du overalt unntatt i tydelig utforkjøring; er mindre enn 20 % av løypa igjen, brukes hele løypa
+  // Festet trenger du på flatt og i stigninger, ikke i nedoverbakker (selv svake: da staker man); er mindre enn 20 % av løypa igjen, brukes hele løypa
   const feste = tAlle.filter((_, i) => seksjoner[i].stigning >= FESTE_MIN_STIGNING);
   const brukerFeste = feste.length >= tAlle.length * 0.2 && feste.length < tAlle.length;
   const t = brukerFeste ? feste : tAlle;
@@ -72,7 +72,7 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   const varm = persentil(t, 0.8);
   const lengdeKm = seksjoner[seksjoner.length - 1].endM / 1000;
   const begrunnelse: string[] = [
-    `Snøtemperatur langs løypa (luft justert for høyde pluss sol): kaldest ${tur.tMin.toFixed(1)}, varmest ${tur.tMaks.toFixed(1)} °C. Brukt: kald ${kald.toFixed(1)}, midt ${midt.toFixed(1)}, varm ${varm.toFixed(1)} °C (10./50./80. persentil${brukerFeste ? `, bare der du trenger feste: flatt, svake og bratte stigninger, ikke tydelig utforkjøring (${Math.round((feste.length / tAlle.length) * 100)} % av løypa)` : ''}).`,
+    `Snøtemperatur langs løypa (luft justert for høyde pluss sol): kaldest ${tur.tMin.toFixed(1)}, varmest ${tur.tMaks.toFixed(1)} °C. Brukt: kald ${kald.toFixed(1)}, midt ${midt.toFixed(1)}, varm ${varm.toFixed(1)} °C (10./50./80. persentil${brukerFeste ? `, bare der du trenger feste: flatt og stigninger, ikke nedoverbakker (${Math.round((feste.length / tAlle.length) * 100)} % av løypa)` : ''}).`,
   ];
   const advarsler = [...snø.advarsler];
   if (tur.skyggeAndel >= SKYGGE_MYE_ANDEL && tur.tMaks - tur.tMin >= SKYGGE_SPENN) {
