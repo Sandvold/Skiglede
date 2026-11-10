@@ -24,14 +24,12 @@ import bygg_auto_ruter as ba
 
 TO = Transformer.from_crs(4326, 25832, always_xy=True)
 FRA = Transformer.from_crs(25832, 4326, always_xy=True)
-LÅST = []  # tidligere Hovden, Nordmarka, Bærumsmarka og Sjusjøen; alle bygges nå med landspipelinen
+LÅST = [("hovden", 59.5667, 7.3667, 12000)]  # Hovden har håndlagde løyper (logger/renn henger på id-ene) og beholdes; Nordmarka, Bærumsmarka og Sjusjøen bygges med landspipelinen
 # Bærumsmarka og Nordmarka var håndbygde og låst; nå bygges de med landspipelinen. Gammel id og navn gjenbrukes for nettet nærmest (innen 3 km),
 # så de nye løypene erstatter de gamle i stedet for å bli et område til ved siden av.
 FASTE = [dict(id="baerumsmarka", navn="Bærumsmarka", lat=59.955, lon=10.52, km=0, antall=0, kommune=None),
          dict(id="nordmarka", navn="Nordmarka", lat=59.98, lon=10.65, km=0, antall=0, kommune=None),
-         dict(id="sjusjoen", navn="Sjusjøen", lat=61.1725, lon=10.7031, km=0, antall=0, kommune=None),
-         # Hovden har håndlagde løyper og logger/renn knyttet til id-ene: bygges som EGET testområde for sammenligning, ikke som erstatning
-         dict(id="hovden-test", navn="Hovden (test)", lat=59.5667, lon=7.3667, km=0, antall=0, kommune=None)]
+         dict(id="sjusjoen", navn="Sjusjøen", lat=61.1725, lon=10.7031, km=0, antall=0, kommune=None)]
 
 
 def slug(s):
