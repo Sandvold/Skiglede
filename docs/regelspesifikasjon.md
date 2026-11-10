@@ -118,7 +118,7 @@ Løypa deles i biter på 250 m med egen snøtemperatur. Kaldeste og varmeste tem
 
 **Mye skygge** [Forslag]: fra 25 % skygge (`SKYGGE_MYE_ANDEL`) og minst 4 °C mellom kaldeste og varmeste del (`SKYGGE_SPENN`) gir appen en egen advarsel: kald base og tynt topplag av den varme voksen (aldri kald oppå varm), tynne lag og god korking, fordi bakglatt kommer av for hard voks i sola og klabb av tykke lag eller fuktige ski som kommer inn i kald skygge.
 
-**Blå extra som mellomlag** [Bruker]: ligger dagens hardvoks varmere enn blå extra (Swix VP45 Pro blå/fiolett, −5 til −1 °C; V40 Blå Extra tilsvarer i V-linjen), legges VP45 som mellomlag mellom binder og dagens voks, på samme måte som KX35N under klister. Bare i Full (ikke Trening) og bare for Swix. Maks to mellomtrinn: det kaldeste faller bort hvis det blir tre. Laget regnes som base og kuttes til ett lag først når lagantallet må begrenses (`BLÅ_EXTRA_SWIX` i `engine/stabel.ts`).
+**Mellomlag under varmere dagsvoks** [Bruker: «alltid hvis mulig»]: som KX35N under klister legges et mellomlag mellom binder og dagens voks når dagsvoksen er varmere enn mellomlaget. Blå extra der merket har det: Swix VP45 (V40 Blå Extra hvis du bare har den), Rode P38 (Blå Super Extra). Toko og Ski Go har ingen blå extra, så der brukes nærmeste kaldere hardvoks (rolle «Base (mellomlag)»). Bare i Full (ikke Trening). Maks to mellomtrinn: det kaldeste faller bort hvis det blir tre. Laget regnes som base og kuttes til ett lag først når lagantallet må begrenses. Med smørelager brukes bare det du har (`blåExtra` i `Smøresystem`).
 
 ### Utvide turen med flere løyper [Bruker]
 Velger man en løype, kan man legge til løyper som starter ved samme sted (startpunktene innen 300 m, `tilhørende` i `data/rute.ts`): Galten og Lundane, Rørvikåsen og Ny Lysløype, Hovden fjellpark og Hovden lysløype, Auversvatn og Remestøylsflotti. Turen blir hovedløypa, så hver valgt ekstra løype, og tilbake til start (`byggRute`; rett kobling hvis startene ikke er identiske). Avstander og terrengdata forskyves, og smøringen regnes for hele turen. Løyper som bare krysser hverandre midt i løypa er ikke med ennå.
@@ -158,7 +158,7 @@ Ikke gjort ennå (funn fra researchen): gammel-snø-område for flere Swix-produ
 - Siste vellykkede Yr-prognose lagres på enheten med tidspunkt og brukes hvis ny henting feiler. Finnes ingen brukbar prognose (tom eller utløpt), vises ingen smøretips, bare en tydelig advarsel; dagvalget er av.
 - «Oppdater vær» henter på nytt. Advarsel når prognosen er over 6 timer gammel og når observert vær i appen er over 12 timer gammelt.
 - Valg som løype, ekstra løyper, dag, starttid, tur/trening og stil huskes mellom sidene.
-- Lagring av smøring på ski: i Enkel visning lagres bare base, glidesone og dagens smøring; i Full lagres hele stabelen. Smøringen knyttes til datoen turen gjelder (`mål`): lagres den på nytt for samme tur, erstattes den uten å telle en ny tur.
+- Lagring av smøring på ski: i Enkel visning vises og lagres bare dagens smøring og glidesonen, uten lagantall, base eller mellomlag [Bruker]; teksten anbefaler en base i bunn for dem som ikke er så gode til å smøre. I Full lagres hele stabelen. Smøringen knyttes til datoen turen gjelder (`mål`): lagres den på nytt for samme tur, erstattes den uten å telle en ny tur.
 - Å slette et ski krever bekreftelse; «Renset (nullstill)» gjør ikke det.
 
 ## Premium (grunnlag, nov 2026)

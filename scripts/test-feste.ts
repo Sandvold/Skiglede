@@ -41,18 +41,28 @@ ok(byggStabel(tur3, snø, sek).advarsler.some((a) => a.includes('Mye skygge')), 
 ok(!byggStabel(tur3, snø, sek).advarsler.some((a) => a.includes('Mye skygge')), 'skygge 24 % gir ikke rådet');
 console.log('Alle sjekker OK');
 
-// Blå extra som mellomlag under varmere dagsvoks (violett) [Bruker]
+// Mellomlag under varmere dagsvoks for alle merker [Bruker], og Enkel = bare dagens smøring
 (async () => {
-  const { SWIX } = await import('../src/engine');
+  const { SWIX, TOKO, RODE, SKIGO, forenklet } = await import('../src/engine') as any;
   const varm = mk(Array(20).fill(0.5));
-  const t4 = planTur({ seksjoner: varm, timer: dag, startTs: Date.parse('2026-11-02T09:00:00Z'), tempoKmt: 7, refH: 800 });
-  t4.seksjoner.forEach((s) => { s.tEff = -0.5; });
   const mildSnø = { ...snø, type: 'ny' as const, skarphet: 10 };
-  const s4 = byggStabel(t4, mildSnø, varm, false, SWIX);
-  const navn = s4.lag.map((l) => l.produkt);
-  console.log(s4.lag.map((l) => `${l.rolle}:${l.produkt}(${l.antall})`).join(' | '));
-  ok(navn.includes('VP45') && navn.indexOf('VP45') > navn.findIndex((n) => n.startsWith('VG')) && navn.indexOf('VP45') < navn.indexOf('VP55'), 'blå extra (VP45) ligger mellom binder og violett');
-  const l4 = byggStabel(t4, mildSnø, varm, true, SWIX);
-  ok(!l4.lag.some((l) => l.produkt === 'VP45'), 'Trening (lett) har ikke blå extra-mellomlag');
-  console.log('Blå extra OK');
+  const bygg = (sys: any, temp: number, lett = false) => {
+    const t = planTur({ seksjoner: varm, timer: dag, startTs: Date.parse('2026-11-02T09:00:00Z'), tempoKmt: 7, refH: 800 });
+    t.seksjoner.forEach((s) => { s.tEff = temp; });
+    return byggStabel(t, mildSnø, varm, lett, sys);
+  };
+  const vis = (st: any) => st.lag.map((l: any) => `${l.rolle}:${l.produkt}(${l.antall})`).join(' | ');
+  const bunn = (st: any) => st.lag.filter((l: any) => l.rolle.startsWith('Base') || l.rolle === 'Binder').map((l: any) => l.produkt);
+  const swix = bygg(SWIX, -0.5); console.log('Swix  ', vis(swix));
+  ok(bunn(swix).join() === 'VG35,VP45', 'Swix: binder, blå extra, så violett');
+  const rode = bygg(RODE, -1); console.log('Rode  ', vis(rode));
+  ok(rode.lag.some((l: any) => l.produkt === 'Rode P38' && l.rolle === 'Base (blå extra)'), 'Rode: Blå Super Extra (P38) som mellomlag');
+  const toko = bygg(TOKO, -1); console.log('Toko  ', vis(toko));
+  ok(toko.lag.some((l: any) => l.rolle === 'Base (mellomlag)' && l.produkt === 'Toko Rød'), 'Toko: nærmeste kaldere (Rød) som mellomlag under Gul');
+  const skigo = bygg(SKIGO, -1); console.log('Skigo ', vis(skigo));
+  ok(skigo.lag.some((l: any) => l.rolle === 'Base (mellomlag)'), 'Ski Go: nærmeste kaldere som mellomlag');
+  ok(!bygg(SWIX, -0.5, true).lag.some((l: any) => l.produkt === 'VP45'), 'Trening: ingen mellomlag');
+  const enkel = forenklet(swix);
+  ok(enkel.lag.every((l: any) => ['Dagens voks', 'Dagens klister', 'Glider', 'Festesone'].includes(l.rolle) || l.rolle.startsWith('Glidesone')), 'Enkel: bare dagens smøring (og glidesone), ingen base/mellomlag');
+  console.log('Mellomlag OK');
 })();

@@ -310,6 +310,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const minutter = Math.round((km / tempo[modus]) * 60);
   const stabelVisning = [...(enkel ? forenklet(vis) : vis).lag].filter((l) => !erGlidesone(l)).reverse(); // øverste lag først, uten glider
   const glidesone = vis.lag.find(erGlidesone);
+  const baseAnbefaling = vis.lag.find((l) => l.rolle === 'Binder' || l.rolle === 'Baseklister')?.produkt;
 
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
@@ -442,7 +443,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           <View style={styles.rad}>
             <Chip aktiv={!enkel} onPress={() => setVisning('full')}>Full</Chip>
             <Chip aktiv={enkel} onPress={() => setVisning('enkel')}>Enkel</Chip>
-            {enkel ? <ThemedText type="small" themeColor="textSecondary">Base, glidesone og dagens smøring. Det er bare dette som lagres på ski.</ThemedText> : null}
+            {enkel ? <ThemedText type="small" themeColor="textSecondary">Bare dagens smøring og glidesonen. Det er bare dette som lagres på ski.</ThemedText> : null}
           </View>
           {ingenPrognose ? (
             <ThemedText type="small">Ingen smøretips uten prognose. Se advarselen under «Turen».</ThemedText>
@@ -456,10 +457,11 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
                   <Text style={[styles.lagProdukt, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.produkt}<Text style={{ fontWeight: '500', fontSize: 14 }}>  {produkt(l.produkt)?.farge}</Text></Text>
                   <Text style={[styles.lagRolle, { color: tekstPå(produktFarge(l.produkt)), opacity: 0.85 }]}>{l.rolle}{l.merknad ? ` · ${l.merknad}` : ''}</Text>
                 </View>
-                <Text style={[styles.lagAntall, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.antall}</Text>
+                {enkel ? null : <Text style={[styles.lagAntall, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.antall}</Text>}
               </View>
             ))}
           </View>
+          {enkel && baseAnbefaling ? <ThemedText type="small" themeColor="textSecondary">Anbefaling: legg en base ({baseAnbefaling}) i bunn først, spesielt hvis du er usikker på smøring.</ThemedText> : null}
           {vis.alternativer?.map((a, i) => <ThemedText key={i} type="small" themeColor="textSecondary">Alternativ: {a}</ThemedText>)}
           {vis.advarsler.map((a, i) => (
             <View key={i} style={[styles.advarsel, { borderColor: '#E3A64A' }]}>
