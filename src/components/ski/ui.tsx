@@ -10,11 +10,11 @@ export function Kort({ children, style }: { children: React.ReactNode; style?: o
   return <View style={[styles.kort, { backgroundColor: theme.backgroundElement, borderColor: theme.border }, style]}>{children}</View>;
 }
 
-export function Chip({ aktiv, onPress, children }: { aktiv: boolean; onPress: () => void; children: string }) {
+export function Chip({ aktiv, onPress, children, liten }: { aktiv: boolean; onPress: () => void; children: string; liten?: boolean }) {
   const theme = useTheme();
   return (
-    <Pressable onPress={onPress} style={[styles.chip, { backgroundColor: aktiv ? theme.accent : theme.backgroundElement, borderColor: aktiv ? theme.accent : theme.border }]}>
-      <Text style={{ color: aktiv ? '#fff' : theme.text, fontWeight: '600', fontSize: 15 }}>{children}</Text>
+    <Pressable onPress={onPress} style={[styles.chip, liten && { paddingVertical: 5, paddingHorizontal: 11 }, { backgroundColor: aktiv ? theme.accent : theme.backgroundElement, borderColor: aktiv ? theme.accent : theme.border }]}>
+      <Text style={{ color: aktiv ? '#fff' : theme.text, fontWeight: '600', fontSize: liten ? 13 : 15 }}>{children}</Text>
     </Pressable>
   );
 }

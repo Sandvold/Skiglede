@@ -362,21 +362,17 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>TUREN</ThemedText>
         <View style={styles.rad}>
           {DAGER.map((i) => (
-            <Chip key={i} aktiv={i === dagIdx} onPress={() => setDagIdx(i)}>{dagNavn(osloDato(i), i)}</Chip>
+            <Chip liten key={i} aktiv={i === dagIdx} onPress={() => setDagIdx(i)}>{dagNavn(osloDato(i), i)}</Chip>
           ))}
         </View>
         <View style={styles.rad}>
           {(['klassisk', 'skoyting'] as Stil[]).map((x) => (
-            <Chip key={x} aktiv={x === stil} onPress={() => setStil(x)}>{STIL_NAVN[x]}</Chip>
+            <Chip liten key={x} aktiv={x === stil} onPress={() => setStil(x)}>{STIL_NAVN[x]}</Chip>
           ))}
-        </View>
-        <View style={styles.rad}>
           {MODI.map((m) => (
-            <Chip key={m} aktiv={m === modus} onPress={() => setModus(m)}>{`${m} · ${tempo[m]} km/t`}</Chip>
+            <Chip liten key={m} aktiv={m === modus} onPress={() => setModus(m)}>{`${m} · ${tempo[m]} km/t`}</Chip>
           ))}
-        </View>
-        <View style={styles.rad}>
-          <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>Start</Text>
+          <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14 }}>Start</Text>
           {Platform.OS === 'web' ? (
             createElement(
               'select',
@@ -384,7 +380,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
                 value: String(startTime),
                 'aria-label': 'Starttidspunkt for turen',
                 onChange: (e: { target: { value: string } }) => setStartTime(Number(e.target.value)),
-                style: { fontSize: 17, fontWeight: 600, padding: '10px 14px', borderRadius: 12, border: `1px solid ${theme.border}`, background: theme.backgroundElement, color: theme.text, minWidth: 130 },
+                style: { fontSize: 14, fontWeight: 600, padding: '5px 8px', borderRadius: 999, border: `1px solid ${theme.border}`, background: theme.backgroundElement, color: theme.text },
               },
               ...startTider.map((h) => createElement('option', { key: h, value: String(h) }, `🕒 ${klokke(h)}`))
             )
@@ -393,15 +389,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           )}
         </View>
         <ThemedText type="small" themeColor="textSecondary">
-          {Math.round(r.tur.skyggeAndel * 100)} % av løypa ({(r.tur.skyggeAndel * km).toFixed(1)} km) ligger i terrengskygge når du går den.
-          {r.tur.skyggeIgnorert ? ' Under 10 % av løypa, så skyggen er ikke regnet med i smøringen.' : r.tur.skyggeAndel >= 0.1 ? ' Skyggen er regnet med: kaldeste del er ' + r.tur.tMin.toFixed(1) + ' °C og varmeste ' + r.tur.tMaks.toFixed(1) + ' °C (5./95. persentil). Vurder selv om du vil smøre for sola eller skyggen.' : ''}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {varsel
-            ? `Prognose: MET Norway / Yr (oppdatert ${tid(Date.parse(varsel.oppdatert))}${varsel.fraCache ? ', lagret fra tidligere' : ''}) · solinnstråling anslått fra skydekke`
-            : henter
-              ? 'Henter prognose fra Yr …'
-              : 'Ingen prognose tilgjengelig.'}
+          Ca. {Math.floor(minutter / 60)} t {minutter % 60} min · {tid(r.tur.startTs)}–{tid(r.tur.sluttTs)} · {Math.round(r.tur.skyggeAndel * 100)} % av løypa i terrengskygge
         </ThemedText>
         {ingenPrognose ? (
           <View style={[styles.advarsel, { borderColor: '#C0392B' }]}>
@@ -410,16 +398,6 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               : '⚠ Prognosen rekker ikke fram til valgt tidspunkt, så smøretipset vises ikke. Velg en tidligere dag eller tid, eller trykk «Oppdater vær».'}</ThemedText>
           </View>
         ) : null}
-        {varselFeil && harPrognose ? <ThemedText type="small">⚠ Fikk ikke hentet ny prognose. Viser den sist lagrede.</ThemedText> : null}
-        {prognoseGammel ? <ThemedText type="small">⚠ Prognosen er {Math.round(prognoseAlderT)} timer gammel. Trykk «Oppdater vær» før du smører.</ThemedText> : null}
-        {historikkGammel ? <ThemedText type="small">⚠ Observert vær i appen er fra {tid(r.sisteHist)} ({new Date(r.sisteHist).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' })}). Snøtilstanden kan ha endret seg siden.</ThemedText> : null}
-        <View style={styles.rad}>
-          <Chip aktiv={false} onPress={henter ? () => {} : oppdaterVær}>{henter ? 'Henter …' : '↻ Oppdater vær'}</Chip>
-        </View>
-        <ThemedText themeColor="textSecondary">
-          Ca. {Math.floor(minutter / 60)} t {minutter % 60} min · {tid(r.tur.startTs)}–{tid(r.tur.sluttTs)}
-        </ThemedText>
-
         {/* Smøring */}
         <Kort style={{ gap: Spacing.three }}>
           <View style={styles.rad}>
@@ -487,6 +465,23 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           </ThemedText>
         </Kort>
 
+        <ThemedText type="small" themeColor="textSecondary">
+          {varsel
+            ? `Prognose: MET Norway / Yr (oppdatert ${tid(Date.parse(varsel.oppdatert))}${varsel.fraCache ? ', lagret fra tidligere' : ''}) · solinnstråling anslått fra skydekke`
+            : henter
+              ? 'Henter prognose fra Yr …'
+              : 'Ingen prognose tilgjengelig.'}
+        </ThemedText>
+        {varselFeil && harPrognose ? <ThemedText type="small">⚠ Fikk ikke hentet ny prognose. Viser den sist lagrede.</ThemedText> : null}
+        {prognoseGammel ? <ThemedText type="small">⚠ Prognosen er {Math.round(prognoseAlderT)} timer gammel. Trykk «Oppdater vær» før du smører.</ThemedText> : null}
+        {historikkGammel ? <ThemedText type="small">⚠ Observert vær i appen er fra {tid(r.sisteHist)} ({new Date(r.sisteHist).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' })}). Snøtilstanden kan ha endret seg siden.</ThemedText> : null}
+        <View style={styles.rad}>
+          <Chip aktiv={false} onPress={henter ? () => {} : oppdaterVær}>{henter ? 'Henter …' : '↻ Oppdater vær'}</Chip>
+        </View>
+        <ThemedText type="small" themeColor="textSecondary">
+          {Math.round(r.tur.skyggeAndel * 100)} % av løypa ({(r.tur.skyggeAndel * km).toFixed(1)} km) ligger i terrengskygge når du går den.
+          {r.tur.skyggeIgnorert ? ' Under 10 % av løypa, så skyggen er ikke regnet med i smøringen.' : r.tur.skyggeAndel >= 0.1 ? ' Skyggen er regnet med: kaldeste del er ' + r.tur.tMin.toFixed(1) + ' °C og varmeste ' + r.tur.tMaks.toFixed(1) + ' °C (5./95. persentil). Vurder selv om du vil smøre for sola eller skyggen.' : ''}
+        </ThemedText>
         {!ingenPrognose && !lasterPrognose && r.alternativer.map((a) => {
           const festeLag = a.stabel.lag.filter((l) => !erGlidesone(l));
           const ingenSmøring = festeLag.length > 0 && festeLag.every((l) => l.antall === 'Ingen smøring');
