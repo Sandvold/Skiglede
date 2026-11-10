@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { Chip, Kort } from '@/components/ski/ui';
@@ -8,21 +9,36 @@ import { useTheme } from '@/hooks/use-theme';
 /** Øverst til høyre: «Logg inn» når du er utlogget; ellers e-post, premium-bryter (midlertidig, ingen betaling ennå) og «Logg ut». */
 export function KontoHøyre() {
   const { klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, byttPremium, byttPro } = usePremium();
+  const router = useRouter();
   if (!klar) return null;
+  const tilInnstillinger = () => router.push('/innstillinger');
+  const tannhjul = (
+    <Pressable accessibilityRole="button" accessibilityLabel="Innstillinger" hitSlop={8} onPress={tilInnstillinger}>
+      <Text style={{ color: '#FFFFFF', fontSize: 20 }}>⚙</Text>
+    </Pressable>
+  );
   const knapp = { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 } as const;
   if (!bruker) {
     return (
       <View style={{ alignItems: 'flex-end', marginTop: 10, maxWidth: 200, flexShrink: 1 }}>
-        <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[knapp, { backgroundColor: '#F4B73B', opacity: pågår ? 0.6 : 1 }]}>
-          <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>{pågår ? 'Logger inn …' : 'Logg inn'}</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {tannhjul}
+          <Pressable accessibilityRole="button" onPress={loggInnMedGoogle} style={[knapp, { backgroundColor: '#F4B73B', opacity: pågår ? 0.6 : 1 }]}>
+            <Text style={{ color: '#12386B', fontWeight: '800', fontSize: 14 }}>{pågår ? 'Logger inn …' : 'Logg inn'}</Text>
+          </Pressable>
+        </View>
         {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, marginTop: 6, textAlign: 'right', alignSelf: 'stretch' }}>{feil.slice(0, 160)}</Text> : null}
       </View>
     );
   }
   return (
     <View style={{ alignItems: 'flex-end', gap: 6, marginTop: 8, flexShrink: 1, maxWidth: 220 }}>
-      <Text numberOfLines={1} style={{ color: '#BFDDF7', fontSize: 13, maxWidth: 220 }}>{bruker.epost}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: 220 }}>
+        <Pressable accessibilityRole="link" accessibilityLabel="Innstillinger" onPress={tilInnstillinger} style={{ flexShrink: 1 }}>
+          <Text numberOfLines={1} style={{ color: '#BFDDF7', fontSize: 13 }}>{bruker.epost}</Text>
+        </Pressable>
+        {tannhjul}
+      </View>
       {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, width: 200, textAlign: 'right' }}>{feil.slice(0, 160)}</Text> : null}
       <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'flex-end' }}>
         <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { paddingHorizontal: 10, backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>

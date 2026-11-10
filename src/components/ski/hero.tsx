@@ -18,7 +18,6 @@ const MENY = [
 ] as const;
 // Premium og pro får egne faner.
 const LOGG = { href: '/logg', tekst: 'Logg' } as const;
-const INNSTILLINGER = { href: '/innstillinger', tekst: 'Innstillinger' } as const;
 const RENN = { href: '/renn', tekst: 'Renn' } as const;
 
 export function Hero() {
@@ -28,7 +27,7 @@ export function Hero() {
   const router = useRouter();
   const [område] = useOmråde();
   const { premium, pro } = usePremium();
-  const meny = [...MENY, ...(premium ? [LOGG] : []), ...(pro ? [RENN] : []), INNSTILLINGER];
+  const meny = [...MENY, ...(premium ? [LOGG] : []), ...(pro ? [RENN] : [])];
   useStedFølgerPosisjon();
   const stedStatus = useStedStatus();
   const { steder, aktiv } = useSteder();
