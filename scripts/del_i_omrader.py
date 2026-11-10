@@ -4,7 +4,7 @@
   1. DBSCAN på punkter langs løypene (--eps m) gir sammenhengende nett.
   2. Nett med større utstrekning enn --maks-diameter m deles med KMeans til hver del er under grensen.
   3. Nett med under --min-km preparert løype droppes (rapporteres).
-  4. Områder som ligger innen radius av et eksisterende (låst) område hoppes over: Hovden, Sjusjøen.
+  4. Områder som ligger innen radius av et eksisterende (låst) område hoppes over: (ingen lenger).
   5. Hvert område får navn fra Kartverkets stedsnavn (Tettsted/Grend/Fjell/… nærmest sentrum), kommune som suffiks ved kollisjon,
      og en stabil id (slug). Finnes manifestet fra før, beholdes id og navn for områder med sentrum innen 3 km av et gammelt.
   6. Hvert område får sin egen osm.json (egne biter + biter innen --buffer m, så runder kan krysse grensen).
@@ -24,11 +24,14 @@ import bygg_auto_ruter as ba
 
 TO = Transformer.from_crs(4326, 25832, always_xy=True)
 FRA = Transformer.from_crs(25832, 4326, always_xy=True)
-LÅST = [("hovden", 59.5667, 7.3667, 12000), ("sjusjoen", 61.1725, 10.7031, 15000)]
+LÅST = []  # tidligere Hovden, Nordmarka, Bærumsmarka og Sjusjøen; alle bygges nå med landspipelinen
 # Bærumsmarka og Nordmarka var håndbygde og låst; nå bygges de med landspipelinen. Gammel id og navn gjenbrukes for nettet nærmest (innen 3 km),
 # så de nye løypene erstatter de gamle i stedet for å bli et område til ved siden av.
 FASTE = [dict(id="baerumsmarka", navn="Bærumsmarka", lat=59.955, lon=10.52, km=0, antall=0, kommune=None),
-         dict(id="nordmarka", navn="Nordmarka", lat=59.98, lon=10.65, km=0, antall=0, kommune=None)]
+         dict(id="nordmarka", navn="Nordmarka", lat=59.98, lon=10.65, km=0, antall=0, kommune=None),
+         dict(id="sjusjoen", navn="Sjusjøen", lat=61.1725, lon=10.7031, km=0, antall=0, kommune=None),
+         # Hovden har håndlagde løyper og logger/renn knyttet til id-ene: bygges som EGET testområde for sammenligning, ikke som erstatning
+         dict(id="hovden-test", navn="Hovden (test)", lat=59.5667, lon=7.3667, km=0, antall=0, kommune=None)]
 
 
 def slug(s):

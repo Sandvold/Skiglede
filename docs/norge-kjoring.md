@@ -21,7 +21,7 @@ Gir `osm-loyper.json` (alle nordiske pistes) og `steder.json` (hotell, hytter, p
 ```
 python -X utf8 scripts/del_i_omrader.py --osm scripts\ut\norge\osm-loyper.json --ut scripts\ut\omrader
 ```
-Klynger nettet (eps 2 km, maks 30 km). Legg til `--min-km 3 --manifest` for å beholde små nett og id/navn fra tidligere kjøring (minst 3 km løype), navngir fra Kartverket og skriver `manifest.json`. Hovden og Sjusjøen er låst og hoppes over. Nordmarka og Bærumsmarka var låst til 10. nov, men bygges nå med landspipelinen og gjenbruker de gamle id-ene (`FASTE`). Se gjennom `manifest.json` og rett navn før neste steg. Windows: bruk alltid `python -X utf8` (aldri `-I`, den skjuler pakkene du har installert; uten utf8 krasjer JSON-skriving på cp1252).
+Klynger nettet (eps 2 km, maks 30 km). Legg til `--min-km 3 --manifest` for å beholde små nett og id/navn fra tidligere kjøring (minst 3 km løype), navngir fra Kartverket og skriver `manifest.json`. Ingen områder er låst lenger. Nordmarka, Bærumsmarka og Sjusjøen bygges med landspipelinen og gjenbruker de gamle id-ene (`FASTE`). Hovden bygges som eget testområde `hovden-test` for sammenligning med de håndlagde løypene. Se gjennom `manifest.json` og rett navn før neste steg. Windows: bruk alltid `python -X utf8` (aldri `-I`, den skjuler pakkene du har installert; uten utf8 krasjer JSON-skriving på cp1252).
 
 ## 5. Bygg områdene (ett fylke om gangen, anbefalt)
 Bruk `kjor_fylke.py` under. `kjor_norge.py` kan kjøre alt i ett:
