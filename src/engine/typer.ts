@@ -71,6 +71,10 @@ export type Tur = {
   variasjon: number;
   /** Laveste lufttemperatur fra 3 t før til 3 t etter turen (°C). */
   luftMin: number;
+  /** Endring i lufttemperatur fra start til 3 t etter slutt (°C): positiv = blir varmere under turen. */
+  luftTrend: number;
+  /** Lufta faller mot minusgrader under turen (det fryser på): kald, våt snø blir til is og klabb. */
+  fryserPå: boolean;
   /** Nedbør i grenseland (−1…+3,5 °C) rundt turen: sludd eller bløt snø. */
   sludd: boolean;
 };
@@ -89,6 +93,8 @@ export type Stabel = {
   alternativer?: string[];
   /** Satt når smøringen du har i lageret ikke passer føret godt (mangler produkt eller er utenfor temperaturområdet). Appen foreslår da felleski/rubbski hvis du har det. */
   lagerPasserIkke?: string;
+  /** Vanskelig 0-føre (sludd): NB-varsel og råd om rubb, felleski, klister og hardvoks. Første linje er selve varselet. */
+  vanskeligFøre?: string[];
   /** Snøtemperatur (snitt langs turen), brukt til å vurdere om en glider som allerede ligger på kan beholdes. */
   tSnitt?: number;
 };

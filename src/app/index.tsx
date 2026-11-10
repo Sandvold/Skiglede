@@ -448,6 +448,12 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           ) : ingenPrognose ? (
             <ThemedText type="small">Ingen smøretips uten prognose for valgt tid. Se advarselen under «Turen».</ThemedText>
           ) : (<>
+          {vis.vanskeligFøre?.length ? (
+            <View style={[styles.advarsel, { borderColor: '#C0392B' }]}>
+              <ThemedText type="smallBold">⚠ {vis.vanskeligFøre[0]}</ThemedText>
+              {vis.vanskeligFøre.slice(1).map((t, i) => <ThemedText key={i} type="small">{t}</ThemedText>)}
+            </View>
+          ) : null}
           {brukLager && vis.lagerPasserIkke && felleRubbSki.length ? (
             <View style={[styles.advarsel, { borderColor: '#C0392B' }]}>
               <ThemedText type="smallBold">⚠ I dag passer ikke smøringen du har i lageret godt ({vis.lagerPasserIkke}). Du har {felleRubbSki.map((x) => x.navn).join(' og ')}: vurder {felleRubbSki.some((x) => x.stil === 'felle') && felleRubbSki.some((x) => x.stil === 'rubb') ? 'felleski eller rubbski' : felleRubbSki[0].stil === 'felle' ? 'felleski' : 'rubbski'} i stedet for å smøre.</ThemedText>

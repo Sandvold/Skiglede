@@ -115,6 +115,12 @@ export function planTur(args: {
   const vindu = timer.filter((x) => x.ts >= startTs - 3 * 3600_000 && x.ts <= sluttTs + 3 * 3600_000);
   const lufttemp = vindu.map((x) => x.temp);
   const variasjon = lufttemp.length ? Math.max(...lufttemp) - Math.min(...lufttemp) : 0;
+  const etterStart = vindu.filter((x) => x.ts >= startTs).sort((a, b) => a.ts - b.ts);
+  const luftStart = etterStart.length ? etterStart[0].temp : lufttemp[0] ?? 0;
+  const luftSlutt = etterStart.length ? etterStart[etterStart.length - 1].temp : luftStart;
+  const luftTrend = luftSlutt - luftStart;
+  // Det fryser på når lufta faller minst 1,5 °C mot minusgrader under turen [Forslag]
+  const fryserPå = etterStart.length > 1 && luftTrend <= -1.5 && Math.min(...etterStart.map((x) => x.temp)) < -1;
   const sludd = vindu.some((x) => x.nedbor >= 0.3 && x.temp >= -1 && x.temp <= 3.5);
   return {
     startTs,
@@ -129,6 +135,8 @@ export function planTur(args: {
     skyggeIgnorert,
     variasjon,
     luftMin: lufttemp.length ? Math.min(...lufttemp) : Math.min(...t),
+    luftTrend,
+    fryserPå,
     sludd,
   };
 }

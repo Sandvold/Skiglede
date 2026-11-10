@@ -184,3 +184,10 @@ Ikke gjort ennå (funn fra researchen): gammel-snø-område for flere Swix-produ
 - **Mine produkter** i temperaturoversikten viser alt du har, fra alle merker.
 - **Tøm alt** i smørelageret krever bekreftelse.
 - **Rekkefølge på forsiden:** valg av løype og tur, deretter Smøring, deretter kart og høydeprofil.
+
+## Vanskelig 0-føre [Bruker, 10. nov 2026]
+Nedbør rundt 0 °C (`tur.sludd`: ≥ 0,3 mm/t mellom −1 og +3,5 °C) er det vanskeligste føret å smøre for, fordi det er usikkert om det blir regn eller snø. Klassisk smøring får da alltid et **NB-varsel** (`Stabel.vanskeligFøre`, `nullFøreRåd`), også når du har riktige produkter, med råd om:
+- **Rubb:** ofte det proffene velger. Blir det varmere under turen (`luftTrend` ≥ +1 °C) gir rubb eller klister ofte mening. Rubb passer **ikke** hvis det fryser på (`fryserPå`: lufta faller ≥ 1,5 °C og ender under −1 °C [Forslag]) eller snøen er for kald (snø eller luft under −2 °C, også høyere opp i løypa via høydekorrigert `tMin`): da klabber og iser den.
+- **Klister:** kan fungere når det er varmt eller blir varmere. Fungerer dårlig hvis turen går opp i kaldere luft (`tMin` eller `luftMin` under −1 °C) eller det fryser på; da foreslås hardvoks med binder eller felleski. Samme advarsel legges på klisterstabelen ved sludd.
+- **Felleski:** det trygge valget, fungerer alltid men glir aldri perfekt.
+Tipsene vises uansett om du har rubb- eller felleski i skiparken. Alternativkortene for ski i skiparken kommer i tillegg. Sludd slås av ved saltet løype.

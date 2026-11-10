@@ -246,6 +246,9 @@ function klisterStabel(tur: Tur, snø: SnøAnalyse, T: { kald: number; midt: num
   if (ute) advarsler.push(ute);
   if (medIs) begrunnelse.push(`Isklister: skarphet ${Math.round(snø.skarphet)} ≥ ${KLISTER_ISHARD} gir veldig hard omdannet snø.`);
   if (lett) begrunnelse.push('Trening: uten mellomlag.');
+  if (tur.sludd && (tur.fryserPå || tur.tMin < -1)) {
+    advarsler.push('Sludd og klister: det blir kaldere i høyden eller fryser på under turen, og da isner klisteret. Vurder hardvoks med binder eller felleski.');
+  }
   if (tur.tMin < -2 && tur.tMaks > 0 && !lag.some((l) => l.rolle.startsWith('Voksdekke'))) {
     advarsler.push(`Isingsfare når temperaturen svinger rundt 0 °C. Valgfritt tiltak: ${sys.ising}`);
   }
@@ -306,13 +309,39 @@ export function byggFelle(tur: Tur, sys: Smøresystem = SWIX): Stabel {
  * Rubbski: bare på sluddføre, og aldri når det er fare for ordentlig minus (da iser rubben).
  * Passer det ikke, frarådes den og vanlig klassisk smøring foreslås som alternativ.
  */
-export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett: boolean, sys: Smøresystem = SWIX): Stabel {
+/** Grunner til at rubb ikke passer føret (tom liste = passer). Rubb klabber og iser når det fryser på eller snøen er for kald, også høyere opp i terrenget [Bruker]. */
+function rubbGrunner(tur: Tur): string[] {
   const grunner: string[] = [];
   if (!tur.sludd) grunner.push('Rubb brukes bare på sluddføre (nedbør rundt 0 °C). Det er ikke meldt sludd rundt turen.');
   const kaldest = Math.min(tur.luftMin, tur.tMin);
   if (kaldest < RUBB.minLuft) {
-    grunner.push(`Fare for ordentlig minus: ned mot ${kaldest.toFixed(1)} °C rundt turen (grense ${RUBB.minLuft} °C). Rubben iser.`);
+    grunner.push(`Fare for ordentlig minus: ned mot ${kaldest.toFixed(1)} °C rundt turen eller høyere opp i løypa (grense ${RUBB.minLuft} °C). Rubben iser og klabber.`);
   }
+  if (tur.fryserPå) grunner.push('Det ser ut til å fryse på i løpet av turen: våt rubb fryser til is og klabber.');
+  return grunner;
+}
+
+/**
+ * Vanskelig 0-føre: nedbør rundt 0 °C, usikkert om det blir regn eller snø, og det vanskeligste føret å smøre for [Bruker].
+ * Proffene tar ofte til rubb, men den klabber hvis det fryser på eller er for kaldt i snøen. Blir det varmere, gir rubb eller klister ofte mening.
+ * Klister fungerer ikke hvis turen går opp i kaldere luft eller det fryser på underveis. Felleski er det trygge valget. Gir NB-varsel selv om du har riktige produkter.
+ */
+export function nullFøreRåd(tur: Tur): string[] {
+  const ut = ['NB: vanskelig 0-føre. Nedbør rundt 0 °C, og det er usikkert om det blir regn eller snø. Dette er det vanskeligste føret å smøre for, også med riktige produkter. Ha klister og hardvoks med, og vær klar til å smøre om.'];
+  const rubbNei = rubbGrunner(tur);
+  const kaldereOppe = tur.tMin < -1 || tur.luftMin < -1; // høyere opp eller kaldere snø: klister fryser og iser
+  const varmere = tur.luftTrend >= 1 && !tur.fryserPå;
+  if (!rubbNei.length) ut.push(varmere ? 'Rubb: blir varmere under turen, og da gir rubbski ofte mening. Proffene tar ofte rubb i slikt føre.' : 'Rubb: passer i dag (ikke fare for at det fryser på eller blir for kaldt i snøen), og er ofte det proffene velger i slikt føre.');
+  else ut.push(`Rubb: passer ikke i dag. ${rubbNei.filter((g) => !g.startsWith('Rubb brukes bare')).join(' ') || 'Det er ikke meldt sludd.'}`);
+  if (tur.fryserPå || kaldereOppe) ut.push('Klister: fungerer dårlig når turen går opp i kaldere luft eller det fryser på underveis. Velg heller hardvoks med binder, eller felleski.');
+  else if (varmere) ut.push('Klister: kan fungere når det blir varmere.');
+  else ut.push('Klister: kan fungere hvis det holder seg rundt og over 0 °C hele turen.');
+  ut.push('Felleski: det tryggeste valget. Fungerer alltid, men glir aldri perfekt.');
+  return ut;
+}
+
+export function byggRubb(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett: boolean, sys: Smøresystem = SWIX): Stabel {
+  const grunner = rubbGrunner(tur);
   if (grunner.length) {
     return {
       type: 'rubb',
@@ -340,7 +369,8 @@ export function byggSmøring(stil: Stil, tur: Tur, snø: SnøAnalyse, seksjoner:
   if (stil === 'skoyting') return byggGlider(tur, sys);
   if (stil === 'felle') return byggFelle(tur, sys);
   if (stil === 'rubb') return byggRubb(tur, snø, seksjoner, lett, sys);
-  return byggStabel(tur, snø, seksjoner, lett, sys);
+  const st = byggStabel(tur, snø, seksjoner, lett, sys);
+  return tur.sludd ? { ...st, vanskeligFøre: nullFøreRåd(tur) } : st;
 }
 
 const ENKEL_ROLLER = new Set(['Dagens voks', 'Dagens klister', 'Glider', 'Festesone', 'Glidesone (foran og bak)']);
@@ -369,7 +399,7 @@ export function byggAlternativer(eier: Stil[], tur: Tur, snø: SnøAnalyse, seks
   const ut: Alternativ[] = [];
   if (eier.includes('rubb')) {
     const rubb = byggRubb(tur, snø, seksjoner, lett, sys);
-    if (rubb.egnet) ut.push({ stil: 'rubb', stabel: rubb, grunn: 'Sluddføre uten fare for ordentlig minus: rubbski passer i dag.' });
+    if (rubb.egnet) ut.push({ stil: 'rubb', stabel: rubb, grunn: tur.luftTrend >= 1 ? 'Sluddføre som blir varmere: rubbski passer i dag.' : 'Sluddføre uten fare for ordentlig minus eller at det fryser på: rubbski passer i dag.' });
   }
   if (eier.includes('felle')) {
     const grunn = utfordrendeGrunn(tur, hoved);

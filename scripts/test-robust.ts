@@ -21,4 +21,16 @@ const k = byggMedLager('klassisk', mk(-0.5), snø, seksjoner, false, ['K22', 'KB
 ok(!k.advarsler.some((a) => a.includes('ingen klister')) && k.lag.some((l) => l.rolle === 'Dagens klister'), 'K22 teller som klister i lageret');
 const v = byggMedLager('klassisk', mk(5), { ...snø, nysnøOppå: 3 }, seksjoner, false, []);
 ok(!v.lag.some((l) => l.rolle.startsWith('Voksdekke')), 'Ikke voksdekke over klister ved +5 °C');
+// Vanskelig 0-føre (sludd): NB-varsel og råd om rubb/klister/felle, avhengig av om det blir varmere eller fryser på
+import { byggSmøring, nullFøreRåd } from '../src/engine';
+const sl = (trend: number, frys: boolean, tmin = 0) => { const t: any = mk(0.5); t.sludd = true; t.luftTrend = trend; t.fryserPå = frys; t.tMin = tmin; t.luftMin = tmin; return t; };
+const varmere = nullFøreRåd(sl(2, false));
+ok(varmere[0].startsWith('NB: vanskelig 0-føre') && varmere.some((x) => x.startsWith('Rubb: blir varmere')) && varmere.some((x) => x.includes('Klister: kan fungere når det blir varmere')), 'sludd som blir varmere: rubb og klister kan fungere');
+const fryser = nullFøreRåd(sl(-3, true, -3));
+ok(fryser.some((x) => x.startsWith('Rubb: passer ikke') && x.includes('fryse på')) && fryser.some((x) => x.includes('Klister: fungerer dårlig')), 'sludd som fryser på: ikke rubb, ikke klister');
+const høyde = nullFøreRåd(sl(0, false, -3));
+ok(høyde.some((x) => x.startsWith('Rubb: passer ikke')) && høyde.some((x) => x.includes('kaldere luft')), 'sludd med kaldere høyde: ikke rubb, ikke klister');
+ok(!!byggSmøring('klassisk', sl(2, false), snø, seksjoner, false).vanskeligFøre, 'klassisk stabel får vanskeligFøre ved sludd');
+const tørr: any = mk(-3); tørr.sludd = false;
+ok(!byggSmøring('klassisk', tørr, snø, seksjoner, false).vanskeligFøre, 'ingen NB uten sludd');
 console.log(feil ? 'FEIL' : 'Robusthet OK'); if (feil) process.exit(1);
