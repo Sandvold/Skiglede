@@ -461,6 +461,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               </View>
             ))}
           </View>
+          {!enkel && vis.lag.some((l) => l.rolle === 'Dagens voks') ? <ThemedText type="small" themeColor="textSecondary">Tips: smør som en pyramide. Legg de første lagene lengst, og hvert lag litt kortere, så det blir tykkest under foten.</ThemedText> : null}
           {enkel && baseAnbefaling ? <ThemedText type="small" themeColor="textSecondary">Anbefaling: legg en base ({baseAnbefaling}) i bunn først, spesielt hvis du er usikker på smøring.</ThemedText> : null}
           {vis.alternativer?.map((a, i) => <ThemedText key={i} type="small" themeColor="textSecondary">Alternativ: {a}</ThemedText>)}
           {vis.advarsler.map((a, i) => (

@@ -175,6 +175,8 @@ export type Smøresystem = {
   glider: Produkt[];
   binder?: { mild: Produkt; skarp: Produkt };
   baseKlister?: Produkt;
+  /** [Bruker] Swix: blå extra er praksis alltid mellomlaget under varmere dagsvoks (første du har brukes). Er dagsvoksen selv blå extra eller kaldere, brukes en kaldere voks. */
+  blåExtra?: Produkt[];
   isKlister?: Produkt;
   universalVarm?: Produkt;
   universalKald?: Produkt;
@@ -198,6 +200,7 @@ export const SWIX: Smøresystem = {
   klister: KLISTER, glider: GLIDER,
   binder: { mild: BINDER[0], skarp: BINDER[1] },
   baseKlister: BASEKLISTER, isKlister: KLISTER[0],
+  blåExtra: [HARDVOKS.find((p) => p.navn === 'VP45')!, V_LINJE.find((p) => p.navn === 'V40')!],
   universalVarm: KLISTER_ANDRE[3], universalKald: KLISTER_ANDRE[2],
   sluddKald: KLISTER_ANDRE[0], sluddVarm: KLISTER_ANDRE[4],
   mellomKlister: ['KX35N', 'KX45N'], utenMellomlag: ['KX45N', 'KX35N'],

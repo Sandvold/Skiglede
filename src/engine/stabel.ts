@@ -11,6 +11,9 @@ export const SKYGGE_MYE_ANDEL = 0.25;
 export const SKYGGE_SPENN = 4;
 /** Mellomlaget under dagens voks skal ha underkant minst så mange °C kaldere enn dagens voks (f.eks. VP45 under VP55, som blå extra under violett) [Forslag]. */
 export const MELLOM_KALDERE = 3;
+/** Rød og varmere dagsvoks (underkant ≥ dette) får et trinn til imellom, fiolett-aktig: underkant minst MELLOM2_KALDERE °C kaldere enn dagens voks [Bruker: «ofte fiolett også», tersklene er Forslag]. */
+export const MELLOM2_FRA = -1;
+export const MELLOM2_KALDERE = 2;
 /**
  * Lagantall i festesonen [Bruker, fra research nov 2026]: kald snø 4–6 lag, over 30 km opptil 8, rundt 0 °C 2–4 lag, klister 2–3 lag totalt.
  * Motoren reduserer selv i stedet for å anbefale mer.
@@ -121,22 +124,34 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   // Base fra kaldt til varmt (maks to mellomtrinn)
   const mellom: number[] = [];
   if (!lett) for (let i = Math.min(kaldIdx, dag); i < dag && mellom.length < 2; i++) mellom.push(i);
-  // Mellomlag under dagens voks, som KX35N under klister [Bruker: alltid hvis mulig]: den varmeste voksen som er minst MELLOM_KALDERE °C kaldere
-  // (underkanten) enn dagens voks. Binder, mellomlag, så dagens voks. Blå extra under violett er bare eksempel på dette.
-  const mellomPå = (): { p: Produkt; rolle: string } | null => {
-    if (lett) return null;
-    for (let i = dag - 1; i >= 0; i--) if (HARDVOKS[i].omr[0] <= dagVoks.omr[0] - MELLOM_KALDERE) return { p: HARDVOKS[i], rolle: 'Base (mellomlag)' };
-    return null;
+  // Mellomlag under dagens voks, som KX35N under klister [Bruker: alltid hvis mulig]. Swix: blå extra er alltid mellomlaget når dagsvoksen er varmere;
+  // er dagsvoksen selv blå extra eller kaldere, brukes en kaldere voks. Andre merker: den varmeste voksen som er minst MELLOM_KALDERE °C kaldere (underkant).
+  // Er dagsvoksen rød eller varmere (underkant ≥ MELLOM2_FRA), kommer også et fiolett-trinn imellom [Bruker: «ofte fiolett også»].
+  const mellomPå = (): { p: Produkt; rolle: string }[] => {
+    if (lett) return [];
+    const be = sys.blåExtra?.[0];
+    let første: Produkt | null = null;
+    if (be && dagVoks.omr[0] > be.omr[0] && dagVoks.navn !== be.navn) første = be;
+    else for (let i = dag - 1; i >= 0; i--) if (HARDVOKS[i].omr[0] <= dagVoks.omr[0] - MELLOM_KALDERE) { første = HARDVOKS[i]; break; }
+    if (!første) return [];
+    const ut = [{ p: første, rolle: be && første.navn === be.navn ? 'Base (blå extra)' : 'Base (mellomlag)' }];
+    if (dagVoks.omr[0] >= MELLOM2_FRA) {
+      for (let i = dag - 1; i >= 0; i--) {
+        if (HARDVOKS[i].omr[0] > første.omr[0] && HARDVOKS[i].omr[0] <= dagVoks.omr[0] - MELLOM2_KALDERE) { ut.push({ p: HARDVOKS[i], rolle: 'Base (mellomlag)' }); break; }
+      }
+    }
+    return ut;
   };
   const mp = mellomPå();
   const baseLag: { p: Produkt; rolle: string }[] = mellom.map((i) => ({ p: HARDVOKS[i], rolle: 'Base (kaldere)' }));
-  if (mp && !baseLag.some((x) => x.p.navn === mp.p.navn)) {
-    baseLag.push(mp);
+  const nyeMellom = mp.filter((m) => !baseLag.some((x) => x.p.navn === m.p.navn));
+  if (nyeMellom.length) {
+    nyeMellom.forEach((m) => baseLag.push(m));
     baseLag.sort((x, y) => x.p.omr[0] - y.p.omr[0]);
     while (baseLag.length > 2) baseLag.shift(); // maks to mellomtrinn: kaldeste faller bort
-    begrunnelse.push(`${mp.p.navn} som mellomlag mellom binder og ${dagVoks.navn} (en kaldere voks, minst ${MELLOM_KALDERE} °C lavere underkant): varmere voks får bedre feste og holder lenger oppå en hardere base.`);
+    begrunnelse.push(`Mellomlag mellom binder og ${dagVoks.navn}: ${nyeMellom.map((m) => m.p.navn).join(' og ')}. Kaldere voks under gir varmere voks bedre feste og lengre levetid.`);
   }
-  baseLag.forEach((x) => lag.push({ rolle: mp && x.p.navn === mp.p.navn ? mp.rolle : x.rolle, produkt: x.p.navn, antall: '1–2 lag' }));
+  baseLag.forEach((x) => lag.push({ rolle: x.rolle, produkt: x.p.navn, antall: '1–2 lag' }));
   lag.push({ rolle: 'Dagens voks', produkt: dagVoks.navn, antall: lett ? '2–3 lag' : '3–4 lag', merknad: `Passer ${dagVoks.omr[0]} til ${dagVoks.omr[1]} °C` });
   begrunnelse.push(`Dagens voks ${dagVoks.navn} velges for varm del (${varm.toFixed(1)} °C).`);
   const ute = utenfor(dagVoks, varm, 'varm del av løypa');
