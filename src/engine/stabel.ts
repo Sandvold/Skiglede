@@ -4,6 +4,11 @@ import type { Lag, Seksjon, SnøAnalyse, Stabel, Stil, Tur } from './typer';
 // Tidsgrenser for dekketrinn [Forslag, åpent punkt 2]
 // Dekketrinn styres av det kalde partiet før det blir varmt: begge kriteriene teller [Forslag, åpent punkt 2/8]
 export const DEKKE = { toTrinnMinKm: 6, toTrinnMinMin: 90 };
+/** Festet regnes ut fra alle seksjoner der du trenger grep: flatt, svake stigninger og stigninger. Bare tydelig utforkjøring (brattere enn dette, grader ≈ −4 %) teller ikke [Forslag]. */
+export const FESTE_MIN_STIGNING = -2.3;
+/** Mye skygge: fra denne andelen av løypa (og et temperaturspenn på minst SKYGGE_SPENN °C mellom kaldeste og varmeste del) gis egen råd om blandet føre [Forslag]. */
+export const SKYGGE_MYE_ANDEL = 0.3;
+export const SKYGGE_SPENN = 4;
 /**
  * Lagantall i festesonen [Bruker, fra research nov 2026]: kald snø 4–6 lag, over 30 km opptil 8, rundt 0 °C 2–4 lag, klister 2–3 lag totalt.
  * Motoren reduserer selv i stedet for å anbefale mer.
@@ -57,15 +62,26 @@ function begrensLag(lag: Lag[], grense: number): string | null {
 export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], lett = false, sys0: Smøresystem = SWIX): Stabel {
   const HARDVOKS = hardvoksForSnø(sys0, snø.type === 'omdannet'); // Swix' dobbelte områder velges automatisk etter snøtype
   const sys: Smøresystem = { ...sys0, hardvoks: HARDVOKS };
-  const t = tur.seksjoner.map((x) => x.tEff);
+  const tAlle = tur.seksjoner.map((x) => x.tEff);
+  // Festet trenger du overalt unntatt i tydelig utforkjøring; er mindre enn 20 % av løypa igjen, brukes hele løypa
+  const feste = tAlle.filter((_, i) => seksjoner[i].stigning >= FESTE_MIN_STIGNING);
+  const brukerFeste = feste.length >= tAlle.length * 0.2 && feste.length < tAlle.length;
+  const t = brukerFeste ? feste : tAlle;
   const kald = persentil(t, 0.1);
   const midt = persentil(t, 0.5);
   const varm = persentil(t, 0.8);
   const lengdeKm = seksjoner[seksjoner.length - 1].endM / 1000;
   const begrunnelse: string[] = [
-    `Snøtemperatur langs løypa (luft justert for høyde pluss sol): kaldest ${tur.tMin.toFixed(1)}, varmest ${tur.tMaks.toFixed(1)} °C. Brukt: kald ${kald.toFixed(1)}, midt ${midt.toFixed(1)}, varm ${varm.toFixed(1)} °C (10./50./80. persentil).`,
+    `Snøtemperatur langs løypa (luft justert for høyde pluss sol): kaldest ${tur.tMin.toFixed(1)}, varmest ${tur.tMaks.toFixed(1)} °C. Brukt: kald ${kald.toFixed(1)}, midt ${midt.toFixed(1)}, varm ${varm.toFixed(1)} °C (10./50./80. persentil${brukerFeste ? `, bare der du trenger feste: flatt, svake og bratte stigninger, ikke tydelig utforkjøring (${Math.round((feste.length / tAlle.length) * 100)} % av løypa)` : ''}).`,
   ];
   const advarsler = [...snø.advarsler];
+  if (tur.skyggeAndel >= SKYGGE_MYE_ANDEL && tur.tMaks - tur.tMin >= SKYGGE_SPENN) {
+    const prosent = Math.round(tur.skyggeAndel * 100);
+    advarsler.push(
+      `Mye skygge (${prosent} % av løypa, ${tur.tMin.toFixed(1)} til ${tur.tMaks.toFixed(1)} °C): smør med kald base og et tynt topplag av den varme voksen, aldri kald voks oppå varm. Bakglatt får du av for hard voks i sola, klabb av tykke lag eller fuktige ski som kommer inn i kald skygge. Kork godt og bruk tynne lag.`,
+    );
+    begrunnelse.push(`Mye skygge (${prosent} % ≥ ${Math.round(SKYGGE_MYE_ANDEL * 100)} %) og spenn ≥ ${SKYGGE_SPENN} °C: kald base under, varm voks øverst, og klabbrisiko ved overgang fra sol til skygge.`);
+  }
 
   const skarpSnø = snø.type === 'omdannet' && (snø.skarphet >= 50 || tur.tMaks >= 0.5);
   // Klister brukes ikke i skikkelig kulde: skarp, iset bane ved −10 er hardvoks over binder (og evt. isklister bare på de verste partiene)

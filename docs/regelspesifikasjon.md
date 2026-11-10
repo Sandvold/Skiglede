@@ -114,6 +114,10 @@ Løypa deles i biter på 250 m med egen snøtemperatur. Kaldeste og varmeste tem
 
 **Skygge under 10 % av løypa teller ikke** [Bruker]: dekker terrengskyggen mindre enn 10 % av løypa (`SKYGGE_MIN_ANDEL` i `engine/tur.ts`), regnes sola som uhindret i alle bitene (`skyggeIgnorert`). Fra 10 % brukes skyggen i temperaturene, og kaldeste/varmeste holdes innenfor 5./95. persentil. Appen sier fra i begge tilfeller.
 
+**Feste regnes der du trenger grep** [Forslag, justeres før vinteren]: temperaturene som bestemmer hardvoksen (kald/midt/varm = 10./50./80. persentil) tas bare fra seksjoner som er flatt, svake eller bratte stigninger. Tydelig utforkjøring (brattere enn −2,3° ≈ −4 %, `FESTE_MIN_STIGNING` i `engine/stabel.ts`) teller ikke, fordi festet ikke brukes der. Er under 20 % av løypa igjen, brukes hele løypa. Glideren velges fortsatt for hele løypa.
+
+**Mye skygge** [Forslag]: fra 30 % skygge (`SKYGGE_MYE_ANDEL`) og minst 4 °C mellom kaldeste og varmeste del (`SKYGGE_SPENN`) gir appen en egen advarsel: kald base og tynt topplag av den varme voksen (aldri kald oppå varm), tynne lag og god korking, fordi bakglatt kommer av for hard voks i sola og klabb av tykke lag eller fuktige ski som kommer inn i kald skygge.
+
 ### Utvide turen med flere løyper [Bruker]
 Velger man en løype, kan man legge til løyper som starter ved samme sted (startpunktene innen 300 m, `tilhørende` i `data/rute.ts`): Galten og Lundane, Rørvikåsen og Ny Lysløype, Hovden fjellpark og Hovden lysløype, Auversvatn og Remestøylsflotti. Turen blir hovedløypa, så hver valgt ekstra løype, og tilbake til start (`byggRute`; rett kobling hvis startene ikke er identiske). Avstander og terrengdata forskyves, og smøringen regnes for hele turen. Løyper som bare krysser hverandre midt i løypa er ikke med ennå.
 
