@@ -36,5 +36,7 @@ tur3.seksjoner.forEach((s, i) => { s.tEff = i < 10 ? -3 : -9.2; });
 const st3 = byggStabel(tur3, snø, sek);
 ok(st3.advarsler.some((a) => a.includes('Mye skygge') && a.includes('kald base')), 'skygge 35 % og spenn 6 °C gir råd om blandet føre');
 (tur3 as any).skyggeAndel = 0.25;
-ok(!byggStabel(tur3, snø, sek).advarsler.some((a) => a.includes('Mye skygge')), 'skygge 25 % gir ikke rådet');
+ok(byggStabel(tur3, snø, sek).advarsler.some((a) => a.includes('Mye skygge')), 'skygge 25 % gir rådet (grensen er fra 25 %)');
+(tur3 as any).skyggeAndel = 0.24;
+ok(!byggStabel(tur3, snø, sek).advarsler.some((a) => a.includes('Mye skygge')), 'skygge 24 % gir ikke rådet');
 console.log('Alle sjekker OK');

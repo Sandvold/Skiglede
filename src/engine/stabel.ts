@@ -7,7 +7,7 @@ export const DEKKE = { toTrinnMinKm: 6, toTrinnMinMin: 90 };
 /** Festet regnes ut fra seksjonene der du trenger grep: flatt og stigninger (svake og bratte). Alt som går nedover teller ikke, selv 0,1 %: der staker man, og da er det glid som gjelder [Bruker]. −0,05° ≈ −0,1 % gir slingringsmonn for målestøy i høydedata. */
 export const FESTE_MIN_STIGNING = -0.05;
 /** Mye skygge: fra denne andelen av løypa (og et temperaturspenn på minst SKYGGE_SPENN °C mellom kaldeste og varmeste del) gis egen råd om blandet føre [Forslag]. */
-export const SKYGGE_MYE_ANDEL = 0.3;
+export const SKYGGE_MYE_ANDEL = 0.25;
 export const SKYGGE_SPENN = 4;
 /**
  * Lagantall i festesonen [Bruker, fra research nov 2026]: kald snø 4–6 lag, over 30 km opptil 8, rundt 0 °C 2–4 lag, klister 2–3 lag totalt.
