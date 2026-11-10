@@ -35,12 +35,12 @@ export function Hero() {
   return (
     <View style={[styles.hero, { backgroundColor: theme.hero, paddingTop: 24 + topp }]}>
       {['❄', '❅', '❆', '❄', '❅', '❆', '❄'].map((f, i) => (
-        <Text key={i} style={[styles.flak, { left: `${8 + i * 14}%`, top: 14 + ((i * 37) % 70), fontSize: 14 + ((i * 5) % 14) }]}>{f}</Text>
+        <Text key={i} pointerEvents="none" style={[styles.flak, { left: `${8 + i * 14}%`, top: 14 + ((i * 37) % 70), fontSize: 14 + ((i * 5) % 14) }]}>{f}</Text>
       ))}
       <View style={styles.innhold}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
           <View style={{ flex: 1, flexShrink: 1 }}>
-            <Pressable accessibilityRole="link" onPress={() => router.push('/')}>
+            <Pressable accessibilityRole="link" accessibilityLabel="Til forsiden" hitSlop={10} onPress={() => router.navigate('/')} style={{ zIndex: 5 }}>
               <Text style={styles.tittel}>Skiglede</Text>
             </Pressable>
             <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>

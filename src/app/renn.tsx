@@ -19,7 +19,7 @@ import { NØKKEL_SKIPARK, NØKKEL_VALGTE, TOM_LISTE, useStedData, type Ski } fro
 import { StedVelger } from '@/components/ski/sted';
 import * as DocumentPicker from 'expo-document-picker';
 import { byggFraGpx, lesGpx, terrengFor } from '@/data/gpx';
-import { hentLagretRutevær, hentRennRute, hentRutevær, lagreRenn, useErAdmin, useMineRuter, type MinRute } from '@/data/minerute';
+import { hentLagretRutevær, hentRennRute, hentRutevær, lagreRenn, useAdminStatus, useMineRuter, type MinRute } from '@/data/minerute';
 import { useLagret } from '@/data/lagring';
 import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
@@ -175,11 +175,17 @@ function RennDetalj({ renn }: { renn: Renn }) {
   const områder = useOmråder();
   const område = områder.find((o) => o.id === renn.omrade);
   const [opplastet, setOpplastet] = useState<Løype | undefined>(undefined);
+  const [lastet, setLastet] = useState<{ ferdig: boolean; feil: string }>({ ferdig: false, feil: '' });
+  const [forsøk, setForsøk] = useState(0);
   useEffect(() => {
-    hentRennRute(renn.id).then((l) => setOpplastet(l ? { ...l, navn: renn.navn } : undefined)).catch(() => undefined);
-  }, [renn.id]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- starter ny henting av rennløypa
+    setLastet({ ferdig: false, feil: '' });
+    hentRennRute(renn.id)
+      .then((l) => { setOpplastet(l ? { ...l, navn: renn.navn } : undefined); setLastet({ ferdig: true, feil: '' }); })
+      .catch((e) => setLastet({ ferdig: true, feil: String((e as Error)?.message ?? e) }));
+  }, [renn.id, forsøk]);
   if (!område) return <Kort><ThemedText>Området {renn.omrade} finnes ikke.</ThemedText></Kort>;
-  return <RennMedOmråde renn={renn} område={område} egenLøype={opplastet} />;
+  return <RennMedOmråde renn={renn} område={område} egenLøype={opplastet} løypeStatus={{ ...lastet, prøvIgjen: () => setForsøk((n) => n + 1) }} />;
 }
 
 /** Dine egne ruter: last opp GPX (bare for deg), velg en lagret rute eller slett den. */
@@ -189,7 +195,7 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
   const [opptatt, setOpptatt] = useState(false);
   const [del, setDel] = useState(false);
   const { bruker } = usePremium();
-  const erAdmin = useErAdmin(!!bruker);
+  const { er: erAdmin, feil: adminFeil } = useAdminStatus(!!bruker);
   const områder = useOmråder();
   const [rennNavn, setRennNavn] = useState('');
   const [rennDato, setRennDato] = useState('');
@@ -246,7 +252,7 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
   };
   const egne = mine.ruter.filter((x) => !bruker || !x.user_id || x.user_id === bruker.id);
   if (modus === 'admin') {
-    if (!erAdmin) return null;
+    if (!erAdmin) return adminFeil ? <ThemedText type="small" themeColor="textSecondary">Fikk ikke sjekket admin-tilgangen ({adminFeil}). Logg ut og inn igjen, og last siden på nytt.</ThemedText> : null;
     return (
       <Sammenleggbar id="renn-admin" tittel="Legg inn renn (admin)" standardÅpen={false}>
         <>
@@ -314,7 +320,7 @@ function glid(st: { lag: { rolle: string; produkt: string }[] }, pro: { rolle: s
   return pro.find((l) => l.rolle === 'Dagens glider')?.produkt ?? 'se Glid over';
 }
 
-function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Område; egenLøype?: Løype }) {
+function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Renn; område: Område; egenLøype?: Løype; løypeStatus?: { ferdig: boolean; feil: string; prøvIgjen: () => void } }) {
   const theme = useTheme();
   const værdata = useVær(område);
   const { liste } = useLøypeliste(område.id);
@@ -396,7 +402,19 @@ function RennMedOmråde({ renn, område, egenLøype }: { renn: Renn; område: Om
       {utenVær ? (
         <Kort><ThemedText>Værhistorikk mangler for {område.navn}.</ThemedText></Kort>
       ) : !løype ? (
-        <Kort><ThemedText themeColor="textSecondary">Henter løypa …</ThemedText></Kort>
+        <Kort>
+          {løypeStatus?.feil ? (
+            <>
+              <ThemedText>Fikk ikke hentet løypa: {løypeStatus.feil}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">Hvis det fortsetter: logg ut og inn igjen, og last siden på nytt.</ThemedText>
+              <View style={{ flexDirection: 'row' }}><Chip aktiv={false} onPress={løypeStatus.prøvIgjen}>↻ Prøv igjen</Chip></View>
+            </>
+          ) : løypeStatus?.ferdig && !renn.loype_id ? (
+            <ThemedText>Det er ikke lastet opp noen løype for dette rennet ennå.</ThemedText>
+          ) : (
+            <ThemedText themeColor="textSecondary">Henter løypa …</ThemedText>
+          )}
+        </Kort>
       ) : res ? (
         <>
           <Sammenleggbar id="renn-2" tittel="Løypa">

@@ -84,19 +84,23 @@ export async function hentLagretRutevær(ruteId: string): Promise<{ referansehoy
 }
 
 /** Er innlogget bruker administrator (kan legge inn renn og rennløyper for alle)? Tabellen `admin` viser bare brukerens egen rad. */
-export function useErAdmin(innlogget: boolean): boolean {
-  const [er, setEr] = useState(false);
+export function useAdminStatus(innlogget: boolean): { er: boolean; feil: string } {
+  const [st, setSt] = useState({ er: false, feil: '' });
   useEffect(() => {
     if (!innlogget) return;
-    neon().from('admin').select('user_id').limit(1).then(({ data }: { data: unknown[] | null }) => setEr(!!data?.length));
+    neon().from('admin').select('user_id').limit(1)
+      .then(({ data, error }: { data: unknown[] | null; error?: { message?: string } | null }) => setSt({ er: !!data?.length, feil: error?.message ?? '' }))
+      .catch((e: unknown) => setSt({ er: false, feil: String((e as Error)?.message ?? e) }));
   }, [innlogget]);
-  return innlogget && er;
+  return innlogget ? st : { er: false, feil: '' };
 }
+export const useErAdmin = (innlogget: boolean): boolean => useAdminStatus(innlogget).er;
 
 /** GPX-løypa som admin har lagt til et renn (synlig for Pro-brukere), eller null. */
 export async function hentRennRute(rennId: string): Promise<(Løype & { start_lat: number; start_lon: number }) | null> {
   const { data, error } = await neon().from('renn_rute').select('lengde_m, punkter, terreng, start_lat, start_lon').eq('renn_id', rennId).maybeSingle();
-  if (error || !data) return null;
+  if (error) throw new Error(error.message ?? 'Kunne ikke hente løypa');
+  if (!data) return null;
   const d = data as { lengde_m: number; punkter: Løype['punkter']; terreng: Terreng[] | null; start_lat: number; start_lon: number };
   return { id: rennId, navn: rennId, lengde_m: d.lengde_m, punkter: d.punkter, terreng: d.terreng ?? undefined, start_lat: d.start_lat, start_lon: d.start_lon };
 }

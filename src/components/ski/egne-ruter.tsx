@@ -64,7 +64,7 @@ export function EgneRuter({ mine, bruker, område, onVelg }: { mine: ReturnType<
   };
 
   return (
-    <Sammenleggbar id="egne-ruter" tittel="Dine egne ruter (GPX)" standardÅpen={false}>
+    <Sammenleggbar id="egne-ruter" tittel={mineEgne.length ? `＋ Legg til egen tur (GPX) · du har ${mineEgne.length}` : '＋ Legg til egen tur (GPX)'} standardÅpen={mineEgne.length > 0}>
       {!bruker ? (
         <ThemedText type="small" themeColor="textSecondary">Logg inn for å laste opp egne GPX-ruter. Du får samme smøreråd som for andre løyper, regnet for akkurat din rute.</ThemedText>
       ) : (
