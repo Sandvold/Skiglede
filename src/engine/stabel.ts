@@ -43,7 +43,7 @@ const persentil = (v: number[], p: number) => {
 /** Reduserer lagantallet i grepsonen til høyst `grense`. Returnerer en kort beskrivelse av hva som ble kuttet, eller null. */
 function begrensLag(lag: Lag[], grense: number): string | null {
   const maks = (l: Lag) => parseInt(l.antall.split('–').pop() as string, 10) || 0;
-  const grep = () => lag.filter((l) => l.rolle !== 'Glidesone (foran og bak)').reduce((s, l) => s + maks(l), 0);
+  const grep = () => lag.filter((l) => l.rolle !== 'Glidesone (foran og bak)' && !l.rolle.startsWith('Klister under')).reduce((s, l) => s + maks(l), 0);
   if (grep() <= grense) return null;
   const kutt: string[] = [];
   const note = (t: string) => { if (!kutt.includes(t)) kutt.push(t); };
@@ -57,7 +57,6 @@ function begrensLag(lag: Lag[], grense: number): string | null {
   sett((r) => r.startsWith('Base'), '1 lag', 'ett lag i hvert base-trinn');
   sett((r) => r === 'Binder', '1 lag', 'ett lag binder');
   sett((r) => r === 'Dagens voks', '3 lag', 'tre lag dagens voks');
-  fjern((r) => r.startsWith('Klister under'), 'uten klister under');
   fjern((r) => r === 'Base (kaldere)', 'færre base-trinn');
   sett((r) => r === 'Dagens voks', '2 lag', 'to lag dagens voks');
   fjern((r) => r === 'Base (mellomlag)', 'uten ekstra mellomlag');
