@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vaer_openmeteo
 
 HER = os.path.dirname(os.path.abspath(__file__))
-TIMEOUT_S = 900
+TIMEOUT_S = 240  # normalt tar ett område sekunder; hang MET, tar vi det neste i stedet for å vente 15 min per område
 KILDE = "met"  # MET Nordic via OPeNDAP (gratis; data samles fra nå, se --vekst i hent_vaer.py) eller "openmeteo" (ett kall for hele vinduet; kommersiell bruk krever abonnement)
 
 
@@ -121,6 +121,9 @@ def main():
     con.close()
     with tempfile.TemporaryDirectory() as tmp, ThreadPoolExecutor(a.samtidig) as ex:
         ok = list(ex.map(lambda r: område(r, tmp), rader))
+        # Én ny runde for de som feilet (typisk et kort MET-avbrudd); økt for liten tåler en time uten MET uten å feile.
+        for i in [i for i, x in enumerate(ok) if not x]:
+            ok[i] = område(rader[i], tmp)
         ok_r = list(ex.map(lambda r: rute(r, tmp), ruter))
     print(f"{sum(ok)} av {len(ok)} områder og {sum(ok_r)} av {len(ok_r)} delte ruter oppdatert")
     ok = ok + ok_r
