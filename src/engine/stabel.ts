@@ -20,7 +20,9 @@ export const MELLOM2_KALDERE = 2;
  */
 export const LAG = { kald: 6, langTur: 8, langTurKm: 30, rundt0: 5, rundt0Fra: -1, klister: 3 };
 export const MAKS_LAG = LAG.langTur; // absolutt øvre grense
-export const lagGrense = (varm: number, lengdeKm: number) => (varm >= LAG.rundt0Fra ? LAG.rundt0 : lengdeKm >= LAG.langTurKm ? LAG.langTur : LAG.kald);
+/** Lang tur = minst 30 km eller minst 3 timer på ski [Forslag]: festet slites mer, så flere lag er lov i kald snø. */
+export const LANG_TUR_TIMER = 3;
+export const lagGrense = (varm: number, lengdeKm: number, timer = 0) => (varm >= LAG.rundt0Fra ? LAG.rundt0 : lengdeKm >= LAG.langTurKm || timer >= LANG_TUR_TIMER ? LAG.langTur : LAG.kald);
 /** Klister brukes bare når snøen er omdannet/skarp (snøtype styrer). Kaldere enn dette brukes hardvoks med binder [Bruker, Nystad: kaldføre er −8 °C og kaldere]. */
 /** Skarphet (0–100) som regnes som «veldig hard omdannet snø» der isklister (KX30) legges under dagens klister. */
 export const KLISTER_ISHARD = 90;
@@ -78,8 +80,13 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
   const midt = persentil(t, 0.5);
   const varm = persentil(t, 0.8);
   const lengdeKm = seksjoner[seksjoner.length - 1].endM / 1000;
+  const varighetT = (tur.sluttTs - tur.startTs) / 3_600_000;
+  const min = Math.round(varighetT * 60);
+  const turTid = min >= 60 ? `${Math.floor(min / 60)} t ${min % 60} min` : `${min} min`;
+  const tr = (x: number) => x.toFixed(1).replace('.', ',');
   const begrunnelse: string[] = [
     `Snøtemperatur langs løypa (luft justert for høyde pluss sol): kaldest ${tur.tMin.toFixed(1).replace('.', ',')}, varmest ${tur.tMaks.toFixed(1).replace('.', ',')} °C. Brukt: kald ${kald.toFixed(1).replace('.', ',')}, midt ${midt.toFixed(1).replace('.', ',')}, varm ${varm.toFixed(1).replace('.', ',')} °C (10./50./80. persentil${brukerFeste ? `, bare der du trenger feste: flatt og stigninger, ikke nedoverbakker (${Math.round((feste.length / tAlle.length) * 100)} % av løypa)` : ''}).`,
+    `Hele turen er regnet med, ikke bare starten: ca. ${turTid} på ski (${lengdeKm.toFixed(1).replace('.', ',')} km), og været er hentet for hver del av løypa på det tidspunktet du er der. Lufta ${Math.abs(tur.luftTrend) < 0.5 ? 'holder seg stabil' : tur.luftTrend > 0 ? `stiger ${tr(tur.luftTrend)} °C` : `faller ${tr(-tur.luftTrend)} °C`} (laveste ${tr(tur.luftMin)} °C). Snøen er ${snø.type}${tur.sludd ? ', det er meldt sludd/nedbør rundt 0 °C' : ''}${tur.fryserPå ? ', og det fryser på underveis' : ''}.`,
   ];
   const advarsler = [...snø.advarsler];
   if (tur.skyggeAndel >= SKYGGE_MYE_ANDEL && tur.tMaks - tur.tMin >= SKYGGE_SPENN) {
@@ -194,9 +201,9 @@ export function byggStabel(tur: Tur, snø: SnøAnalyse, seksjoner: Seksjon[], le
     begrunnelse.push('Ingen kaldt parti etterfulgt av varmere føre: ingen dekke.');
   }
   if (lett) begrunnelse.push('Trening: færre og tynnere lag enn på tur, og ingen mellomtrinn i basen.');
-  const grense = lagGrense(varm, lengdeKm);
+  const grense = lagGrense(varm, lengdeKm, varighetT);
   const redusert = begrensLag(lag, grense);
-  begrunnelse.push(`Lagantall: høyst ${grense} tynne lag i festesonen (${grense === LAG.rundt0 ? 'rundt 0 °C: 2–5 lag' : grense === LAG.langTur ? `kald snø og over ${LAG.langTurKm} km: opptil ${LAG.langTur}` : 'kald snø: 4–6 lag'})${redusert ? `. Redusert: ${redusert}` : ''}.`);
+  begrunnelse.push(`Lagantall: høyst ${grense} tynne lag i festesonen (${grense === LAG.rundt0 ? 'rundt 0 °C: 2–5 lag' : grense === LAG.langTur ? `kald snø og lang tur (over ${LAG.langTurKm} km eller ${LANG_TUR_TIMER} timer): opptil ${LAG.langTur}` : 'kald snø: 4–6 lag'})${redusert ? `. Redusert: ${redusert}` : ''}.`);
   return { type: 'hardvoks', lag, begrunnelse, advarsler };
 }
 
@@ -338,17 +345,17 @@ function rubbGrunner(tur: Tur): string[] {
  * Klister fungerer ikke hvis turen går opp i kaldere luft eller det fryser på underveis. Felleski er det trygge valget. Gir NB-varsel selv om du har riktige produkter.
  */
 export function nullFøreRåd(tur: Tur): string[] {
-  const ut = ['NB: vanskelig 0-føre. Nedbør rundt 0 °C, og det er usikkert om det blir regn eller snø. Dette er det vanskeligste føret å smøre for, også med riktige produkter. Ha klister og hardvoks med, og vær klar til å smøre om.'];
+  const ut = ['NB: vanskelig 0-føre (nedbør rundt 0 °C, usikkert om regn eller snø). Ha klister, hardvoks og felleski med, og vær klar til å smøre om.'];
   const rubbNei = rubbGrunner(tur);
   const kaldereOppe = tur.tMin < -1 || tur.luftMin < -1; // høyere opp eller kaldere snø: klister fryser og iser
   const varmere = tur.luftTrend >= 1 && !tur.fryserPå;
-  if (!rubbNei.length) ut.push(varmere ? 'Rubb: blir varmere under turen, og da gir rubbski ofte mening. Proffene tar ofte rubb i slikt føre.' : 'Rubb: passer i dag (ikke minus, og ikke fare for at det fryser på), og er ofte det proffene velger i slikt føre. Stopper nedbøren eller går den over til regn, blir sporet blankt og festet dårligere, og på lange turer er rubb risikabelt fordi føret kan endre seg.');
+  if (!rubbNei.length) ut.push(varmere ? 'Rubb: blir varmere under turen, så rubb passer.' : 'Rubb: passer i dag, men er risikabelt på lange turer hvis føret endrer seg.');
   else ut.push(`Rubb: passer ikke i dag. ${rubbNei.filter((g) => !g.startsWith('Rubb brukes bare')).join(' ') || 'Det er ikke meldt sludd.'}`);
-  if (tur.fryserPå || kaldereOppe) ut.push('Klister: fungerer dårlig når turen går opp i kaldere luft eller det fryser på underveis. Velg heller hardvoks med binder, eller felleski.');
+  if (tur.fryserPå || kaldereOppe) ut.push('Klister: fungerer dårlig når turen går opp i kaldere luft eller det fryser på. Velg hardvoks med binder, eller felleski.');
   else if (varmere) ut.push('Klister: kan fungere når det blir varmere.');
-  else ut.push('Klister: kan fungere hvis det holder seg rundt og over 0 °C hele turen.');
-  ut.push('Hardvoks: ved fallende eller ny snø rundt 0 °C er en myk hardvoks valget (Swix), eventuelt med tynt klister under. Klister er for mykt til ny snø og virker først når snøen er omdannet og har fritt vann.');
-  ut.push('Felleski: det tryggeste valget. Fungerer alltid, men glir aldri perfekt.');
+  else ut.push('Klister: kan fungere hvis det holder seg på 0 °C eller over hele turen.');
+  ut.push('Hardvoks: ved ny snø rundt 0 °C passer en myk hardvoks, eventuelt med tynt klister under.');
+  ut.push('Felleski: tryggest. Fester alltid, men glir aldri perfekt.');
   return ut;
 }
 

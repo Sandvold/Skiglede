@@ -120,7 +120,12 @@ export default function RennSide() {
   const { bruker } = usePremium();
   const mine = useMineRuter(!!bruker);
   const egen = mine.ruter.find((x) => x.id === valgtEgen) ?? null;
-  const r = renn.find((x) => x.id === valgt) ?? null;
+  // Åpner rett på neste kommende renn (ellers det siste som har vært) hvis ingen er valgt
+  const neste = valgtEgen ? null : [...renn].filter((x) => x.dato).sort((a, b) => {
+    const da = dagnr(a.dato as string), db = dagnr(b.dato as string), i = idagNr();
+    return (da >= i ? da - i : 1e6 + (i - da)) - (db >= i ? db - i : 1e6 + (i - db));
+  })[0] ?? renn[0] ?? null;
+  const r = renn.find((x) => x.id === valgt) ?? neste;
   const andres = mine.ruter.filter((x) => bruker && x.user_id && x.user_id !== bruker.id);
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
@@ -136,7 +141,7 @@ export default function RennSide() {
           </View>
           {fane === 'tour' ? (
             <>
-              <Rennkalender renn={renn} valgt={valgt} velg={(id) => { setValgt(id); setValgtEgen(''); }} />
+              <Rennkalender renn={renn} valgt={r?.id ?? ''} velg={(id) => { setValgt(id); setValgtEgen(''); }} />
               {andres.length ? (
                 <View style={{ gap: 8 }}>
                   <ThemedText type="smallBold" themeColor="textSecondary">DELT AV ANDRE</ThemedText>
@@ -145,8 +150,8 @@ export default function RennSide() {
                   </View>
                 </View>
               ) : null}
-              <EgenRute modus="admin" mine={mine} valgt={valgtEgen} velg={() => undefined} />
               {egen && andres.some((x) => x.id === egen.id) ? <EgenRuteDetalj key={egen.id} rute={egen} /> : r ? <RennDetalj key={r.id} renn={r} /> : <ThemedText themeColor="textSecondary">Velg et renn i kalenderen for å få råd for hele løypa.</ThemedText>}
+              <EgenRute modus="admin" mine={mine} valgt={valgtEgen} velg={() => undefined} />
             </>
           ) : (
             <>

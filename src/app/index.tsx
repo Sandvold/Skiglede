@@ -309,7 +309,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const km = løype.lengde_m / 1000;
   const tempo = TEMPO[stil === 'skoyting' ? 'skoyting' : 'klassisk'];
   const minutter = Math.round((km / tempo[modus]) * 60);
-  const stabelVisning = [...(enkel ? forenklet(vis) : vis).lag].filter((l) => !erGlidesone(l)).reverse(); // øverste lag først, uten glider
+  const stabelVisning = [...(enkel ? forenklet(vis) : vis).lag].filter((l) => !erGlidesone(l)); // første lag øverst, uten glider
   const glidesone = vis.lag.find(erGlidesone);
   const dagensP = produkt(dagens(vis)?.produkt ?? '');
   const smøreMerke = dagensP ? SYSTEMER[merkeAv(dagensP)].navn : sys.navn;
@@ -421,13 +421,13 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
             </View>
           ) : null}
           <GliderBoks lag={glidesone} />
-          <ThemedText type="small" themeColor="textSecondary">{vis.lag.filter((l) => !erGlidesone(l)).length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Smør i rekkefølgen 1, 2, 3 … Nederst er første lag, øverst er siste.' : 'Ingen smøring på festesonen.'}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">{vis.lag.filter((l) => !erGlidesone(l)).length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Smør i rekkefølgen 1, 2, 3 … fra øverst og ned.' : 'Ingen smøring på festesonen.'}</ThemedText>
           <View style={{ gap: 6 }}>
             {stabelVisning.map((l, i) => (
               <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
                 {stabelVisning.length > 1 ? (
                   <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: tekstPå(produktFarge(l.produkt)), alignItems: 'center', justifyContent: 'center' }}>
-                    <Text accessibilityLabel={`Lag ${stabelVisning.length - i}`} style={{ color: tekstPå(produktFarge(l.produkt)), fontWeight: '800', fontSize: 15 }}>{stabelVisning.length - i}</Text>
+                    <Text accessibilityLabel={`Lag ${i + 1}`} style={{ color: tekstPå(produktFarge(l.produkt)), fontWeight: '800', fontSize: 15 }}>{i + 1}</Text>
                   </View>
                 ) : null}
                 <View style={{ flex: 1 }}>

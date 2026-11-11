@@ -43,10 +43,10 @@ export function Hero() {
             <Pressable accessibilityRole="link" accessibilityLabel="Til forsiden" hitSlop={10} onPress={() => router.navigate('/')} style={{ zIndex: 5 }}>
               <Text style={styles.tittel}>Skiglede</Text>
             </Pressable>
-            <Text style={styles.under}>Smøring for løypa du skal gå. {område.navn}</Text>
           </View>
           <KontoHøyre />
         </View>
+        <Text style={styles.under} numberOfLines={1}>Smøring for løypa du skal gå</Text>
         <Områdevelger />
         {premium && stedStatus.tilstand !== 'ukjent' ? (
           <Text style={{ color: '#BFDDF7', fontSize: 13, marginTop: 10 }}>
