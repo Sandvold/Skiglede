@@ -20,8 +20,8 @@ Status: «bekreftet» = lest/kjørt av to. «ikke testet på enhet» = bare lest
 - [ ] **B1. Feil fra kontosynk svelges.** `src/data/premium.tsx:61,99,120,121`, `src/data/logg.ts:57`, `src/data/minerute.ts:37`: `error` fra Neon sjekkes ikke. Fiks: `const { error } = await …; if (error) throw error;`. I `:61`: ved feil, sett `feil` og ikke rør `premium`.
 - [ ] **B2. Prognosen sjekkes bare mot starttid.** `src/app/index.tsx:313`: bruk `> r.tur.sluttTs` i stedet for `r.startTs`, så lange turer ikke regnes på frosset vær uten advarsel.
 - [ ] **B3. Databasekall uten tidsavbrudd.** `src/data/neon.ts:42,55`: legg `AbortController` med 12 s (mønster i `src/data/varsel.ts:43-50`), så «Henter løypene …» ikke henger.
-- [ ] **B4. Saltet løype.** `src/engine/underlag.ts:51`: `Math.min(t, 0) + SALT_SNØTEMP` gir −13 ved −10. Spesifikasjonen sier −3 «eller kaldere hvis den allerede er det». Fiks: `Math.min(t, SALT_SNØTEMP)`. **Spør Kristoffer først** om ekstra kjøling var meningen.
-- [ ] **B5. Isklister under våtklister ved plussgrader.** `src/engine/stabel.ts:230`: `medIs` ser bare på skarphet ≥ 90. Tine/frys-historikk og +8 °C gir KB20C → KX30 → KX75. Forslag: krev også `tur.tMaks <= 1`. **Regelendring: spør Kristoffer først.**
+- [ ] **B4. Salt bare ved 0 °C eller varmere (avgjort).** Avkrysningen for saltet løype (`src/components/ski/underlag.tsx`, `src/engine/underlag.ts:51`) skal bare vises og gjelde når lufta/snøen på turen er 0 °C eller varmere (man salter ikke kald løype). Ved kaldere: skjul valget og nullstill det. Da stemmer `Math.min(t, 0) + SALT_SNØTEMP` med spesifikasjonen. Oppdater `docs/regelspesifikasjon.md`.
+- [x] **B5. Isklister som mellomlag (avgjort: beholdes).** Ingen endring i `src/engine/stabel.ts:230`. Kristoffer: isklister kan brukes som mellomlag.
 - [ ] **B6. Motoren krasjer på tomme inndata.** `src/engine/tur.ts:100,114`: kast tydelig feil i `planTur` ved tom `seksjoner`/`timer`, og vis «Løypa mangler punkter» i `Hjem` når `løype.punkter.length < 2`.
 - [ ] **B7. Android-klienten mangler `update` og `rpc`** (ikke testet på enhet). `src/data/native-konto.ts`: `delMed` kaster, og `erKjentUtfartssted` svarer alltid nei. Fiks: `update()` (PATCH) i `Spørring` og `rpc(navn, args)` (POST `/rpc/<navn>`) i `nativKlient`.
 - [ ] **B8. «Oppdater vær» henter ikke historikken.** `src/app/index.tsx:230-236`, `src/data/omrader.ts:275`: eksporter `oppdaterHistorikk(id)` som nullstiller `friskVær`/`værSpurt` og henter på nytt; kall den fra `oppdaterVær`. Skill «nytt område uten data» fra «kallet feilet» med et `feilet`-flagg i `Værstatus`.
@@ -47,13 +47,14 @@ Status: «bekreftet» = lest/kjørt av to. «ikke testet på enhet» = bare lest
 - [ ] **C12. Rå engelske feilmeldinger.** Send `error.message` gjennom `feilTekst` (`src/data/premium.tsx:35`) i `logg.ts`, `minerute.ts`, `premium.tsx`. Auth-feil: «Du er logget ut. Logg inn igjen.» Ellers: «Noe gikk galt. Prøv igjen.»
 - [ ] **C13. Nytt sted ser ut som tømt lager.** `src/components/ski/sted.tsx:23`: vis «<Sted> er tomt. Det du hadde ligger fortsatt under <forrige sted>.»
 - [ ] **C14. Toppfeltet innlogget.** `src/components/ski/konto.tsx:35-54`: flytt Premium/Pro-bryterne og «Logg ut» til Innstillinger. Toppfeltet får bare e-post og tannhjul.
+- [ ] **C16. Egen tur både under kartet og i løypevelgeren.** Behold kortet under kartet (`src/app/index.tsx:683-684`), og legg samme innhold som en rad/knapp nederst i løypelista (`src/components/ski/loypevelger.tsx`) som åpner det samme kortet. Hold løypelista først i rekkefølgen under kartet slik at lista ikke skyves ned.
 - [ ] **C15. Småting.** Desimalkomma («10,7 km», «−1,9 °C») gjennomgående; «Ca. 37 min» i stedet for «Ca. 0 t 37 min»; skjul terrengskygge-linjen når andelen er 0 eller det er mørkt; temperaturtall kuttes i «Voks og klister» på mobil (`oversikt.tsx:46`).
 
-## D. Kristoffer må bestemme (ikke gjør uten svar)
+## D. Avgjort av Kristoffer 11. nov
 
-- **D1. Felleski og rubbski som valg for alle?** I dag vises de bare når de ligger i skiparken (premium). En utlogget bruker med bare felleski får hardvoksråd. Enten legg dem i stilvalget, eller skriv «Har du felleski eller rubbski? Legg dem inn i Skipark.»
-- **D2. Rekkefølgen på forsiden.** «Legg til egen tur (GPX)» ligger nå mellom kartet og løypelista (bedt om 10. nov). Kontrolløren mener løypelista bør komme først.
-- B4 og B5 over er regelspørsmål.
+- **Felleski og rubbski** er bare for de som har den typen ski i skiparken. Ingen endring i stilvalget.
+- **«Legg til egen tur (GPX)»** skal finnes både under kartet og der man velger løype (løypevelgeren). Ny oppgave **C16**.
+- Salt: se B4. Isklister: se B5.
 
 ## Ikke sjekket
 
