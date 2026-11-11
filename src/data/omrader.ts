@@ -246,6 +246,8 @@ export type Værstatus = {
   fersk: boolean;
   /** Døgn siden siste oppdatering (null hvis ukjent) */
   alderDøgn: number | null;
+  /** Siste henting fra databasen feilet (nettfeil) */
+  feilet: boolean;
 };
 
 /** Værstatus for et område: fersk, gammel eller manglende, slik at løypesiden kan vise løypeinfo uten smøreråd når været ikke er til å stole på. */
@@ -262,49 +264,58 @@ export function useVærstatus(o: Område): Værstatus {
     const alderDøgn = oppdatert === null ? innebygdAlder : (Date.now() - oppdatert) / 86400_000;
     const innebygd = innebygdAlder !== null && innebygdAlder <= VÆR_FERSK_DØGN;
     const fersk = friskVær.has(o.id) || innebygd;
-    return { data: friskVær.get(o.id) ?? data, lastet: værSpurt.has(o.id), oppdatert, fersk, alderDøgn };
+    return { data: friskVær.get(o.id) ?? data, lastet: værSpurt.has(o.id), oppdatert, fersk, alderDøgn, feilet: værFeilet.has(o.id) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [o.id, data, versjon]);
 }
 
-/** Værhistorikk for området: ferdig innebygd kopi først, byttes mot siste fra databasen (oppdateres hver natt uten nytt bygg). */
+/** Værhistorikk for området: ferdig innebygd kopi først, byttes mot siste fra databasen (oppdateres hver fjerde time uten nytt bygg). */
 export function useVær(o: Område): Værdata {
   return useVærMedVersjon(o)[0];
 }
 
+/** Områder der siste henting fra databasen feilet (nettfeil), så vi kan skille «ingen nett» fra «nytt område uten data». */
+const værFeilet = new Set<string>();
+const værLyttere = new Set<() => void>();
+const varsleVær = () => værLyttere.forEach((f) => f());
+
+/** Henter værhistorikken fra databasen. Gamle data beholdes hvis kallet feiler. */
+async function hentVærFraDb(o: Område): Promise<void> {
+  try {
+    const data = ((await lesAnonymt<{ referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string }>(`vaer?select=referansehoyde_m,timer,oppdatert&omrade=eq.${encodeURIComponent(o.id)}`))[0]) as { referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string } | undefined;
+    const timer = data?.timer as (string | number)[][] | undefined;
+    if (timer?.length) {
+      sisteVær.set(o.id, { data: { referansehoyde_m: data!.referansehoyde_m, timer }, oppdatert: Date.parse(String(data!.oppdatert)) });
+      if (Date.parse(String(data!.oppdatert)) > Date.now() - VÆR_FERSK_DØGN * 86400_000) friskVær.set(o.id, { referansehoyde_m: data!.referansehoyde_m, timer });
+    }
+    værFeilet.delete(o.id);
+  } catch {
+    // uten nett eller database brukes den innebygde kopien (hvis den er fersk)
+    værFeilet.add(o.id);
+  }
+  værSpurt.add(o.id);
+  varsleVær();
+}
+
+/** «Oppdater vær»: hent værhistorikken på nytt (databasen oppdateres hver fjerde time). Viste data står urørt til nye er hentet. */
+export const oppdaterHistorikk = (o: Område) => hentVærFraDb(o);
+
 function useVærMedVersjon(o: Område): [Værdata, number] {
   const [versjon, tving] = useState(0);
   useEffect(() => {
+    const f = () => tving((n) => n + 1);
+    værLyttere.add(f);
+    return () => { værLyttere.delete(f); };
+  }, []);
+  useEffect(() => {
     if (friskVær.has(o.id)) return;
-    let avbrutt = false;
     // Svarer ikke databasen innen 8 s, regnes været som ikke hentet (siden viser da beskjed i stedet for å vente for alltid)
     const frist = setTimeout(() => {
-      if (!avbrutt) { værSpurt.add(o.id); tving((n) => n + 1); }
+      if (!værSpurt.has(o.id)) { værSpurt.add(o.id); værFeilet.add(o.id); varsleVær(); }
     }, 8000);
-    (async () => {
-      try {
-        const data = ((await lesAnonymt<{ referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string }>(`vaer?select=referansehoyde_m,timer,oppdatert&omrade=eq.${encodeURIComponent(o.id)}`))[0]) as { referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string } | undefined;
-        const timer = data?.timer as (string | number)[][] | undefined;
-        if (!avbrutt && timer?.length) {
-          sisteVær.set(o.id, { data: { referansehoyde_m: data!.referansehoyde_m, timer }, oppdatert: Date.parse(String(data!.oppdatert)) });
-          if (Date.parse(String(data!.oppdatert)) > Date.now() - VÆR_FERSK_DØGN * 86400_000) friskVær.set(o.id, { referansehoyde_m: data!.referansehoyde_m, timer });
-        }
-        if (!avbrutt) {
-          værSpurt.add(o.id);
-          tving((n) => n + 1);
-        }
-      } catch {
-        // uten nett eller database brukes den innebygde kopien
-        if (!avbrutt) {
-          værSpurt.add(o.id);
-          tving((n) => n + 1);
-        }
-      }
-    })();
-    return () => {
-      avbrutt = true;
-      clearTimeout(frist);
-    };
+    void hentVærFraDb(o);
+    return () => clearTimeout(frist);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [o.id]);
   return [friskVær.get(o.id) ?? o.vær, versjon];
 }

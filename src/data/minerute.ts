@@ -33,9 +33,10 @@ export function useMineRuter(innlogget: boolean) {
       await last();
       return null;
     },
-    async delMed(id: string, delt: boolean) {
-      await neon().from('bruker_rute').update({ delt }).eq('id', id);
+    async delMed(id: string, delt: boolean): Promise<string | null> {
+      const { error } = await neon().from('bruker_rute').update({ delt }).eq('id', id);
       await last();
+      return error?.message ?? null;
     },
     async slett(id: string): Promise<string | null> {
       const { error } = await neon().from('bruker_rute').delete().eq('id', id);

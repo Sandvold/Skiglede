@@ -128,6 +128,7 @@ class Spørring implements PromiseLike<Svar> {
   private params: string[] = [];
   private prefer: string[] = [];
   private enkelt = false;
+  private rpcKall = false;
   constructor(private tabell: string) {}
   select(kol = '*') {
     this.params.push(`select=${encodeURIComponent(kol)}`);
@@ -145,8 +146,20 @@ class Spørring implements PromiseLike<Svar> {
     if (o?.onConflict) this.params.push(`on_conflict=${encodeURIComponent(o.onConflict)}`);
     return this;
   }
+  update(verdier: unknown) {
+    this.metode = 'PATCH';
+    this.kropp = verdier;
+    return this;
+  }
   delete() {
     this.metode = 'DELETE';
+    return this;
+  }
+  /** Funksjonskall (PostgREST /rpc/<navn>): POST med argumentene som JSON. */
+  kall(args: unknown) {
+    this.metode = 'POST';
+    this.kropp = args ?? {};
+    this.rpcKall = true;
     return this;
   }
   eq(k: string, v: unknown) {
@@ -175,7 +188,7 @@ class Spørring implements PromiseLike<Svar> {
       if (!o) throw new Error('ikke innlogget');
       const headers: Record<string, string> = { Authorization: `Bearer ${await jwt()}`, Accept: 'application/json' };
       if (this.kropp !== undefined) headers['Content-Type'] = 'application/json';
-      if (this.metode !== 'GET') this.prefer.push('return=minimal');
+      if (this.metode !== 'GET' && !this.rpcKall) this.prefer.push('return=minimal');
       if (this.prefer.length) headers.Prefer = this.prefer.join(',');
       const q = this.params.length ? `?${this.params.join('&')}` : '';
       const svar = await fetch(`${DATA_API_URL}/${this.tabell}${q}`, { method: this.metode, headers, body: this.kropp === undefined ? undefined : JSON.stringify(this.kropp) });
@@ -194,6 +207,7 @@ class Spørring implements PromiseLike<Svar> {
 
 export const nativKlient = {
   from: (tabell: string) => new Spørring(tabell),
+  rpc: (navn: string, args?: unknown) => new Spørring(`rpc/${navn}`).kall(args),
   auth: {
     getSession: async () => {
       const o = await gjeldendeØkt();

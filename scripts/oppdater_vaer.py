@@ -121,9 +121,13 @@ def main():
     con.close()
     with tempfile.TemporaryDirectory() as tmp, ThreadPoolExecutor(a.samtidig) as ex:
         ok = list(ex.map(lambda r: område(r, tmp), rader))
-        # Én ny runde for de som feilet (typisk et kort MET-avbrudd); økt for liten tåler en time uten MET uten å feile.
-        for i in [i for i, x in enumerate(ok) if not x]:
-            ok[i] = område(rader[i], tmp)
+        # Én ny runde (parallelt) for de som feilet, typisk et kort MET-avbrudd. Feilet mer enn 25 %, er MET nede: da hjelper det ikke å prøve igjen nå.
+        feilet = [i for i, x in enumerate(ok) if not x]
+        if feilet and len(feilet) <= 0.25 * len(ok):
+            for i, x in zip(feilet, ex.map(lambda i: område(rader[i], tmp), feilet)):
+                ok[i] = x
+        elif feilet:
+            print(f"{len(feilet)} av {len(ok)} områder feilet, MET ser ut til å være nede: hopper over ny runde", file=sys.stderr)
         ok_r = list(ex.map(lambda r: rute(r, tmp), ruter))
     print(f"{sum(ok)} av {len(ok)} områder og {sum(ok_r)} av {len(ok_r)} delte ruter oppdatert")
     ok = ok + ok_r

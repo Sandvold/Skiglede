@@ -29,7 +29,7 @@ export const HARDVOKS: Produkt[] = [
   { navn: 'VP70', farge: 'Pro gul', hex: '#F2CF3A', omr: [0, 3], linje: 'VP' },
 ];
 
-/** V-linja (Hardwax): vises i oversikten, brukes ikke av motoren ennå. */
+/** V-linja (Hardwax): vises i oversikten, og teller som hardvoks i smørelageret (se systemFraLager). */
 export const V_LINJE: Produkt[] = [
   { navn: 'V05', farge: 'Polar', hex: '#DCEBF7', omr: [-25, -12], linje: 'V' },
   { navn: 'V20', farge: 'Grønn', hex: '#3DA35D', omr: [-15, -8], linje: 'V' },

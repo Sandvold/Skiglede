@@ -18,9 +18,10 @@ import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useNaboløyper } from '@/data/naboloyper';
 import type { KartBoks } from '@/components/ski/zoomkart';
-import { useOmråde, useOmråder, useVær, useVærstatus, VÆR_FERSK_DØGN, type Område, type Værstatus } from '@/data/omrader';
+import { oppdaterHistorikk, useOmråde, useOmråder, useVær, useVærstatus, VÆR_FERSK_DØGN, type Område, type Værstatus } from '@/data/omrader';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { usePremium } from '@/data/premium';
+import { osloDato, osloTs, timerI } from '@/data/tid';
 import { Loggkort } from '@/components/ski/loggkort';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
 import { useRouter } from 'expo-router';
@@ -32,25 +33,6 @@ const vindu = (alle: Vær[], startTs: number): Vær[] => {
   const v = alle.filter((t) => t.ts >= startTs - 3 * 3600_000);
   return v.length ? v : alle.slice(-6);
 };
-const timerI = (v: Område['vær']): Vær[] => v.timer.map((r) => ({
-  ts: Date.parse(r[0] as string), temp: r[1] as number, nedbor: r[2] as number, rh: r[3] as number, vind: r[4] as number, sw: r[5] as number,
-}));
-
-/** Dato (ÅÅÅÅ-MM-DD) i Oslo, `dager` frem i tid. */
-const osloDato = (dager: number) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(Date.now() + dager * 86400_000);
-/** UTC-tidspunkt for lokal Oslo-klokkeslett (time kan ha desimaler, 10.5 = 10:30) på en dato (håndterer sommer-/vintertid). */
-function osloTs(dato: string, time: number) {
-  const hh = Math.floor(time);
-  const mm = Math.round((time - hh) * 60);
-  const lokalSomUtc = Date.parse(`${dato}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00Z`);
-  for (const off of [1, 2]) {
-    const ts = lokalSomUtc - off * 3600_000;
-    const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(ts));
-    if (h === hh) return ts;
-  }
-  return lokalSomUtc - 3600_000;
-}
 const dagNavn = (dato: string, i: number) =>
   i === 0 ? 'I dag' : i === 1 ? 'I morgen' : new Intl.DateTimeFormat('nb-NO', { weekday: 'long', timeZone: 'UTC' }).format(Date.parse(dato + 'T12:00:00Z'));
 const DAGER = [0, 1, 2];
@@ -122,14 +104,19 @@ function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: {
   const segmenter = useMemo(() => [{ pts: løype.punkter.map((p) => [p[0], p[1]] as [number, number]), farge }], [løype, farge]);
   const profil = useMemo(() => løype.punkter.map((p) => ({ d: p[3], h: p[2], farge })), [løype, farge]);
   const dager = status.alderDøgn === null ? null : Math.floor(status.alderDøgn);
+  const nettFeil = status.feilet && dager === null;
   const tittel = !status.lastet
     ? 'Henter værdata …'
-    : dager === null
+    : nettFeil
+      ? 'Fikk ikke hentet værdata'
+      : dager === null
       ? 'Værdata er ikke klare ennå'
       : `Værdata er ${dager} døgn gamle`;
   const tekst = !status.lastet
     ? 'Smøretipset vises så snart været er hentet.'
-    : dager === null
+    : nettFeil
+      ? 'Sjekk nettforbindelsen og prøv igjen. Løypa kan du se på i mellomtiden.'
+      : dager === null
       ? `${område.navn} er nytt, og værjobben har ikke samlet data her ennå. Den kjører hver 4. time, så smøretips kommer automatisk. Løypa er klar til å se på i mellomtiden.`
       : `Siste oppdatering er for gammel til at vi vil gi smøreråd (grensen er ${VÆR_FERSK_DØGN} døgn). Det kan bety at værtjenesten har stoppet. Tipsene kommer tilbake når nye data er hentet.`;
   return (
@@ -227,8 +214,9 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [varselFeil, setVarselFeil] = useState(false);
   const [henter, setHenter] = useState(false);
-  const oppdaterVær = () => {
+  const oppdaterVær = (medHistorikk = false) => {
     setHenter(true);
+    if (medHistorikk) void oppdaterHistorikk(område); // knappen oppdaterer også observert vær (databasen), ikke bare prognosen
     hentVarsel(område)
       .then((v) => { setVarsel(v); setVarselFeil(false); })
       .catch(() => setVarselFeil(true))
@@ -313,6 +301,8 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const harPrognose = !!varsel && varsel.timer.length > 0 && varsel.timer[varsel.timer.length - 1].ts > r.startTs;
   const lasterPrognose = !varsel && !varselFeil; // ingen smøretips før prognosen er hentet
   const ingenPrognose = !lasterPrognose && !harPrognose;
+  // Prognosen rekker bare ca. 2,5 døgn: slutter den før turen er ferdig, regnes resten på siste kjente time. Si fra.
+  const prognoseKort = harPrognose && varsel!.timer[varsel!.timer.length - 1].ts < r.tur.sluttTs;
   const prognoseAlderT = varsel ? (nå - varsel.hentet) / 3600_000 : 0;
   const prognoseGammel = !!varsel && prognoseAlderT > VARSEL_GAMMELT_T;
   const historikkGammel = (nå - r.sisteHist) / 3600_000 > HISTORIKK_GAMMEL_T;
@@ -460,11 +450,12 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               ? 'Henter prognose fra Yr …'
               : 'Ingen prognose tilgjengelig.'}
         </ThemedText>
+        {prognoseKort ? <ThemedText type="small">⚠ Prognosen rekker ikke til turen er ferdig. Siste timer er regnet med siste kjente vær, så smøringen er mer usikker.</ThemedText> : null}
         {varselFeil && harPrognose ? <ThemedText type="small">⚠ Fikk ikke hentet ny prognose. Viser den sist lagrede.</ThemedText> : null}
         {prognoseGammel ? <ThemedText type="small">⚠ Prognosen er {Math.round(prognoseAlderT)} timer gammel. Trykk «Oppdater vær» før du smører.</ThemedText> : null}
         {historikkGammel ? <ThemedText type="small">⚠ Observert vær i appen er fra {tid(r.sisteHist)} ({new Date(r.sisteHist).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' })}). Snøtilstanden kan ha endret seg siden.</ThemedText> : null}
         <View style={styles.rad}>
-          <Chip aktiv={false} onPress={henter ? () => {} : oppdaterVær}>{henter ? 'Henter …' : '↻ Oppdater vær'}</Chip>
+          <Chip aktiv={false} onPress={henter ? () => {} : () => oppdaterVær(true)}>{henter ? 'Henter …' : '↻ Oppdater vær'}</Chip>
         </View>
         <ThemedText type="small" themeColor="textSecondary">
           {Math.round(r.tur.skyggeAndel * 100)} % av løypa ({(r.tur.skyggeAndel * km).toFixed(1)} km) ligger i terrengskygge når du går den.
@@ -701,6 +692,7 @@ export default function Hjem() {
   const hentFeil = info ? løypeFeilFor(område.id, info.id) : '';
   if (valgt && liste === null && !feil) return <Laster tekst="Henter løypa …" />;
   if (!info || !liste) return <Oversikt område={område} liste={liste} feil={feil} prøvIgjen={prøvIgjen} onVelg={setValgt} onVelgNabo={(o, id) => { skrivFraKonto(`skiglede.loype.${o}`, JSON.stringify(id)); settOmråde(o); }} egne={egne} />;
+  if (løype && løype.punkter.length < 2) return <Laster tekst={`${info.navn} mangler punkter i databasen, så den kan ikke vises. Velg en annen løype.`} onPrøv={() => setValgt(null)} onTilbake={() => setValgt(null)} />;
   if (!løype) return <Laster tekst={hentFeil ? `Fikk ikke tak i ${info.navn}: ${hentFeil}` : `Henter ${info.navn} …`} onPrøv={hentFeil ? () => setForsøk((n) => n + 1) : undefined} onTilbake={() => setValgt(null)} />;
   return <Detalj key={`${område.id}:${løype.id}`} løype={løype} liste={liste} område={område} onVelg={setValgt} onTilbake={() => setValgt(null)} />;
 }

@@ -65,6 +65,18 @@ def grid_cell(lat, lon, ref):
     return int(np.abs(x - X).argmin()), int(np.abs(y - Y).argmin())
 
 
+def celle_hoyde(i, j):
+    """Høyden (m) til 1 km-cella i MET sin modell. Temperaturene i analysen gjelder denne høyden, ikke løypenes snitthøyde. None hvis oppslaget feiler."""
+    try:
+        txt = get(f"{ROOT}/metpplatest/met_analysis_1_0km_nordic_latest.nc", f"altitude[{j}:1:{j}][{i}:1:{i}]")
+        m = re.search(r"altitude\.altitude\[1\]\[1\]\n\[0\], (\S+)", txt)
+        v = float(m.group(1)) if m else None
+        return round(v) if v is not None and v == v else None
+    except Exception as e:
+        print(f"fikk ikke celle-høyde ({e}), bruker --ref-hoyde", file=sys.stderr)
+        return None
+
+
 def fetch_hour(t, i, j):
     q = ",".join(f"{v}[0:1:0][{j}:1:{j}][{i}:1:{i}]" for v in VARS)
     for base in candidates(t):
@@ -140,6 +152,10 @@ def main():
 
     if a.json:
         import json
+        # Referansehøyde = høyden til værcella (dit temperaturene hører hjemme); motoren korrigerer 0,6 °C per 100 m mot løypa
+        ref_h = celle_hoyde(i, j)
+        if ref_h is None:
+            ref_h = a.ref_hoyde
         timer = [[t.strftime("%Y-%m-%dT%H:%M:%SZ"), round(v["air_temperature_2m"] - 273.15, 2), round(v["precipitation_amount"], 3),
                   round(v["relative_humidity_2m"], 3), round(v["wind_speed_10m"], 2),
                   round(v["integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"])] for t, v in ok]
@@ -149,7 +165,7 @@ def main():
         if len(timer) < len(hours) * 0.9 or not timer:
             sys.exit(f"for få timer ({len(timer)} av {len(hours)}), skriver ikke {a.json}")
         with open(a.json, "w") as f:
-            json.dump({"celle": [i, j], "lat": a.lat, "lon": a.lon, "referansehoyde_m": a.ref_hoyde,
+            json.dump({"celle": [i, j], "lat": a.lat, "lon": a.lon, "referansehoyde_m": ref_h,
                        "kolonner": ["ts", "temp_c", "nedbor_mm", "rh", "vind_ms", "sw_j_m2"], "timer": timer}, f, separators=(",", ":"))
         print(f"skrev {len(timer)} timer til {a.json}", file=sys.stderr)
 

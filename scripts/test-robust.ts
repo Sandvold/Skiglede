@@ -6,7 +6,7 @@ let feil = 0;
 const ok = (b: boolean, t: string) => { console.log(b ? 'ok:' : 'FEIL:', t); if (!b) feil++; };
 // enkel syntetisk løype
 const seksjoner: any[] = Array.from({ length: 20 }, (_, i) => ({ startM: i * 500, endM: (i + 1) * 500, stigning: i % 3 === 0 ? -2 : 1, hoyde: 800, skog: 0.5, h: 800 }));
-const timer: any[] = Array.from({ length: 24 * 14 }, (_, i) => ({ ts: Date.parse('2026-11-01T00:00:00Z') + i * 3600_000, t: 0, nedbor: 0, fukt: 0.8, vind: 2, straling: 0 }));
+const timer: any[] = Array.from({ length: 24 * 14 }, (_, i) => ({ ts: Date.parse('2026-11-01T00:00:00Z') + i * 3600_000, temp: 0, nedbor: 0, rh: 0.8, vind: 2, sw: 0 }));
 const mk = (temp: number) => { const t = planTur({ seksjoner, timer, startTs: Date.parse('2026-11-08T09:00:00Z'), tempoKmt: 7, refH: 800 } as any); t.seksjoner.forEach((s) => { s.tEff = temp; }); t.tMin = temp; t.tMaks = temp; return t; };
 const snø: any = { type: 'omdannet', skarphet: 60, nysnøOppå: 0, advarsler: [], tidSidenNysnø: 99 };
 const lagre = [['HS7'], ['Toko Blå', 'Toko Rød', 'V40', 'K22'], ['KX65'], ['V30', 'V40', 'V45', 'VG35'], ['K22', 'KB20C'], []];

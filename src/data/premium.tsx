@@ -65,7 +65,8 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       let { data: rad, error: profilFeil } = await db.from('profil').select('premium, pro').maybeSingle();
       if (profilFeil) throw profilFeil; // ikke sett premium til av når profilen bare ikke kunne leses
       if (!rad) {
-        await db.from('profil').insert({});
+        const { error: nyFeil } = await db.from('profil').insert({});
+        if (nyFeil) throw nyFeil;
         rad = { premium: false, pro: false };
       }
       setPremium(!!rad.premium);

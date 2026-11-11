@@ -42,7 +42,7 @@ Binder (VG35 grønn, ved aggressiv/skarp omdannet snø og lange turer; VG30 blå
 - Dekke: ett eller to trinn kaldere. Antall avhenger av **hvor lenge** man er i varmere føre [Bruker]: noen få km eller ca. en time gir ett trinn; lang strekning videre (f.eks. 12 km av 20) gir to. [Åpent: tidsgrenser; forslag: 1 t = ett, 2 t eller mer = to]
 
 ### 7.2 Klister (omdannet snø)
-Maks **fire lag** [Bruker: «sjelden mer enn tre-fire»; Swix-veiledningen bekrefter]. Swix: ett tynt baselag (KB20C/KX20), ett mellomlag (KX35N/KX45N) og ett tykt toppsjikt som er tykkere enn base + mellomlag til sammen. Valgfritt: tre eller flere tynne lag hardvoks over klisteret mot ising.
+Klister: maks **tre lag** totalt (baseklister, isklister eller mellomlag, dagens klister; se Lagantall under). Hardvoks har egne grenser (kald snø 6, rundt 0 °C 5, lange turer 8) [Bruker]. Swix klister: ett tynt baselag (KB20C/KX20), ett mellomlag (KX35N/KX45N) og ett tykt toppsjikt som er tykkere enn base + mellomlag til sammen. Valgfritt: tre eller flere tynne lag hardvoks over klisteret mot ising.
 Valg av dagens klister [Bruker]: **KX-klistrene** (KX35N, KX45N, KX40S, KX65, KX75) når været er veldig stabilt. **Universal** (K22 fra −1 °C, K21S kaldere; `T.varm >= -1` i `engine/stabel.ts`) er mest brukt totalt og passer ved skiftende vær (utslag ≥ 4 °C i lufta ±3 t rundt turen, eller ≥ 5 °C langs løypa). **KN33** (+1…−7) og **KN44** (+5…−3), Nero, ved sludd og vekslende forhold (nedbør ≥ 0,3 mm/t mellom −1 og +3,5 °C; KN44 når varmeste del ≥ −0,5 °C). Universal og Nero legges som ett tykt dagslag uten mellomlag. **Har brukeren KN44 i smørelageret, brukes den også ved skiftende vær (og ikke bare ved sludd) i stedet for universal, innenfor −3…+5 °C** [Bruker: den iser mindre og tåler varierende vær bedre]. Uten KN44 i lageret er universal fortsatt valget.
 Slik bygges det: Baseklister KB20C → isklister KX30 (bare veldig hard bane: skarphet ≥ 90, `KLISTER_ISHARD`) → mellomlag (utelates når dagens klister er KX35N/KX45N, og i Trening) → dagens klister, ett tykt lag. Tidligere 2–5 mellomlag var for mange.
 
@@ -91,11 +91,11 @@ Testes med `scripts/test-lager-skipark.ts`.
 7. Validering mot egne observasjoner («fungerte / fungerte ikke»).
 
 ## 11. Implementert i regelmotoren (src/engine), 3. november
-- `snø.ts`: skarphetsindeks 0–100 fra tine/frys-runder siste 14 døgn (mild dag maks ≥ +1 °C, påfølgende natt; full skarphet ved −6 °C; vekter 1/0,6/0,3 etter alder; sol øker). Snøfall ≥ 5 mm siste 48 t nullstiller til nysnø. Advarsel når snittet siste 7 døgn er over +3 °C (forutsetter snødekke).
+- `snø.ts`: skarphetsindeks 0–100 fra tine/frys-runder siste 14 døgn (mild dag maks ≥ +1 °C, påfølgende natt; full skarphet ved −6 °C; vekter 1/0,6/0,3 etter alder; sol øker). Nysnø (≥ 5 mm nedbør, ca. 5 cm) som ligger oppå nullstiller til nysnø; alder alene gjør det ikke (skorpa varer til det snør igjen). Advarsel når snittet siste 7 døgn er over +3 °C (forutsetter snødekke).
 - `snø.ts` vind: ved maks 1–2 °C og snittvind ≥ 5 m/s (kl. 08–16) regnes dagen ikke som tinedag; dempingen er lineær fra 3 til 5 m/s og forsvinner mellom 2 og 4 °C [Bruker, terskler Forslag].
 - `tur.ts`: seksjoner à ca. 250 m, tid per seksjon fra tempo, temperatur justert 0,6 °C/100 m mot cellehøyden, sol-tillegg opptil +2 °C per 500 W/m² dempet av skog. Terreng (implementert): `scripts/hent_terreng.py` henter hellingsretning, helning og horisont i 16 retninger (ut til 3 km) hvert 250. m fra Kartverkets høydedata (dtm1) og lagrer det som `terreng` i trails.json. `terreng.ts` regner solhøyde og -retning (`sol.ts`); er sola lavere enn horisonten i solretningen, blir direkte sol (70 % av innstrålingen) blokkert; ellers skaleres den med cos(innfallsvinkel)/sin(solhøyde), maks 2. Skog demper i tillegg: 75 % ved solhøyde ≤10° ned til 45 % ved ≥40° (lineært; ca. 70 % i november, ca. 55 % i mars) [Forslag]. Høydedata er terreng uten trær og uten skyer i regnestykket (innstrålingen kommer fra MET, eller anslås fra skydekke).
 - `sol.ts`: solposisjon og innstråling fra skydekke (Haurwitz + Kasten–Czeplak) for Yr-prognosen, som mangler stråling.
-- Værhistorikk oppdateres hvert 6. time av GitHub Actions (`.github/workflows/oppdater-vaer.yml`, `hent_vaer.py --json`).
+- Værhistorikk oppdateres hver 4. time (cron `17 */4 * * *`) av GitHub Actions (`.github/workflows/oppdater-vaer.yml`, `hent_vaer.py --json`).
 - `stabel.ts`: hardvoks (binder → base → dagens voks → dekke) eller klister (baseklister → isklister → mellomlag → dagens klister). Klister når snøen er omdannet og skarphet ≥ 50 eller varmest ≥ +0,5 °C.
 - Turdagen bruker observert vær 2. november som stand-in for prognose til Yr er koblet på.
 
@@ -172,7 +172,7 @@ Ikke gjort ennå (funn fra researchen): gammel-snø-område for flere Swix-produ
 - Områdene ligger i tabellen `omrade` (id, navn, lat/lon for værpunktet, kartutsnitt `vis_*`, snøtemperatur `vinter_*`, `ref_hoyde_m`, `loypefil`, `vaer`, `rekkefolge`). Appen leser den ved start; de tre første områdene ligger også innebygd som reserve.
 - **Nytt område:** sett inn en rad i `omrade` (loypefil = filnavnet i `src/data/`, f.eks. `trails-geilo.json`), legg løypefilen i `src/data/`, og push. GitHub laster løypene opp (`last_opp_loyper.py`) og værjobben henter været for området (`oppdater_vaer.py`, hver fjerde time). Ingen Netlify-bygg og ingen kodeendring.
 - **Nye løyper:** endre løypefilen og push. Løypene hentes bare når de blir sett på (`loype`: lett liste + full løype).
-- Prognosen (Yr) hentes via Netlify-funksjonen `varsel` med lat/lon/høyde fra området.
+- Prognosen (Yr) hentes direkte fra MET (`api.met.no`, locationforecast) av appen (`src/data/varsel.ts`) med lat/lon/høyde fra området. `netlify/functions/varsel.mjs` er ikke lenger i bruk.
 
 
 ## Rettelser etter kontroll 10. nov 2026 [Bruker]
@@ -195,3 +195,14 @@ Tipsene vises uansett om du har rubb- eller felleski i skiparken. Alternativkort
 Kilder som er sjekket mot dette (10. nov 2026): langrenn.com (rubbeski/zeroski: best nullføre til +1…+3 °C, fallende våt nysnø; risikabelt på lange distanser, og når nedbøren stopper eller blir regn blir sporet blankt; is i rubben skyldes ofte for grov rubb uten topping, ikke bare kulde), Kondis (best 0 til et par plussgrader; ned til et par minusgrader kan gå med riktig rubbing og svært høy luftfuktighet; isingsfare ca. +2…−2 °C), Swix' smørebok kap. 20 (nullføre med fallende eller ny snø: myk hardvoks, tynt klister under mulig; klister er for mykt til ny snø og virker først når snøen er omdannet og har fritt vann). Ingen av dem gir en hard nedre grense; det er brukerens egen erfaring (minus = for kaldt) som er lagt til grunn.
 
 **Hardvoks eller klister ved 0-føre** [Swix kap. 20, Bruker «ga mer mening»]: ved fallende eller ny snø (ikke omdannet) rundt 0 °C er svaret en **myk hardvoks**, valgt for den varmeste delen av turen (`tMaks`, ikke 80. persentil), med **valgfritt tynt klister under** (rolle «Klister under (valgfritt)», universal, ellers baseklister; ikke i Trening; teller ikke med i lagantallet siden det er valgfritt og tynt). Hardvoksen tåler ising bedre enn klister, som er for mykt til ny snø og virker først når snøen er omdannet og har fritt vann. Klister brukes derfor bare på omdannet/skarp snø (som før). Hardvoks kan likevel snøballe i regn eller våt snø: felleski eller rubb er plan B.
+
+## Rettelser etter kontroll 11. nov 2026
+
+- **Salt** er bare et valg ved 0 °C eller varmere (snøtemperatur): man salter ikke kald løype. Ved kaldere skjules valget og slås av [Bruker].
+- **Isklister (KX30) som mellomlag** er greit [Bruker]; ingen ekstra temperaturkrav ut over reglene for skarp, omdannet snø.
+- **Referansehøyde for værhistorikk** er høyden til MET-cella (`altitude` i MET Nordic-filen), ikke løypenes snitthøyde. Målt mot 25 områder: 10 av 25 avvek mer enn 50 m (opptil 151 m, ca. 0,9 °C). Værjobben lagrer cellehøyden i `vaer.referansehoyde_m` (`scripts/hent_vaer.py`).
+- **Innebygd værhistorikk** (Hovden, Nordmarka, Bærumsmarka) brukes bare hvis den er under 4 døgn gammel; ellers gis ikke smøreråd uten ferske data fra databasen.
+- **Lagerfiltrering** teller Rode P32/P38/P46/K46 og universalklistrene (Toko, Rode K76, Skigo) som hardvoks og klister.
+- **Glider ved hull i lageret:** nærmeste glider til snøtemperaturen (kaldeste ved likhet), med advarsel hvis ingen dekker temperaturen.
+- **Prognose som ikke rekker hele turen:** advarsel, og resten regnes på siste kjente time.
+- **Skjema:** `db/schema.sql` er lest ut fra den levende databasen 11. nov 2026.

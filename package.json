@@ -46,7 +46,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "kontroller": "node scripts/kontroller-loyper.mjs"
+    "kontroller": "node scripts/kontroller-loyper.mjs",
+    "test": "npx --yes tsx scripts/test-lager-skipark.ts && npx --yes tsx scripts/test-feste.ts && npx --yes tsx scripts/test-robust.ts && npx --yes tsx scripts/test-underlag.ts && npx --yes tsx scripts/test-motor.ts"
   },
   "private": true
 }

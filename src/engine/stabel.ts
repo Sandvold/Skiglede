@@ -15,7 +15,7 @@ export const MELLOM_KALDERE = 3;
 export const MELLOM2_FRA = -1;
 export const MELLOM2_KALDERE = 2;
 /**
- * Lagantall i festesonen [Bruker, fra research nov 2026]: kald snø 4–6 lag, over 30 km opptil 8, rundt 0 °C 2–4 lag, klister 2–3 lag totalt.
+ * Lagantall i festesonen [Bruker, fra research nov 2026]: kald snø opptil 6 lag, over 30 km opptil 8, rundt 0 °C opptil 5 lag, klister maks 3 lag totalt (se LAG).
  * Motoren reduserer selv i stedet for å anbefale mer.
  */
 export const LAG = { kald: 6, langTur: 8, langTurKm: 30, rundt0: 5, rundt0Fra: -1, klister: 3 };
@@ -288,7 +288,7 @@ export function byggGlider(tur: Tur, sys: Smøresystem = SWIX): Stabel {
   };
 }
 
-/** Rubbski: bare sludd, aldri ved fare for ordentlig minus [Bruker; −2 °C er Forslag]. */
+/** Rubbski: bare sludd, aldri ved fare for ordentlig minus [Bruker: rubb er for kaldt når det er minus; grensen er RUBB.minLuft]. */
 export const RUBB = { minLuft: -0.5 }; // [Bruker: rubb er for kaldt så snart det er minus. −0,5 gir slingringsmonn for målestøy i prognosen]
 
 function glidesone(tur: Tur, sys: Smøresystem): Lag | null {

@@ -60,8 +60,8 @@ export function EgneRuter({ mine, bruker, område, onVelg }: { mine: ReturnType<
 
   const veksleDeling = async (r: MinRute) => {
     if (!r.delt && !(await erKjentUtfartssted(r.start_lat, r.start_lon))) return setStatus('Ruten starter ikke ved et kjent utfartssted, så den kan ikke deles.');
-    await mine.delMed(r.id, !r.delt);
-    setStatus('');
+    const f = await mine.delMed(r.id, !r.delt);
+    setStatus(f ? `Kunne ikke endre deling: ${f}` : '');
   };
 
   return (

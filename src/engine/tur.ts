@@ -90,6 +90,8 @@ export function planTur(args: {
   sted?: { lat: number; lon: number };
 }): Tur {
   const { seksjoner, timer, startTs, tempoKmt, refH, terreng, sted = HOVDEN } = args;
+  if (!seksjoner.length) throw new Error('planTur: løypa har ingen seksjoner (under to punkter)');
+  if (!timer.length) throw new Error('planTur: ingen værtimer å regne på');
   const ms = (m: number) => (m / 1000 / tempoKmt) * 3600_000;
   const lengder = seksjoner.map((x) => x.endM - x.startM);
   const totalM = lengder.reduce((a, b) => a + b, 0);

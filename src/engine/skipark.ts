@@ -96,7 +96,7 @@ export function lagreSmøring(stil: Stil, stabel: Stabel, forrige: Smøring | un
 }
 
 
-/** Temperatursone for ski: kald (snø kaldere enn −6 °C), mid (−6 til −2 °C), varm (varmere enn −2 °C, inkludert sludd) [Forslag, justeres mot erfaring]. */
+/** Temperatursone for ski: kald (snø −5 °C eller kaldere), mid (−5 til 0 °C), varm (0 °C og varmere, inkludert sludd) [landslagets strukturkode, se SONER]. */
 export type Temperatursone = 'kald' | 'mid' | 'varm';
 export const SONER = { kaldMaks: -5, varmMin: 0 }; // landslagets strukturkode: grønn ≤ −5, blå −5…0, hvit/rød over 0
 export const SONE_NAVN: Record<Temperatursone, string> = { kald: 'Kald', mid: 'Mid', varm: 'Varm' };

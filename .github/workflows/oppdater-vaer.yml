@@ -18,6 +18,7 @@ concurrency:
 jobs:
   vaer:
     runs-on: ubuntu-latest
+    timeout-minutes: 45  # normalt ca. 6 min; stopp heller enn å blokkere neste kjøring i timevis hvis MET henger
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

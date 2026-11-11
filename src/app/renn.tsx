@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { ProLås } from '@/components/ski/konto';
 import { Hero } from '@/components/ski/hero';
+import { osloDato, osloTs, timerI } from '@/data/tid';
 import { UnderlagValg } from '@/components/ski/underlag';
 import { Chip, Kort, Nedtrekk, Sammenleggbar } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
@@ -38,19 +39,6 @@ const RESERVE: Renn[] = [
   { id: 'hovden-tour-test', navn: 'Hovden Tour (test)', omrade: 'hovden', dato: null, starttid: '10:00', stil: null, lengde_km: 16.4, loype_id: null, testdata: true, merknad: 'Løypa er OSM-linjene HovdenTour og HovdenTuren, og så ned til stadion langs Auversvatn-løypa (16,4 km). Ikke bekreftet som arrangørens løype. Dato mangler.' },
 ];
 
-const osloDato = (dager: number) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(Date.now() + dager * 86400_000);
-function osloTs(dato: string, time: number) {
-  const hh = Math.floor(time);
-  const mm = Math.round((time - hh) * 60);
-  const lokalSomUtc = Date.parse(`${dato}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00Z`);
-  for (const off of [1, 2]) {
-    const ts = lokalSomUtc - off * 3600_000;
-    const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(ts));
-    if (h === hh) return ts;
-  }
-  return lokalSomUtc - 3600_000;
-}
-const timerI = (v: Område['vær']): Vær[] => v.timer.map((r) => ({ ts: Date.parse(r[0] as string), temp: r[1] as number, nedbor: r[2] as number, rh: r[3] as number, vind: r[4] as number, sw: r[5] as number }));
 const TEMPO_RENN = { klassisk: 12, skoyting: 17 }; // km/t, [Forslag] rask hobbyløper
 
 function useRenn(): Renn[] {
@@ -285,7 +273,7 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
         if (!v || (bruker && v.user_id && v.user_id !== bruker.id)) return null;
         return (
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Chip aktiv={false} onPress={async () => { await mine.delMed(v.id, !v.delt); }}>{v.delt ? 'Slutt å dele' : 'Del med Pro-brukere'}</Chip>
+            <Chip aktiv={false} onPress={async () => { const f = await mine.delMed(v.id, !v.delt); if (f) setStatus(`Kunne ikke endre deling: ${f}`); }}>{v.delt ? 'Slutt å dele' : 'Del med Pro-brukere'}</Chip>
             {bekreftSlett === v.id ? (
               <>
                 <ThemedText type="small">Slette «{v.navn}» for godt?</ThemedText>
@@ -338,7 +326,7 @@ function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Ren
   const [varsel, setVarsel] = useState<Varsel | null>(null);
   const [dag, setDag] = useState(renn.dato ? 0 : 1);
   const [time, setTime] = useState(renn.starttid ? Number(renn.starttid.slice(0, 2)) + Number(renn.starttid.slice(3, 5)) / 60 : 10);
-  const [underlag, setUnderlag] = useState<Underlag>(INGEN_UNDERLAG);
+  const [underlagValgt, setUnderlag] = useState<Underlag>(INGEN_UNDERLAG);
   const [stil, setStil] = useState<'klassisk' | 'skoyting'>(renn.stil === 'skoyting' ? 'skoyting' : 'klassisk');
   const TIMER = useMemo(() => timerI(værdata), [værdata]);
   const [skipark] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
@@ -364,8 +352,12 @@ function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Ren
     const sisteTs = alle[alle.length - 1].ts;
     const dekket = ønsket + 6 * 3600_000 <= sisteTs;
     const startTs = dekket ? ønsket : sisteTs - 8 * 3600_000;
+    const rå = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO_RENN[stil], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
+    // Man salter ikke kald løype: salt-valget finnes bare når snøen blir 0 °C eller varmere, og slås ellers av.
+    const saltMulig = rå.tMaksRå >= 0;
+    const underlag = saltMulig || !underlagValgt.salt.på ? underlagValgt : { ...underlagValgt, salt: { ...underlagValgt.salt, på: false } };
     const snø = snøMedUnderlag(analyserSnø(alle, startTs, null), underlag);
-    const tur = turMedUnderlag(planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO_RENN[stil], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted }), underlag);
+    const tur = turMedUnderlag(rå, underlag);
     const stabel = medUnderlag(byggSmøring(stil as Stil, tur, snø, seksjoner, false, SWIX), underlag, tur);
     // Tre alternativer til test: anbefalt, kaldere og varmere (±2 °C er [Forslag]). Like alternativer slås sammen.
     const forskyv = (d: number): Tur => ({ ...tur, tMin: tur.tMin + d, tMaks: tur.tMaks + d, tMinRå: tur.tMinRå + d, tMaksRå: tur.tMaksRå + d, seksjoner: tur.seksjoner.map((x) => ({ ...x, tEff: x.tEff + d, tLuft: x.tLuft + d })) });
@@ -382,8 +374,8 @@ function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Ren
     const segmenter = seksjoner.map((x, i) => ({ pts: løype.punkter.filter((p) => p[3] >= x.startM && p[3] <= x.endM).map((p) => [p[0], p[1]] as [number, number]), farge: farger[i] }));
     const profil = løype.punkter.map((p) => ({ d: p[3], h: p[2], farge: farger[Math.max(0, seksjoner.findIndex((x) => p[3] <= x.endM))] }));
     const opp = løype.punkter.slice(1).reduce((a, p, i) => a + Math.max(0, p[2] - løype.punkter[i][2]), 0);
-    return { segmenter, profil, opp, tur, snø, stabel, feste, snitt, struktur: strukturMedUnderlag(anbefalStruktur(snitt, snø, tur.sludd, stil), underlag, stil as 'klassisk' | 'skoyting'), glid: proGlidelag(tur, SWIX), harVarsel: dekket, startTs };
-  }, [løype, utenVær, dato, time, varsel, stil, TIMER, område, værdata, underlag]);
+    return { segmenter, profil, opp, tur, snø, stabel, feste, snitt, struktur: strukturMedUnderlag(anbefalStruktur(snitt, snø, tur.sludd, stil), underlag, stil as 'klassisk' | 'skoyting'), glid: proGlidelag(tur, SWIX), harVarsel: dekket, startTs, saltMulig };
+  }, [løype, utenVær, dato, time, varsel, stil, TIMER, område, værdata, underlagValgt]);
 
   return (
     <View style={{ gap: Spacing.three }}>
@@ -405,7 +397,7 @@ function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Ren
         <Chip aktiv={stil === 'skoyting'} onPress={() => setStil('skoyting')}>Skøyting</Chip>
       </View>
       <Kort>
-        <UnderlagValg u={underlag} onChange={setUnderlag} medSalt />
+        <UnderlagValg u={underlagValgt} onChange={setUnderlag} medSalt={!!res?.saltMulig} />
       </Kort>
 
       {utenVær ? (
