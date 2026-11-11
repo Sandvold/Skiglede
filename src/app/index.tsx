@@ -86,12 +86,6 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
 }
 
 /** Løypesiden: med ferske værdata vises hele siden. Uten (nytt område, eller værjobben har stoppet) vises løypa uten smøreråd, med beskjed om hvorfor. */
-/** Samme «Legg til egen tur»-kort som under kartet, for løypevelgeren inne i en løype. */
-function EgenTurKort({ område, onVelg }: { område: Område; onVelg: (id: string) => void }) {
-  const egne = useEgneRuterIOmråde(område);
-  return <EgneRuter mine={egne.mine} bruker={egne.bruker} område={område} onVelg={onVelg} />;
-}
-
 function Detalj(props: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
   const status = useVærstatus(props.område);
   if (!status.fersk) return <DetaljUtenVær {...props} status={status} />;
@@ -133,7 +127,6 @@ function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: {
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
         </Pressable>
         <Loypevelger løyper={liste.filter((l) => !l.variantAv)} valgt={gruppe} onVelg={onVelg} />
-        <EgenTurKort område={område} onVelg={onVelg} />
         {varianter.length > 1 && (
           <View style={styles.rad}>
             {varianter.map((v) => (
@@ -333,7 +326,6 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
         </Pressable>
         <Loypevelger løyper={LØYPER.filter((l) => !l.variantAv)} valgt={gruppe} onVelg={onVelg} />
-        <EgenTurKort område={område} onVelg={onVelg} />
         {varianter.length > 1 && (
           <View style={styles.rad}>
             {varianter.map((v) => (

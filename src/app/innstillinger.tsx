@@ -6,7 +6,9 @@ import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useLagret } from '@/data/lagring';
+import { skrivFraKonto, useLagret } from '@/data/lagring';
+import { EgneRuter } from '@/components/ski/egne-ruter';
+import { useOmråde } from '@/data/omrader';
 import { useMineRuter, type MinRute } from '@/data/minerute';
 import { usePremium } from '@/data/premium';
 import { useTheme } from '@/hooks/use-theme';
@@ -28,6 +30,7 @@ export default function Innstillinger() {
         </Pressable>
         <Tempo />
         <Konto />
+        <LeggTilTur />
         <PrivateRuter />
       </View>
     </ScrollView>
@@ -134,4 +137,13 @@ function Konto() {
       {feil ? <ThemedText type="small" style={{ color: theme.accent }}>{feil}</ThemedText> : null}
     </Kort>
   );
+}
+
+/** Samme «Legg til egen tur (GPX)» som på forsiden. Åpne en rute går til forsiden med ruta valgt. */
+function LeggTilTur() {
+  const router = useRouter();
+  const [område] = useOmråde();
+  const { bruker } = usePremium();
+  const mine = useMineRuter(!!bruker);
+  return <EgneRuter mine={mine} bruker={bruker} område={område} onVelg={(id) => { skrivFraKonto(`skiglede.loype.${område.id}`, JSON.stringify(id)); router.push('/?v=1'); }} />;
 }
