@@ -1,4 +1,4 @@
-import { ALLE_PRODUKTER, KLISTER_ANDRE, MERKE_IDER, SWIX, V_LINJE, SYSTEMER, kategori, produkt, type MerkeId, type Produkt, type Smøresystem } from './tabeller';
+import { ALLE_PRODUKTER, KLISTER_ANDRE, MERKE_IDER, RODE_ANDRE, SWIX, V_LINJE, SYSTEMER, kategori, produkt, type MerkeId, type Produkt, type Smøresystem } from './tabeller';
 import { byggSmøring } from './stabel';
 import type { Seksjon, SnøAnalyse, Stabel, Stil, Tur } from './typer';
 
@@ -15,8 +15,11 @@ export function systemFraLager(id: MerkeId, lager: string[]): Smøresystem | nul
   const filtrer = (l: Produkt[]) => l.filter((p) => lager.includes(p.navn));
   // Swix: V-linja og «andre klistere» (K22, KN33, KX55 …) kan også krysses av i lageret og teller som hardvoks og klister.
   const senterOmr = (p: Produkt) => (p.omr[0] + p.omr[1]) / 2;
-  const ekstraH = id === 'swix' ? V_LINJE.filter((p) => !sys.hardvoks.some((h) => h.navn === p.navn)) : [];
-  const ekstraK = id === 'swix' ? KLISTER_ANDRE.filter((p) => !sys.klister.some((k) => k.navn === p.navn)) : [];
+  // Rode: P32/P38/P46 og K46 ligger utenfor hovedlinja. Universalklistrene (alle merker) teller også som klister.
+  const nye = (liste: Produkt[], fra: Produkt[]) => liste.filter((p, i) => !fra.some((x) => x.navn === p.navn) && liste.findIndex((q) => q.navn === p.navn) === i);
+  const ekstraH = id === 'swix' ? nye(V_LINJE, sys.hardvoks) : id === 'rode' ? nye(RODE_ANDRE.filter((p) => p.linje === 'V'), sys.hardvoks) : [];
+  const univ = [sys.universalVarm, sys.universalKald].filter((p): p is Produkt => !!p);
+  const ekstraK = nye([...(id === 'swix' ? KLISTER_ANDRE : id === 'rode' ? RODE_ANDRE.filter((p) => p.linje === 'K') : []), ...univ], sys.klister);
   const hardvoks = filtrer([...sys.hardvoks, ...ekstraH]).sort((a, b) => senterOmr(a) - senterOmr(b));
   const klister = filtrer([...sys.klister, ...ekstraK]).sort((a, b) => senterOmr(a) - senterOmr(b));
   const glider = filtrer(sys.glider);

@@ -3,6 +3,11 @@ if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
   require('react-native-url-polyfill/auto');
 }
 
+// Hermes (Android) har ikke localStorage. expo-sqlite gir en synkron, varig erstatning, så skipark, smørelager og valg overlever at appen lukkes.
+if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
+  require('expo-sqlite/localStorage/install');
+}
+
 // atob/btoa brukes til å lese utløpstid i innloggingstokenet; sørg for at de finnes.
 if (typeof global.atob !== 'function') {
   const { Buffer } = require('buffer');

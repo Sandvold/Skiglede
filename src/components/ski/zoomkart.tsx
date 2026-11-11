@@ -37,12 +37,18 @@ export function ZoomKart({ punkter, hoyde, startZ = 16, fast, onBoks, children }
   const zoom = (d: number) => setDz((v) => Math.max(MIN_Z - ref.current.passZ, Math.min(MAX_Z - ref.current.passZ, v + d)));
 
   const gest = useRef({ sist: [0, 0], avstand: 0 });
+  // Berøring: én finger sveiper siden (vertikalt), to fingre eller vannrett sveip flytter kartet. Mus: dra flytter kartet.
+  const berøring = useRef(Platform.OS !== 'web');
   const pan = useMemo(
     () =>
       // eslint-disable-next-line react-hooks/refs -- refene leses bare inne i gesture-funksjonene, aldri under visning
       PanResponder.create({
         onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) + Math.abs(g.dy) > 6,
+        onMoveShouldSetPanResponder: (e, g) => {
+          if (Math.abs(g.dx) + Math.abs(g.dy) <= 6) return false;
+          if (!berøring.current) return true;
+          return (e.nativeEvent.touches?.length ?? 1) >= 2 || Math.abs(g.dx) > Math.abs(g.dy);
+        },
         onPanResponderGrant: () => {
           gest.current = { sist: [0, 0], avstand: 0 };
         },
@@ -102,7 +108,7 @@ export function ZoomKart({ punkter, hoyde, startZ = 16, fast, onBoks, children }
   }, [z, Math.round(left / 20), Math.round(top / 20), w, hoyde]);
 
   const knapp = (tekst: string, onPress: () => void, av: boolean) => (
-    <Pressable onPress={onPress} disabled={av} accessibilityLabel={tekst === '+' ? 'Zoom inn' : 'Zoom ut'} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.92)', opacity: av ? 0.4 : 1 }}>
+    <Pressable onPress={onPress} disabled={av} accessibilityLabel={tekst === '+' ? 'Zoom inn' : 'Zoom ut'} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.92)', opacity: av ? 0.4 : 1 }}>
       <ThemedText style={{ color: '#12386B', fontSize: 22, lineHeight: 24 }}>{tekst}</ThemedText>
     </Pressable>
   );
@@ -111,8 +117,9 @@ export function ZoomKart({ punkter, hoyde, startZ = 16, fast, onBoks, children }
     <View
       ref={boks}
       onLayout={(e) => setW(Math.round(e.nativeEvent.layout.width))}
+      onTouchStart={() => { berøring.current = true; }}
       {...pan.panHandlers}
-      style={[{ height: hoyde, borderRadius: 16, overflow: 'hidden', backgroundColor: '#DCE9F5' }, { touchAction: 'none', userSelect: 'none' } as object]}>
+      style={[{ height: hoyde, borderRadius: 16, overflow: 'hidden', backgroundColor: '#DCE9F5' }, { touchAction: 'pan-y', userSelect: 'none' } as object]}>
       {tiles.map((t) => (
         <Image key={`${z}/${t.x}/${t.y}`} source={{ uri: tileUrl(z, t.x, t.y) }} style={{ position: 'absolute', left: t.x * TILE - left, top: t.y * TILE - top, width: TILE, height: TILE }} />
       ))}
@@ -121,6 +128,9 @@ export function ZoomKart({ punkter, hoyde, startZ = 16, fast, onBoks, children }
         {knapp('+', () => zoom(1), z >= MAX_Z)}
         <View style={{ height: 1, backgroundColor: '#C5D3E3' }} />
         {knapp('−', () => zoom(-1), z <= MIN_Z)}
+      </View>
+      <View pointerEvents="none" style={{ position: 'absolute', left: 6, bottom: 4, backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 6, borderRadius: 6 }}>
+        <ThemedText type="small" style={{ color: '#12386B', fontSize: 11, lineHeight: 16 }}>Flytt kartet med to fingre</ThemedText>
       </View>
       <View pointerEvents="none" style={{ position: 'absolute', right: 6, bottom: 4, backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 6, borderRadius: 6 }}>
         <ThemedText type="small" style={{ color: '#12386B', fontSize: 11, lineHeight: 16 }}>© Kartverket</ThemedText>

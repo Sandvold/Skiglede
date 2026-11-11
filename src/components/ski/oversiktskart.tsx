@@ -12,7 +12,7 @@ export const HOVDEN_VISNING = { lon: 7.3646, lat: 59.5699, z: 12 };
 export type Visning = { lon: number; lat: number; z: number };
 
 /** Kart med alle løyper. Trykk på en løype for å gå til den. Dra og zoom for å se nærmere. */
-export function Oversiktskart({ løyper, naboer = [], onBoks, onVelgNabo, onVelg, visning = HOVDEN_VISNING, hoyde = 420 }: { løyper: OversiktLøype[]; /** Løyper fra områder rundt, vist dempet under områdets egne */ naboer?: NaboLøype[]; onBoks?: (b: KartBoks) => void; onVelgNabo?: (omrade: string, id: string) => void; visning?: Visning; onVelg: (id: string) => void; hoyde?: number }) {
+export function Oversiktskart({ løyper, naboer = [], onBoks, onVelgNabo, onVelg, visning = HOVDEN_VISNING, hoyde = 300 }: { løyper: OversiktLøype[]; /** Løyper fra områder rundt, vist dempet under områdets egne */ naboer?: NaboLøype[]; onBoks?: (b: KartBoks) => void; onVelgNabo?: (omrade: string, id: string) => void; visning?: Visning; onVelg: (id: string) => void; hoyde?: number }) {
   return (
     <ZoomKart punkter={løyper.flatMap((l) => l.punkter)} hoyde={hoyde} startZ={15} fast={visning} onBoks={onBoks}>
       {({ z, left, top, w, h }) => {

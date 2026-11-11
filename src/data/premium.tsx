@@ -25,7 +25,11 @@ type Tilstand = {
 const Ctx = createContext<Tilstand | null>(null);
 const LOKAL_NØKLER = () => {
   try {
-    return Object.keys(globalThis.localStorage ?? {}).filter(erBrukerdata);
+    const ls = globalThis.localStorage;
+    if (!ls) return [];
+    const n: string[] = [];
+    for (let i = 0; i < ls.length; i++) { const k = ls.key(i); if (k) n.push(k); } // fungerer både i nettleser og med expo-sqlite på Android
+    return n.filter(erBrukerdata);
   } catch {
     return [];
   }
@@ -58,7 +62,8 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       }
       setBruker({ id: u.id, epost: u.email, navn: u.name ?? u.email });
       const db = neon();
-      let { data: rad } = await db.from('profil').select('premium, pro').maybeSingle();
+      let { data: rad, error: profilFeil } = await db.from('profil').select('premium, pro').maybeSingle();
+      if (profilFeil) throw profilFeil; // ikke sett premium til av når profilen bare ikke kunne leses
       if (!rad) {
         await db.from('profil').insert({});
         rad = { premium: false, pro: false };
@@ -96,7 +101,8 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         server.forEach((v, n) => skrivFraKonto(n, v));
         const opp = LOKAL_NØKLER().filter((n) => !server.has(n) && lesLokal(n));
         if (opp.length) {
-          await db.from('brukerdata').upsert(opp.map((n) => ({ nokkel: n, verdi: JSON.parse(lesLokal(n)), oppdatert: new Date().toISOString() })), { onConflict: 'user_id,nokkel' });
+          const { error: oppFeil } = await db.from('brukerdata').upsert(opp.map((n) => ({ nokkel: n, verdi: JSON.parse(lesLokal(n)), oppdatert: new Date().toISOString() })), { onConflict: 'user_id,nokkel' });
+          if (oppFeil) throw oppFeil;
         }
       } catch (e) {
         synket.current = false;
@@ -117,8 +123,14 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         const db = neon();
         const tomme = biter.filter(([, v]) => !v).map(([n]) => n);
         const fulle = biter.filter(([, v]) => v);
-        if (fulle.length) await db.from('brukerdata').upsert(fulle.map(([n, v]) => ({ nokkel: n, verdi: JSON.parse(v), oppdatert: new Date().toISOString() })), { onConflict: 'user_id,nokkel' });
-        if (tomme.length) await db.from('brukerdata').delete().in('nokkel', tomme);
+        if (fulle.length) {
+          const { error } = await db.from('brukerdata').upsert(fulle.map(([n, v]) => ({ nokkel: n, verdi: JSON.parse(v), oppdatert: new Date().toISOString() })), { onConflict: 'user_id,nokkel' });
+          if (error) throw error;
+        }
+        if (tomme.length) {
+          const { error } = await db.from('brukerdata').delete().in('nokkel', tomme);
+          if (error) throw error;
+        }
       } catch (e) {
         setFeil(`Synk feilet: ${feilTekst(e)}`);
       }

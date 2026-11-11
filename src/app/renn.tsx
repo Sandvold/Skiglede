@@ -192,6 +192,7 @@ function RennDetalj({ renn }: { renn: Renn }) {
 function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMineRuter>; valgt: string; velg: (id: string) => void; modus: 'mine' | 'admin' }) {
   const theme = useTheme();
   const [status, setStatus] = useState('');
+  const [bekreftSlett, setBekreftSlett] = useState<string | null>(null);
   const [opptatt, setOpptatt] = useState(false);
   const [del, setDel] = useState(false);
   const { bruker } = usePremium();
@@ -285,7 +286,15 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
         return (
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             <Chip aktiv={false} onPress={async () => { await mine.delMed(v.id, !v.delt); }}>{v.delt ? 'Slutt å dele' : 'Del med Pro-brukere'}</Chip>
-            <Chip aktiv={false} onPress={async () => { await mine.slett(v.id); velg(''); }}>Slett valgt rute</Chip>
+            {bekreftSlett === v.id ? (
+              <>
+                <ThemedText type="small">Slette «{v.navn}» for godt?</ThemedText>
+                <Chip aktiv onPress={async () => { const f = await mine.slett(v.id); setBekreftSlett(null); if (f) setStatus(`Kunne ikke slette: ${f}`); else velg(''); }}>Ja, slett</Chip>
+                <Chip aktiv={false} onPress={() => setBekreftSlett(null)}>Avbryt</Chip>
+              </>
+            ) : (
+              <Chip aktiv={false} onPress={() => setBekreftSlett(v.id)}>Slett valgt rute</Chip>
+            )}
           </View>
         );
       })()}

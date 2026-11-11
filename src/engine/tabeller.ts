@@ -309,7 +309,12 @@ export function glideFor(t: number, sys: Smøresystem = SWIX): Produkt {
   const G = sys.glider;
   const passer = G.filter((g) => t >= g.omr[0] && t <= g.omr[1]);
   if (passer.length) return passer.reduce((a, b) => (senter(a.omr) <= senter(b.omr) ? a : b));
-  return t < G[0].omr[0] ? G[0] : G[G.length - 1];
+  // Ingen passer (hull i lageret): nærmeste glider (minst avstand til området), kaldeste ved likhet.
+  const avstand = (g: Produkt) => (t < g.omr[0] ? g.omr[0] - t : t - g.omr[1]);
+  return G.reduce((a, b) => {
+    const da = avstand(a), db = avstand(b);
+    return db < da - 1e-9 || (Math.abs(db - da) <= 1e-9 && senter(b.omr) < senter(a.omr)) ? b : a;
+  });
 }
 
 export type Kategori = 'hard' | 'binder' | 'klister' | 'glid';

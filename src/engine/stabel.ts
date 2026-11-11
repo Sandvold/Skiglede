@@ -295,7 +295,8 @@ function glidesone(tur: Tur, sys: Smøresystem): Lag | null {
   if (!sys.glider.length) return null;
   const snitt = tur.seksjoner.reduce((a, x) => a + x.tEff, 0) / tur.seksjoner.length;
   const g = glideFor(snitt, sys);
-  return { rolle: 'Glidesone (foran og bak)', produkt: g.navn, antall: '1 lag', merknad: `Passer ${g.omr[0]} til ${g.omr[1]} °C. Ikke på festesonen.` };
+  const ute = utenfor(g, snitt, 'snøen i snitt');
+  return { rolle: 'Glidesone (foran og bak)', produkt: g.navn, antall: '1 lag', merknad: `Passer ${g.omr[0]} til ${g.omr[1]} °C. Ikke på festesonen.${ute ? ` ${ute}` : ''}` };
 }
 
 /** Felleski: fungerer alltid, men aldri perfekt, og glir alltid [Bruker]. Ingen festevoks eller klister. */

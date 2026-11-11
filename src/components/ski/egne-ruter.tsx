@@ -21,6 +21,7 @@ export function EgneRuter({ mine, bruker, område, onVelg }: { mine: ReturnType<
   const [del, setDel] = useState(false);
   const [status, setStatus] = useState('');
   const [opptatt, setOpptatt] = useState(false);
+  const [bekreft, setBekreft] = useState<string | null>(null);
   const mineEgne = mine.ruter.filter((r: MinRute) => bruker && r.user_id === bruker.id);
 
   const last = async () => {
@@ -81,7 +82,15 @@ export function EgneRuter({ mine, bruker, område, onVelg }: { mine: ReturnType<
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 <Chip aktiv onPress={() => onVelg(`egen-${r.id}`)}>Åpne</Chip>
                 <Chip aktiv={false} onPress={() => veksleDeling(r)}>{r.delt ? 'Slutt å dele' : 'Del'}</Chip>
-                <Chip aktiv={false} onPress={() => mine.slett(r.id)}>Slett</Chip>
+                {bekreft === r.id ? (
+                  <>
+                    <ThemedText type="small">Slette for godt?</ThemedText>
+                    <Chip aktiv onPress={async () => { const f = await mine.slett(r.id); setBekreft(null); setStatus(f ? `Kunne ikke slette: ${f}` : `Slettet «${r.navn}».`); }}>Ja, slett</Chip>
+                    <Chip aktiv={false} onPress={() => setBekreft(null)}>Avbryt</Chip>
+                  </>
+                ) : (
+                  <Chip aktiv={false} onPress={() => setBekreft(r.id)}>Slett</Chip>
+                )}
               </View>
             </View>
           ))}

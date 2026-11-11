@@ -255,9 +255,12 @@ export function useVærstatus(o: Område): Værstatus {
   return useMemo(() => {
     const sist = sisteVær.get(o.id);
     const oppdatert = sist?.oppdatert ?? null;
+    // Innebygd kopi (Hovden, Nordmarka, Bærumsmarka) brukes når databasen ikke svarer, men bare hvis den selv er fersk: den slutter på byggedagen og blir gammel.
+    const sisteTime = data.timer.length ? Date.parse(String(data.timer[data.timer.length - 1][0])) : NaN;
     // eslint-disable-next-line react-hooks/purity -- alderen regnes ut når værdata endres (versjon), ikke for hver visning
-    const alderDøgn = oppdatert === null ? null : (Date.now() - oppdatert) / 86400_000;
-    const innebygd = !sist && data.timer.length > 0; // innebygd kopi når databasen ikke svarer (Hovden, Nordmarka, Bærumsmarka)
+    const innebygdAlder = !sist && Number.isFinite(sisteTime) ? (Date.now() - sisteTime) / 86400_000 : null;
+    const alderDøgn = oppdatert === null ? innebygdAlder : (Date.now() - oppdatert) / 86400_000;
+    const innebygd = innebygdAlder !== null && innebygdAlder <= VÆR_FERSK_DØGN;
     const fersk = friskVær.has(o.id) || innebygd;
     return { data: friskVær.get(o.id) ?? data, lastet: værSpurt.has(o.id), oppdatert, fersk, alderDøgn };
     // eslint-disable-next-line react-hooks/exhaustive-deps

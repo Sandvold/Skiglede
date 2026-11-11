@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -49,6 +50,7 @@ function Innhold() {
 function Rad({ l, onSlett }: { l: Logg; onSlett: () => void }) {
   const theme = useTheme();
   const m = l.modell ?? {};
+  const [bekreft, setBekreft] = useState(false);
   return (
     <Kort style={{ gap: 4 }}>
       <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>{`${dato(l.tid)} · ${l.loype_navn ?? l.loype_id ?? ''}`}</Text>
@@ -57,7 +59,17 @@ function Rad({ l, onSlett }: { l: Logg; onSlett: () => void }) {
       {l.produkter?.length ? <ThemedText type="small">{l.produkter.map((p) => `${p.rolle}: ${p.produkt}`).join(' · ')}</ThemedText> : null}
       <ThemedText type="small" themeColor="textSecondary">{`Modellen: snø snitt ${num(m.tSnitt)} °C (${num(m.tMin)} til ${num(m.tMaks)}), skarphet ${num(m.skarphet, 0)}${m.snotype ? `, ${String(m.snotype)}` : ''}${m.sludd ? ', sludd' : ''}${l.snotemp_malt !== null ? ` · målt snø ${l.snotemp_malt} °C` : ''}${l.lufttemp_malt !== null ? ` · målt luft ${l.lufttemp_malt} °C` : ''}`}</ThemedText>
       {l.kommentar ? <Text style={{ color: theme.text, fontStyle: 'italic' }}>{`«${l.kommentar}»`}</Text> : null}
-      <View style={{ flexDirection: 'row' }}><Chip aktiv={false} onPress={onSlett}>Slett</Chip></View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        {bekreft ? (
+          <>
+            <ThemedText type="small">Slette for godt?</ThemedText>
+            <Chip aktiv onPress={onSlett}>Ja, slett</Chip>
+            <Chip aktiv={false} onPress={() => setBekreft(false)}>Avbryt</Chip>
+          </>
+        ) : (
+          <Chip aktiv={false} onPress={() => setBekreft(true)}>Slett</Chip>
+        )}
+      </View>
     </Kort>
   );
 }

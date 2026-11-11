@@ -35,4 +35,18 @@ const nysl = byggSmøring('klassisk', sl(2, false), { ...snø, type: 'ny', skarp
 ok(nysl.type === 'hardvoks' && nysl.advarsler.some((a) => a.includes('myk hardvoks')) && nysl.lag.some((l) => l.rolle === 'Klister under (valgfritt)'), 'sludd og ny snø: myk hardvoks med valgfritt tynt klister under');
 const tørr: any = mk(-3); tørr.sludd = false;
 ok(!byggSmøring('klassisk', tørr, snø, seksjoner, false).vanskeligFøre, 'ingen NB uten sludd');
+// Lager fra andre merker: Rode P-linja og universalklister teller
+const rp = byggMedLager('klassisk', mk(-4), { ...snø, type: 'ny', skarphet: 10 }, seksjoner, false, ['Rode P38', 'Rode P46', 'Rode P32']);
+ok(!rp.advarsler.some((a) => a.includes('ingen hardvoks')) && rp.lag.some((l) => l.rolle === 'Dagens voks'), 'Rode P32/P38/P46 teller som hardvoks i lageret');
+for (const [navn, t] of [['Toko Universal klisterspray', -0.5], ['Rode K76', -0.5], ['Skigo XC klister universal', -0.5]] as const) {
+  const u = byggMedLager('klassisk', mk(t), snø, seksjoner, false, [navn]);
+  ok(!u.advarsler.some((a) => a.includes('ingen klister')) && u.lag.some((l) => l.rolle === 'Dagens klister'), `${navn} teller som klister i lageret`);
+}
+// Glider: hull i lageret gir nærmeste glider, ikke alltid den varmeste
+import { glideFor, SWIX } from '../src/engine/tabeller';
+const kald = { ...SWIX, glider: SWIX.glider.filter((g) => ['HS5', 'HS10'].includes(g.navn)) };
+ok(kald.glider.length === 2 && glideFor(-9.5, kald).navn === 'HS5', 'HS5 + HS10 ved -9,5 °C gir HS5 (nærmest), ikke HS10');
+ok(glideFor(5, kald).navn === 'HS10' && glideFor(-25, kald).navn === 'HS5', 'utenfor begge: nærmeste ytterkant');
+const gl = byggMedLager('skoyting', mk(-9.5), snø, seksjoner, false, ['HS5', 'HS10']);
+ok(gl.lag.some((l) => l.produkt === 'HS5'), 'skøyting med HS5 + HS10 ved -9,5 °C: HS5');
 console.log(feil ? 'FEIL' : 'Robusthet OK'); if (feil) process.exit(1);
