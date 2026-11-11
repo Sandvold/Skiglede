@@ -8,6 +8,7 @@ import { byggFraGpx, lesGpx, terrengFor } from '@/data/gpx';
 import { erKjentUtfartssted, type MinRute, useMineRuter } from '@/data/minerute';
 import type { Område } from '@/data/omrader';
 import { useTheme } from '@/hooks/use-theme';
+import { feilTekst } from '@/data/feil';
 
 const MAKS_KM = 60;
 
@@ -49,10 +50,10 @@ export function EgneRuter({ mine, bruker, område, onVelg }: { mine: ReturnType<
         } else merk = 'Ruten starter ikke ved et kjent utfartssted, så den er lagret privat.';
       }
       const feil = await mine.lagre(løype, 'klassisk', delt);
-      setStatus(feil ? `Kunne ikke lagre: ${feil}` : `Lagret «${n}» (${(løype.lengde_m / 1000).toFixed(1)} km). ${merk}`);
+      setStatus(feil ? `Kunne ikke lagre: ${feil}` : `Lagret «${n}» (${(løype.lengde_m / 1000).toFixed(1).replace('.', ',')} km). ${merk}`);
       if (!feil) setNavn('');
     } catch (e) {
-      setStatus(String((e as Error)?.message ?? e));
+      setStatus(feilTekst(e));
     } finally {
       setOpptatt(false);
     }
@@ -78,7 +79,7 @@ export function EgneRuter({ mine, bruker, område, onVelg }: { mine: ReturnType<
           </View>
           {mineEgne.map((r: MinRute) => (
             <View key={r.id} style={{ gap: 6 }}>
-              <ThemedText type="smallBold">{`${r.navn} · ${(r.lengde_m / 1000).toFixed(1)} km · ${r.delt ? 'delt' : 'privat'}`}</ThemedText>
+              <ThemedText type="smallBold">{`${r.navn} · ${(r.lengde_m / 1000).toFixed(1).replace('.', ',')} km · ${r.delt ? 'delt' : 'privat'}`}</ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 <Chip aktiv onPress={() => onVelg(`egen-${r.id}`)}>Åpne</Chip>
                 <Chip aktiv={false} onPress={() => veksleDeling(r)}>{r.delt ? 'Slutt å dele' : 'Del'}</Chip>

@@ -6,18 +6,18 @@ import { ThemedText } from '@/components/themed-text';
 import { usePremium } from '@/data/premium';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Øverst til høyre: «Logg inn» når du er utlogget; ellers e-post, premium-bryter (midlertidig, ingen betaling ennå) og «Logg ut». */
+/** Øverst til høyre: «Logg inn» og tannhjul når du er utlogget; ellers e-post og tannhjul. Premium/pro-brytere og «Logg ut» ligger i Innstillinger. */
 export function KontoHøyre() {
-  const { klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, byttPremium, byttPro } = usePremium();
+  const { klar, bruker, feil, pågår, loggInnMedGoogle } = usePremium();
   const router = useRouter();
   if (!klar) return null;
   const tilInnstillinger = () => router.push('/innstillinger');
   const tannhjul = (
-    <Pressable accessibilityRole="button" accessibilityLabel="Innstillinger" hitSlop={8} onPress={tilInnstillinger}>
-      <Text style={{ color: '#FFFFFF', fontSize: 20 }}>⚙</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel="Innstillinger" onPress={tilInnstillinger} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: '#FFFFFF', fontSize: 26 }}>⚙</Text>
     </Pressable>
   );
-  const knapp = { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999 } as const;
+  const knapp = { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 999 } as const;
   if (!bruker) {
     return (
       <View style={{ alignItems: 'flex-end', marginTop: 10, maxWidth: 200, flexShrink: 1 }}>
@@ -40,17 +40,6 @@ export function KontoHøyre() {
         {tannhjul}
       </View>
       {feil ? <Text style={{ color: '#FFD9D9', fontSize: 12, width: 200, textAlign: 'right' }}>{feil.slice(0, 160)}</Text> : null}
-      <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'flex-end' }}>
-        <Pressable accessibilityRole="button" onPress={byttPremium} style={[knapp, { paddingHorizontal: 10, backgroundColor: premium ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
-          <Text style={{ color: premium ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 12 }}>{premium ? 'Premium' : 'Vanlig'}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" onPress={byttPro} style={[knapp, { paddingHorizontal: 10, backgroundColor: pro ? '#F4B73B' : 'rgba(255,255,255,0.14)' }]}>
-          <Text style={{ color: pro ? '#12386B' : '#FFFFFF', fontWeight: '700', fontSize: 12 }}>{pro ? 'Pro' : 'Pro (av)'}</Text>
-        </Pressable>
-      </View>
-      <Pressable accessibilityRole="button" onPress={loggUt} style={[knapp, { paddingHorizontal: 12, backgroundColor: 'rgba(255,255,255,0.14)' }]}>
-        <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 12 }}>Logg ut</Text>
-      </Pressable>
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
+import { feilTekst } from '@/data/feil';
 
 /** Retur fra Google-innloggingen på mobil: skiglede://auth?neon_auth_session_verifier=… */
 export default function AuthRetur() {
@@ -17,7 +18,7 @@ export default function AuthRetur() {
         }
         if (!avbrutt) router.replace('/');
       } catch (e) {
-        if (!avbrutt) setFeil(String((e as Error)?.message ?? e));
+        if (!avbrutt) setFeil(feilTekst(e));
       }
     })();
     return () => {

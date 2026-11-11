@@ -16,6 +16,7 @@ export const Colors = {
     textSecondary: '#52708F',
     accent: '#2F7FD1',
     accentSoft: '#CFE5F9',
+    onAccent: '#FFFFFF', // tekst på accent-bakgrunn
     border: '#C9DDF0',
     hero: '#12386B',
   },
@@ -27,6 +28,7 @@ export const Colors = {
     textSecondary: '#9DB9D3',
     accent: '#6DB3F2',
     accentSoft: '#1D4A73',
+    onAccent: '#08182A', // mørk tekst på lys accent (hvit ga kontrast 2,2:1)
     border: '#1F4468',
     hero: '#0B2A52',
   },

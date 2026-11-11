@@ -27,6 +27,7 @@ export default function Innstillinger() {
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Tilbake</Text>
         </Pressable>
         <Tempo />
+        <Konto />
         <PrivateRuter />
       </View>
     </ScrollView>
@@ -67,7 +68,7 @@ function PrivateRuter() {
   };
   const rad = (r: MinRute) => (
     <View key={r.id} style={{ gap: 6, paddingVertical: 6 }}>
-      <ThemedText type="smallBold">{`${r.navn} · ${(r.lengde_m / 1000).toFixed(1)} km · ${r.delt ? 'delt' : 'privat'}`}</ThemedText>
+      <ThemedText type="smallBold">{`${r.navn} · ${(r.lengde_m / 1000).toFixed(1).replace('.', ',')} km · ${r.delt ? 'delt' : 'privat'}`}</ThemedText>
       {bekreft === r.id ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
           <ThemedText type="small">Slette for godt?</ThemedText>
@@ -101,6 +102,36 @@ function PrivateRuter() {
       )}
       {status ? <ThemedText type="small" style={{ color: theme.accent }}>{status}</ThemedText> : null}
       {mine.feil ? <ThemedText type="small" style={{ color: theme.accent }}>{mine.feil}</ThemedText> : null}
+    </Kort>
+  );
+}
+
+function Konto() {
+  const theme = useTheme();
+  const { klar, bruker, premium, pro, feil, loggInnMedGoogle, loggUt, byttPremium, byttPro } = usePremium();
+  if (!klar) return null;
+  return (
+    <Kort>
+      <Text style={{ color: theme.text, fontWeight: '800', fontSize: 20 }}>Konto</Text>
+      {!bruker ? (
+        <>
+          <ThemedText type="small" themeColor="textSecondary">Logg inn for å lagre lager og ski på kontoen, og for å laste opp egne ruter.</ThemedText>
+          <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
+        </>
+      ) : (
+        <>
+          <ThemedText type="small" themeColor="textSecondary">{`Logget inn som ${bruker.epost}`}</ThemedText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Chip aktiv={premium} onPress={byttPremium}>{premium ? '✓ Premium' : 'Premium (av)'}</Chip>
+            <Chip aktiv={pro} onPress={byttPro}>{pro ? '✓ Pro' : 'Pro (av)'}</Chip>
+          </View>
+          <ThemedText type="small" themeColor="textSecondary">Premium og pro er prøvebrytere uten betaling, så alle kan teste funksjonene.</ThemedText>
+          <View style={{ flexDirection: 'row' }}>
+            <Chip aktiv={false} onPress={loggUt}>Logg ut</Chip>
+          </View>
+        </>
+      )}
+      {feil ? <ThemedText type="small" style={{ color: theme.accent }}>{feil}</ThemedText> : null}
     </Kort>
   );
 }

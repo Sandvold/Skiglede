@@ -25,6 +25,7 @@ import { useLagret } from '@/data/lagring';
 import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
 import { useTheme } from '@/hooks/use-theme';
+import { feilTekst } from '@/data/feil';
 import { SWIX, analyserSnø, anbefalStruktur, nabostruktur, byggSmøring, lagSeksjoner, planTur, proGlidelag, snøMedUnderlag, turMedUnderlag, medUnderlag, strukturMedUnderlag, INGEN_UNDERLAG, type Underlag, type Stil, type Tur, type Vær } from '@/engine';
 
 type Renn = { id: string; navn: string; omrade: string; dato: string | null; starttid: string | null; stil: string | null; lengde_km: number | null; loype_id: string | null; testdata: boolean; merknad: string | null };
@@ -82,7 +83,7 @@ function Rennkalender({ renn, valgt, velg }: { renn: Renn[]; valgt: string; velg
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>{r.navn}</Text>
-          <Text style={{ color: theme.textSecondary, fontSize: 13 }}>{[om, r.lengde_km ? `${Number(r.lengde_km).toFixed(1)} km` : '', r.stil === 'klassisk' ? 'klassisk' : r.stil === 'skoyting' ? 'skøyting' : ''].filter(Boolean).join(' · ')}</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 13 }}>{[om, r.lengde_km ? `${Number(r.lengde_km).toFixed(1).replace('.', ',')} km` : '', r.stil === 'klassisk' ? 'klassisk' : r.stil === 'skoyting' ? 'skøyting' : ''].filter(Boolean).join(' · ')}</Text>
         </View>
       </Pressable>
     );
@@ -140,7 +141,7 @@ export default function RennSide() {
                 <View style={{ gap: 8 }}>
                   <ThemedText type="smallBold" themeColor="textSecondary">DELT AV ANDRE</ThemedText>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {andres.map((x) => <Chip key={x.id} aktiv={x.id === valgtEgen} onPress={() => { setValgtEgen(x.id); setValgt(''); }}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km`}</Chip>)}
+                    {andres.map((x) => <Chip key={x.id} aktiv={x.id === valgtEgen} onPress={() => { setValgtEgen(x.id); setValgt(''); }}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1).replace('.', ',')} km`}</Chip>)}
                   </View>
                 </View>
               ) : null}
@@ -170,7 +171,7 @@ function RennDetalj({ renn }: { renn: Renn }) {
     setLastet({ ferdig: false, feil: '' });
     hentRennRute(renn.id)
       .then((l) => { setOpplastet(l ? { ...l, navn: renn.navn } : undefined); setLastet({ ferdig: true, feil: '' }); })
-      .catch((e) => setLastet({ ferdig: true, feil: String((e as Error)?.message ?? e) }));
+      .catch((e) => setLastet({ ferdig: true, feil: feilTekst(e) }));
   }, [renn.id, forsøk]);
   if (!område) return <Kort><ThemedText>Området {renn.omrade} finnes ikke.</ThemedText></Kort>;
   return <RennMedOmråde renn={renn} område={område} egenLøype={opplastet} løypeStatus={{ ...lastet, prøvIgjen: () => setForsøk((n) => n + 1) }} />;
@@ -207,9 +208,9 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
       if (!nær || km(nær) > 60) return setStatus('Ruten ligger mer enn 60 km fra et område med værdata. Legg til området først.');
       const id = rennNavn.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const feil = await lagreRenn({ id, navn: rennNavn.trim(), omrade: nær.id, dato: rennDato || null, stil: rennStil || null, løype });
-      setStatus(feil ? `Kunne ikke lagre: ${feil}` : `Rennet «${rennNavn.trim()}» er lagt inn (${(løype.lengde_m / 1000).toFixed(1)} km, vær fra ${nær.navn}). Alle Pro-brukere ser det under Renn.`);
+      setStatus(feil ? `Kunne ikke lagre: ${feil}` : `Rennet «${rennNavn.trim()}» er lagt inn (${(løype.lengde_m / 1000).toFixed(1).replace('.', ',')} km, vær fra ${nær.navn}). Alle Pro-brukere ser det under Renn.`);
     } catch (e) {
-      setStatus(String((e as Error)?.message ?? e));
+      setStatus(feilTekst(e));
     } finally {
       setOpptatt(false);
     }
@@ -232,9 +233,9 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
         setStatus(`Kunne ikke lagre: ${feil}`);
         return;
       }
-      setStatus(`Lagret «${navn}» (${(løype.lengde_m / 1000).toFixed(1)} km), ${del ? 'delt med andre Pro-brukere' : 'bare synlig for deg'}.`);
+      setStatus(`Lagret «${navn}» (${(løype.lengde_m / 1000).toFixed(1).replace('.', ',')} km), ${del ? 'delt med andre Pro-brukere' : 'bare synlig for deg'}.`);
     } catch (e) {
-      setStatus(String((e as Error)?.message ?? e));
+      setStatus(feilTekst(e));
     } finally {
       setOpptatt(false);
     }
@@ -263,7 +264,7 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Chip aktiv onPress={opptatt ? () => undefined : last}>{opptatt ? 'Laster opp …' : 'Last opp GPX'}</Chip>
         {egne.map((x) => (
-          <Chip key={x.id} aktiv={x.id === valgt} onPress={() => velg(x.id)}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km${x.delt ? ' · delt' : ''}`}</Chip>
+          <Chip key={x.id} aktiv={x.id === valgt} onPress={() => velg(x.id)}>{`${x.navn} · ${(x.lengde_m / 1000).toFixed(1).replace('.', ',')} km${x.delt ? ' · delt' : ''}`}</Chip>
         ))}
       </View>
       <Chip aktiv={del} onPress={() => setDel(!del)}>{del ? '✓ Del med andre Pro-brukere' : 'Del med andre Pro-brukere (av)'}</Chip>
@@ -297,7 +298,7 @@ function EgenRuteDetalj({ rute }: { rute: MinRute }) {
   const [vær, setVær] = useState<{ referansehoyde_m: number; timer: (string | number)[][] } | null>(null);
   const [feil, setFeil] = useState('');
   useEffect(() => {
-    (rute.delt ? hentLagretRutevær(rute.id) : Promise.resolve(null)).catch(() => null).then((l) => l ?? hentRutevær(rute.start_lat, rute.start_lon)).then(setVær).catch((e) => setFeil(String(e?.message ?? e)));
+    (rute.delt ? hentLagretRutevær(rute.id) : Promise.resolve(null)).catch(() => null).then((l) => l ?? hentRutevær(rute.start_lat, rute.start_lon)).then(setVær).catch((e) => setFeil(feilTekst(e)));
   }, [rute.id]);
   if (feil) return <Kort><ThemedText>Fikk ikke hentet været for ruten: {feil}</ThemedText></Kort>;
   if (!vær) return <Kort><ThemedText themeColor="textSecondary">Henter været for ruten …</ThemedText></Kort>;
@@ -383,7 +384,7 @@ function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Ren
         <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800' }}>{renn.navn}</Text>
         <ThemedText themeColor="textSecondary">{[område.navn, renn.dato ? `dato ${renn.dato}` : 'dato ikke lagt inn', renn.lengde_km ? `${renn.lengde_km} km` : null].filter(Boolean).join(' · ')}</ThemedText>
         {renn.testdata && <ThemedText type="small" style={{ color: theme.accent }}>⚠ Testoppføring. {renn.merknad ?? ''}</ThemedText>}
-        {løype && <ThemedText type="small" themeColor="textSecondary">{`Løype brukt i beregningen: ${løype.navn} (${(løype.lengde_m / 1000).toFixed(1)} km).`}</ThemedText>}
+        {løype && <ThemedText type="small" themeColor="textSecondary">{`Løype brukt i beregningen: ${løype.navn} (${(løype.lengde_m / 1000).toFixed(1).replace('.', ',')} km).`}</ThemedText>}
       </Kort>
 
       {!renn.dato && (
@@ -419,7 +420,7 @@ function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Ren
       ) : res ? (
         <>
           <Sammenleggbar id="renn-2" tittel="Løypa">
-            <ThemedText type="small" themeColor="textSecondary">{`${(løype.lengde_m / 1000).toFixed(1)} km · ${Math.round(res.opp)} m opp · ${Math.round(Math.min(...løype.punkter.map((p) => p[2])))}–${Math.round(Math.max(...løype.punkter.map((p) => p[2])))} moh. Fargen viser beregnet snøtemperatur langs løypa.`}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">{`${(løype.lengde_m / 1000).toFixed(1).replace('.', ',')} km · ${Math.round(res.opp)} m opp · ${Math.round(Math.min(...løype.punkter.map((p) => p[2])))}–${Math.round(Math.max(...løype.punkter.map((p) => p[2])))} moh. Fargen viser beregnet snøtemperatur langs løypa.`}</ThemedText>
             <TrailMap segmenter={res.segmenter} />
             <Hoydeprofil punkter={res.profil} />
           </Sammenleggbar>
@@ -427,7 +428,7 @@ function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Ren
           <Sammenleggbar id="renn-3" tittel="Slipestruktur (rilljern)">
             <Text style={{ color: theme.text, fontSize: 17, fontWeight: '700' }}>{res.struktur.navn}</Text>
             <ThemedText themeColor="textSecondary">{res.struktur.grunn}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">{`Snøtemperatur i snitt ${res.snitt.toFixed(1)} °C (${res.tur.tMin.toFixed(1)} til ${res.tur.tMaks.toFixed(1)}). Forslag til testing, ikke fasit.`}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">{`Snøtemperatur i snitt ${res.snitt.toFixed(1).replace('.', ',')} °C (${res.tur.tMin.toFixed(1).replace('.', ',')} til ${res.tur.tMaks.toFixed(1).replace('.', ',')}). Forslag til testing, ikke fasit.`}</ThemedText>
           </Sammenleggbar>
           <Sammenleggbar id="renn-4" tittel="Glid, lag for lag">
             {res.glid.map((l, i) => (

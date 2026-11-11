@@ -73,13 +73,13 @@ export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | 
       smeltDag = smelt;
       syklus = clamp(-nattMin / SNØ.frostFull, 0, 1) * (0.7 + 0.3 * clamp(solMaks / 800_000, 0, 1)) * smelt;
       const dato = new Date(d * DAG).toISOString().slice(0, 10);
-      if (maks > 0 && smelt < 0.9) forklaring.push(`${dato}: maks ${maks.toFixed(1)} °C, vind ${vind.toFixed(1)} m/s, sol ${Math.round(solW)} W/m² gir ${smelt < 0.05 ? 'nesten ingen' : 'svak'} smelting (×${smelt.toFixed(2)})${solSmelt > tempSmelt ? ' (solskorpe)' : ''}.`);
+      if (maks > 0 && smelt < 0.9) forklaring.push(`${dato}: maks ${maks.toFixed(1).replace('.', ',')} °C, vind ${vind.toFixed(1).replace('.', ',')} m/s, sol ${Math.round(solW)} W/m² gir ${smelt < 0.05 ? 'nesten ingen' : 'svak'} smelting (×${smelt.toFixed(2).replace('.', ',')})${solSmelt > tempSmelt ? ' (solskorpe)' : ''}.`);
     }
     // Snø som falt etter denne syklusen ligger oppå skorpa og skjuler den: syklusen teller bare for det som ikke er dekket.
     const snøEtter = h.filter((x) => x.ts >= d * DAG + 17 * 3600_000 && x.temp <= 0.5).reduce((s, x) => s + x.nedbor, 0);
     if (nysnøOppå === null && syklus > 0) nysnøOppå = snøEtter;
     const dekket = clamp(snøEtter / SNØ.begravMm, 0, 1);
-    if (syklus > 0 && dekket > 0.05) forklaring.push(`${new Date(d * DAG).toISOString().slice(0, 10)}: skorpa er dekket av ${snøEtter.toFixed(0)} mm snø siden og teller ×${(1 - dekket).toFixed(2)}.`);
+    if (syklus > 0 && dekket > 0.05) forklaring.push(`${new Date(d * DAG).toISOString().slice(0, 10)}: skorpa er dekket av ${snøEtter.toFixed(0).replace('.', ',')} mm snø siden og teller ×${(1 - dekket).toFixed(2).replace('.', ',')}.`);
     syklus *= 1 - dekket;
     sum += syklus * SNØ.vekter[i];
     if (syklus > 0 && smeltDag >= SNØ.minSmelt) sumUvektet += syklus;
@@ -111,12 +111,12 @@ export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | 
     forklaring.push(`Nysnø: ${SNØ.begravMm} mm (≈ ${SNØ.begravMm} cm) snø eller mer ligger oppå alt eldre og starter tellingen på nytt.`);
   } else if (omdannetTegn) {
     type = 'omdannet';
-    forklaring.push(`Omdannet snø: tine/frys-sum ${sumUvektet.toFixed(2)} (uten aldersvekt), regn siste 7 d ${regn7.toFixed(1)} mm, ${milde} milde soltimer siste 7 d.`);
+    forklaring.push(`Omdannet snø: tine/frys-sum ${sumUvektet.toFixed(2).replace('.', ',')} (uten aldersvekt), regn siste 7 d ${regn7.toFixed(1).replace('.', ',')} mm, ${milde} milde soltimer siste 7 d.`);
   } else if (forrige?.type === 'omdannet' && snøSiden(forrige.ts) < SNØ.begravMm) {
     type = 'omdannet';
     skarphet = Math.max(skarphet, forrige.skarphet);
     beholdt = true;
-    forklaring.push(`Snøen var omdannet ${new Date(forrige.ts).toISOString().slice(0, 10)}, og det har ikke kommet 5 cm nysnø siden (${snøSiden(forrige.ts).toFixed(1)} mm): fortsatt skarp.`);
+    forklaring.push(`Snøen var omdannet ${new Date(forrige.ts).toISOString().slice(0, 10)}, og det har ikke kommet 5 cm nysnø siden (${snøSiden(forrige.ts).toFixed(1).replace('.', ',')} mm): fortsatt skarp.`);
   } else {
     forklaring.push('Ingen tegn til omdanning siste 14 døgn: bruker nysnø-kolonnen.');
   }
@@ -124,7 +124,7 @@ export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | 
 
   const advarsler: string[] = [];
   if (snittTemp7 > SNØ.snødekkeVarsel) {
-    advarsler.push(`Snitt ${snittTemp7.toFixed(1)} °C siste 7 døgn: mye mildvær og regn. Motoren forutsetter snødekke, sjekk at det finnes snø i løypa.`);
+    advarsler.push(`Snitt ${snittTemp7.toFixed(1).replace('.', ',')} °C siste 7 døgn: mye mildvær og regn. Motoren forutsetter snødekke, sjekk at det finnes snø i løypa.`);
   }
   // Status som appen kan lagre. Tidspunktet står stille mens statusen bare er beholdt, så snø etter det summeres riktig.
   const status: SnøStatus = { type, skarphet, ts: beholdt && forrige ? forrige.ts : type === 'ny' && !(tBury !== null) && forrige?.type === 'ny' ? forrige.ts : nå };

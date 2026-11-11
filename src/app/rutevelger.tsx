@@ -27,7 +27,7 @@ const TUR_BITER: Bit[] = berik(
 ).map((b) => ({ ...b, navnKilde: 'turrutebasen' as const }));
 
 const slug = (s: string) => s.toLowerCase().replace(/\s+/g, '-').replace(/å/g, 'a').replace(/ø/g, 'o').replace(/æ/g, 'ae').replace(/[^a-z0-9-]/g, '');
-const km = (m: number) => (m / 1000).toFixed(1);
+const km = (m: number) => (m / 1000).toFixed(1).replace('.', ',');
 const NY_GRENSE = 0.5; // under så stor dekning regnes en bit som ny
 const I_APPEN = 0.8; // over så stor dekning regnes den som allerede i appen
 

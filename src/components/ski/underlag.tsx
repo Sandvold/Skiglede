@@ -12,8 +12,8 @@ function Rad<T extends Påvirkning>({ tittel, hjelp, p, onChange, ekstra }: { ti
   return (
     <View style={{ gap: 6 }}>
       <Pressable onPress={() => onChange({ ...p, på: !p.på })} accessibilityRole="checkbox" accessibilityState={{ checked: p.på }} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, alignItems: 'center' }}>
-        <View style={{ width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: theme.border, backgroundColor: p.på ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-          {p.på ? <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✓</Text> : null}
+        <View style={{ width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: theme.textSecondary, backgroundColor: p.på ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+          {p.på ? <Text style={{ color: theme.onAccent, fontWeight: '800', fontSize: 14 }}>✓</Text> : null}
         </View>
         <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>{tittel}</Text>
         {!p.på ? <ThemedText type="small" themeColor="textSecondary" style={{ flexShrink: 1 }}>{hjelp}</ThemedText> : null}

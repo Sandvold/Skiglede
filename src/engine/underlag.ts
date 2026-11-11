@@ -94,14 +94,14 @@ export function medUnderlag(stabel: Stabel, u: Underlag, tur: Tur): Stabel {
       advarsler.push('Kunstsnø er slipende: legg baseklister/binder først og hold laget under festet tynt og jevnt, så festet ikke slites bort. Et hardvoksdekke over klisteret holder skitt og løse iskorn unna (kan være litt varmere enn temperaturen tilsier).');
     }
     if (stabel.type === 'hardvoks') advarsler.push('Kunstsnø under −8 °C: hardvoks over binder i stedet for klister. Hvis festet slipper, bytt til klister med voksdekke.');
-    tillegg.push('Kunstsnø er tette, harde iskrystaller som slipende sandpapir: velg en hard, slitesterk glider selv rundt null, og ikke gå varmere. Swix nevner PS Polar, PS05/HS05 og PS06/HS06 på fersk kunstsnø i kulde, og at glidet blir bedre og vanlig smøring gjelder igjen etter noen dager. Kald kunstsnø antas å gi ekstra mekanisk friksjon [Bruker]. Snøen holder ekstra fuktighet, så test medium til grov struktur mot sug [Forslag]. Rens og smør skiene rett etter turen.');
+    tillegg.push('Kunstsnø er tette, harde iskrystaller som slipende sandpapir: velg en hard, slitesterk glider selv rundt null, og ikke gå varmere. Swix nevner PS Polar, PS05/HS05 og PS06/HS06 på fersk kunstsnø i kulde, og at glidet blir bedre og vanlig smøring gjelder igjen etter noen dager. Kald kunstsnø antas å gi ekstra mekanisk friksjon. Snøen holder ekstra fuktighet, så test medium til grov struktur mot sug. Rens og smør skiene rett etter turen.');
     partielt(k, 'Kunstsnø');
   }
   if (s.på) {
-    begrunnelse.push(`Saltet løype${bare(s)}: salt kjøler snøen og binder det frie vannet, så løypa blir hard, tørr og slipende (NSF, Beitostølen-veilederen og erfaring). Salting har «stor påvirkning på festesmøring og sålestruktur». ${delAndel(s) >= UNDERLAG_MIN_ANDEL ? `Snøtemperaturen er satt til ca. ${SALT_SNØTEMP} °C uansett lufta [Forslag], og smøringen er valgt som for hard, omdannet snø.` : ''}`.trim());
-    if (tur.tMaksRå < -1) advarsler.push(`Salting virker ikke ved lufttemperatur rundt null eller kaldere (NSF), og det er ned mot ${tur.tMinRå.toFixed(1)} °C. Sjekk at løypa faktisk er saltet.`);
+    begrunnelse.push(`Saltet løype${bare(s)}: salt kjøler snøen og binder det frie vannet, så løypa blir hard, tørr og slipende (NSF, Beitostølen-veilederen og erfaring). Salting har «stor påvirkning på festesmøring og sålestruktur». ${delAndel(s) >= UNDERLAG_MIN_ANDEL ? `Snøtemperaturen er satt til ca. ${SALT_SNØTEMP} °C uansett lufta, og smøringen er valgt som for hard, omdannet snø.` : ''}`.trim());
+    if (tur.tMaksRå < -1) advarsler.push(`Salting virker ikke ved lufttemperatur rundt null eller kaldere (NSF), og det er ned mot ${tur.tMinRå.toFixed(1).replace('.', ',')} °C. Sjekk at løypa faktisk er saltet.`);
     if (klassisk) advarsler.push('Hard saltet løype: staking får fordel over diagonalgang med festesmøring (NSF). Test festet på et prøvestykke før start, og smør ikke tykkere enn nødvendig.');
-    tillegg.push('Saltet snø er kald, hard og slipende, med en tynn saltlakefilm på sålen (Swix: salt gir tykkere smørefilm): velg en hard, slitesterk glider (kald) og ikke gå varmere. Medium til grov rille leder bort laken og hindrer sug [Forslag, test].');
+    tillegg.push('Saltet snø er kald, hard og slipende, med en tynn saltlakefilm på sålen (Swix: salt gir tykkere smørefilm): velg en hard, slitesterk glider (kald) og ikke gå varmere. Medium til grov rille leder bort laken og hindrer sug.');
     advarsler.push('Smør etter snøtemperaturen, ikke lufta: smører du etter lufta, kladder og iser festet. Be om å få teste ski på prøveområdet.');
     partielt(s, 'Salt');
   }
@@ -118,7 +118,7 @@ export function strukturMedUnderlag(s: Struktur, u: Underlag, stil: 'klassisk' |
   if (!harUnderlag(u)) return s;
   const del: string[] = [];
   let ut = s;
-  if (u.kunstsnø.på) del.push('Kunstsnø: tett og fuktig, med sug under skiene. SkinnySki/Swix sier samme struktur som natursnø; en annen kilde sier medium til grov. [Forslag] Start med anbefalingen og test ett trinn grovere.');
+  if (u.kunstsnø.på) del.push('Kunstsnø: tett og fuktig, med sug under skiene. SkinnySki/Swix sier samme struktur som natursnø; en annen kilde sier medium til grov. Start med anbefalingen og test ett trinn grovere.');
   if (u.salt.på) {
     del.push('Saltet løype: salt senker smeltepunktet og gir en tykkere vannfilm med saltlake og sug (Swix, Gemini-rapport). Derfor medium til grov rille for å lede bort laken. Test, ikke fasit.');
     if (delAndel(u.salt) >= UNDERLAG_MIN_ANDEL && s.nivå < 3) {

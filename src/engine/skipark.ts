@@ -54,15 +54,15 @@ export function vurderPåfylling(forrige: Smøring | undefined, ny: Stabel, nå:
         handling: 'topplag',
         behold: true,
         tittel: `Behold ${a}`,
-        grunner: [`${a} ligger på og passer ${p.omr[0]} til ${p.omr[1]} °C. Snøen i dag (${t.toFixed(1)} °C) er innenfor slingringsmonnet (±${SKIPARK.glideMonn} °C). Å bytte glider krever rens, så ${b} trengs ikke.`, `${forrige.turer} tur${forrige.turer === 1 ? '' : 'er'} siden sist rens (maks ${SKIPARK.maksTurerUtenRens}).`],
+        grunner: [`${a} ligger på og passer ${p.omr[0]} til ${p.omr[1]} °C. Snøen i dag (${t.toFixed(1).replace('.', ',')} °C) er innenfor slingringsmonnet (±${SKIPARK.glideMonn} °C). Å bytte glider krever rens, så ${b} trengs ikke.`, `${forrige.turer} tur${forrige.turer === 1 ? '' : 'er'} siden sist rens (maks ${SKIPARK.maksTurerUtenRens}).`],
       };
     }
-    return rens(`Å bytte glider krever rens: ${a} ligger på, nå trengs ${b}${t !== undefined ? ` (snø ${t.toFixed(1)} °C, utenfor slingringsmonnet)` : ''}.`);
+    return rens(`Å bytte glider krever rens: ${a} ligger på, nå trengs ${b}${t !== undefined ? ` (snø ${t.toFixed(1).replace('.', ',')} °C, utenfor slingringsmonnet)` : ''}.`);
   }
   let dekke = false;
   if (!glider && a && b) {
     const diff = senter(a) - senter(b);
-    if (diff > SKIPARK.maksKaldere) return rens(`Nå trengs ${b}, men ${a} ligger øverst og er ${diff.toFixed(0)} °C varmere. En kaldere voks fester seg dårlig oppå en varmere.`);
+    if (diff > SKIPARK.maksKaldere) return rens(`Nå trengs ${b}, men ${a} ligger øverst og er ${diff.toFixed(0).replace('.', ',')} °C varmere. En kaldere voks fester seg dårlig oppå en varmere.`);
     dekke = diff > 0.5;
   }
   const likt = a === b;
@@ -107,5 +107,5 @@ export function soneVurdering(sone: Temperatursone | undefined, tSnitt: number):
   if (!sone) return null;
   const nå = soneFor(tSnitt);
   if (nå === sone) return null;
-  return `Disse skiene er for ${SONE_NAVN[sone].toLowerCase()} snø (${sone === 'kald' ? `under ${SONER.kaldMaks}` : sone === 'varm' ? `over ${SONER.varmMin}` : `${SONER.kaldMaks} til ${SONER.varmMin}`} °C), men snøen i dag er ${SONE_NAVN[nå].toLowerCase()} (snitt ${tSnitt.toFixed(1)} °C). Vurder et par for ${SONE_NAVN[nå].toLowerCase()} snø.`;
+  return `Disse skiene er for ${SONE_NAVN[sone].toLowerCase()} snø (${sone === 'kald' ? `under ${SONER.kaldMaks}` : sone === 'varm' ? `over ${SONER.varmMin}` : `${SONER.kaldMaks} til ${SONER.varmMin}`} °C), men snøen i dag er ${SONE_NAVN[nå].toLowerCase()} (snitt ${tSnitt.toFixed(1).replace('.', ',')} °C). Vurder et par for ${SONE_NAVN[nå].toLowerCase()} snø.`;
 }

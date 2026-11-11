@@ -33,22 +33,22 @@ Status: «bekreftet» = lest/kjørt av to. «ikke testet på enhet» = bare lest
 
 ## C. Bør fikses: brukervennlighet
 
-- [ ] **C1. Smørerådet ligger for langt ned.** `src/app/index.tsx:331-441`, `src/components/ski/hero.tsx:74`. Legg én oppsummeringslinje rett under «Smøring»-tittelen («I dag: VP55 fiolett, 3–4 lag»), og bruk lavt toppfelt på løypesiden (tittel og meny, uten undertittel og områdevelger).
-- [ ] **C2. NB-boksen for vanskelig føre er en tekstvegg.** `src/app/index.tsx:417-422`: vis første setning, resten bak «Vis hvorfor». Flytt boksen under lagene.
-- [ ] **C3. Advarsel motsier snøkortet.** `src/engine/stabel.ts:174`: teksten «snøen er ikke omdannet» settes av `tur.sludd` uten å se på `snø.type`. Styr teksten av `snø.type`.
-- [ ] **C4. Interne merker i brukertekst.** Fjern `[Bruker]`/`[Forslag]` fra strenger som vises (`src/engine/underlag.ts:97,101,121`, `src/engine/stabel.ts:249`, `src/engine/tabeller.ts:66`). Kommentarer i koden skal stå. Kort kunstsnø-teksten til én setning.
-- [ ] **C5. Lagene leses ovenfra, men smøres nedenfra.** `src/app/index.tsx:430-441`: nummerer lagene i smørerekkefølge (1 nederst).
-- [ ] **C6. Fagord.** Forklar i teksten: festesone («midtpartiet under foten»), binder («grunnlag som får voksen til å sitte»), omdannet («gammel, grov snø»), skarphet («hvor mye snøen sliter på smøringen»). Fjern «(5./95. persentil)» i `index.tsx:471`.
-- [ ] **C7. Tilbake-knappen forlater appen.** `src/app/index.tsx:693-705`: valgt løype ligger ikke i adressen. Legg den i ruteparametre (`router.push({ pathname: '/', params: { loype: id } })`), så tilbake gir «Alle løyper».
-- [ ] **C8. Trykkflater under 44 px.** `minHeight: 44` på Chip (også `liten`), menyknapper, select (`ui.tsx`), tannhjul 44×44 (`konto.tsx`), zoomknapper (`zoomkart.tsx:105`), overskrift på sammenleggbare kort (`ui.tsx:28`). Sjekk at turvalget fortsatt får plass på to rader.
-- [ ] **C9. Mørk modus.** Aktiv chip har hvit tekst på `#6DB3F2` (kontrast 2,2:1): bruk mørk tekst `#08182A` i mørk modus (`ui.tsx:17`). Avkrysningsbokser: `theme.textSecondary` som kantfarge.
-- [ ] **C10. Skjermleser.** `ui.tsx` Chip: `accessibilityRole="button"` og `accessibilityState={{ selected: aktiv }}`. Samme rolle på løyperadene (`loypevelger.tsx:20,47`) og «← Alle løyper».
-- [ ] **C11. «Vis feilsøking» synlig for alle.** `src/app/index.tsx:626-664`: kall knappen «Hvorfor dette rådet?» og vis bare begrunnelsen. Tabellene bak `?debug=1`.
-- [ ] **C12. Rå engelske feilmeldinger.** Send `error.message` gjennom `feilTekst` (`src/data/premium.tsx:35`) i `logg.ts`, `minerute.ts`, `premium.tsx`. Auth-feil: «Du er logget ut. Logg inn igjen.» Ellers: «Noe gikk galt. Prøv igjen.»
-- [ ] **C13. Nytt sted ser ut som tømt lager.** `src/components/ski/sted.tsx:23`: vis «<Sted> er tomt. Det du hadde ligger fortsatt under <forrige sted>.»
-- [ ] **C14. Toppfeltet innlogget.** `src/components/ski/konto.tsx:35-54`: flytt Premium/Pro-bryterne og «Logg ut» til Innstillinger. Toppfeltet får bare e-post og tannhjul.
-- [ ] **C16. Egen tur både under kartet og i løypevelgeren.** Behold kortet under kartet (`src/app/index.tsx:683-684`), og legg samme innhold som en rad/knapp nederst i løypelista (`src/components/ski/loypevelger.tsx`) som åpner det samme kortet. Hold løypelista først i rekkefølgen under kartet slik at lista ikke skyves ned.
-- [ ] **C15. Småting.** Desimalkomma («10,7 km», «−1,9 °C») gjennomgående; «Ca. 37 min» i stedet for «Ca. 0 t 37 min»; skjul terrengskygge-linjen når andelen er 0 eller det er mørkt; temperaturtall kuttes i «Voks og klister» på mobil (`oversikt.tsx:46`).
+- [x] **C1. Smørerådet ligger for langt ned.** `src/app/index.tsx:331-441`, `src/components/ski/hero.tsx:74`. Legg én oppsummeringslinje rett under «Smøring»-tittelen («I dag: VP55 fiolett, 3–4 lag»), og bruk lavt toppfelt på løypesiden (tittel og meny, uten undertittel og områdevelger). **Beholdes som den er (Kristoffer).**
+- [x] **C2. NB-boksen for vanskelig føre er en tekstvegg.** `src/app/index.tsx:417-422`: vis første setning, resten bak «Vis hvorfor». Flytt boksen under lagene.
+- [x] **C3. Advarsel motsier snøkortet.** `src/engine/stabel.ts:174`: teksten «snøen er ikke omdannet» settes av `tur.sludd` uten å se på `snø.type`. Styr teksten av `snø.type`.
+- [x] **C4. Interne merker i brukertekst.** Fjern `[Bruker]`/`[Forslag]` fra strenger som vises (`src/engine/underlag.ts:97,101,121`, `src/engine/stabel.ts:249`, `src/engine/tabeller.ts:66`). Kommentarer i koden skal stå. Kort kunstsnø-teksten til én setning.
+- [x] **C5. Lagene leses ovenfra, men smøres nedenfra.** `src/app/index.tsx:430-441`: nummerer lagene i smørerekkefølge (1 nederst).
+- [x] **C6. Fagord.** Forklar i teksten: festesone («midtpartiet under foten»), binder («grunnlag som får voksen til å sitte»), omdannet («gammel, grov snø»), skarphet («hvor mye snøen sliter på smøringen»). Fjern «(5./95. persentil)» i `index.tsx:471`. **Beholdes som den er (Kristoffer).**
+- [x] **C7. Tilbake-knappen forlater appen.** `src/app/index.tsx:693-705`: valgt løype ligger ikke i adressen. Legg den i ruteparametre (`router.push({ pathname: '/', params: { loype: id } })`), så tilbake gir «Alle løyper».
+- [x] **C8. Trykkflater under 44 px.** `minHeight: 44` på Chip (også `liten`), menyknapper, select (`ui.tsx`), tannhjul 44×44 (`konto.tsx`), zoomknapper (`zoomkart.tsx:105`), overskrift på sammenleggbare kort (`ui.tsx:28`). Sjekk at turvalget fortsatt får plass på to rader.
+- [x] **C9. Mørk modus.** Aktiv chip har hvit tekst på `#6DB3F2` (kontrast 2,2:1): bruk mørk tekst `#08182A` i mørk modus (`ui.tsx:17`). Avkrysningsbokser: `theme.textSecondary` som kantfarge.
+- [ ] **C10. Skjermleser.** `ui.tsx` Chip: `accessibilityRole="button"` og `accessibilityState={{ selected: aktiv }}`. Samme rolle på løyperadene (`loypevelger.tsx:20,47`) og «← Alle løyper». **Bare forklart, ikke gjort (Kristoffer).**
+- [x] **C11. «Vis feilsøking» synlig for alle.** `src/app/index.tsx:626-664`: kall knappen «Hvorfor dette rådet?» og vis bare begrunnelsen. Tabellene bak `?debug=1`.
+- [x] **C12. Rå engelske feilmeldinger.** Send `error.message` gjennom `feilTekst` (`src/data/premium.tsx:35`) i `logg.ts`, `minerute.ts`, `premium.tsx`. Auth-feil: «Du er logget ut. Logg inn igjen.» Ellers: «Noe gikk galt. Prøv igjen.»
+- [x] **C13. Nytt sted ser ut som tømt lager.** `src/components/ski/sted.tsx:23`: vis «<Sted> er tomt. Det du hadde ligger fortsatt under <forrige sted>.» **Beholdes som den er (Kristoffer).**
+- [x] **C14. Toppfeltet innlogget.** `src/components/ski/konto.tsx:35-54`: flytt Premium/Pro-bryterne og «Logg ut» til Innstillinger. Toppfeltet får bare e-post og tannhjul.
+- [x] **C16. Egen tur både under kartet og i løypevelgeren.** Behold kortet under kartet (`src/app/index.tsx:683-684`), og legg samme innhold som en rad/knapp nederst i løypelista (`src/components/ski/loypevelger.tsx`) som åpner det samme kortet. Hold løypelista først i rekkefølgen under kartet slik at lista ikke skyves ned.
+- [x] **C15. Småting.** Desimalkomma («10,7 km», «−1,9 °C») gjennomgående; «Ca. 37 min» i stedet for «Ca. 0 t 37 min»; skjul terrengskygge-linjen når andelen er 0 eller det er mørkt; temperaturtall kuttes i «Voks og klister» på mobil (`oversikt.tsx:46`).
 
 ## D. Avgjort av Kristoffer 11. nov
 

@@ -55,8 +55,8 @@ export default function Lager() {
             {g.liste.map((p) => (
               <View key={p.navn} style={{ gap: 6 }}>
               <Pressable onPress={() => bytt(p.navn)} style={styles.produkt} accessibilityRole="checkbox" accessibilityState={{ checked: har(p.navn) }}>
-                <View style={[styles.boks, { borderColor: theme.border, backgroundColor: har(p.navn) ? theme.accent : 'transparent' }]}>
-                  {har(p.navn) ? <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✓</Text> : null}
+                <View style={[styles.boks, { borderColor: theme.textSecondary, backgroundColor: har(p.navn) ? theme.accent : 'transparent' }]}>
+                  {har(p.navn) ? <Text style={{ color: theme.onAccent, fontWeight: '800', fontSize: 14 }}>✓</Text> : null}
                 </View>
                 <View style={[styles.farge, { backgroundColor: p.hex }]}>
                   <Text style={{ color: tekstPå(p.hex), fontWeight: '800', fontSize: 13 }}>{p.navn}</Text>

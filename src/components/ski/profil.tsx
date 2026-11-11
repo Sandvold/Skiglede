@@ -36,7 +36,7 @@ export function Hoydeprofil({ punkter, hoyde = 150 }: { punkter: ProfilPunkt[]; 
       )}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <ThemedText type="small" themeColor="textSecondary">0 km · {Math.round(punkter[0].h)} m</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">{(total / 1000).toFixed(1)} km · {Math.round(punkter[punkter.length - 1].h)} m</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">{(total / 1000).toFixed(1).replace('.', ',')} km · {Math.round(punkter[punkter.length - 1].h)} m</ThemedText>
       </View>
     </View>
   );

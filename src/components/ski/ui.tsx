@@ -13,8 +13,11 @@ export function Kort({ children, style }: { children: React.ReactNode; style?: o
 export function Chip({ aktiv, onPress, children, liten }: { aktiv: boolean; onPress: () => void; children: string; liten?: boolean }) {
   const theme = useTheme();
   return (
-    <Pressable onPress={onPress} style={[styles.chip, liten && { paddingVertical: 5, paddingHorizontal: 11 }, { backgroundColor: aktiv ? theme.accent : theme.backgroundElement, borderColor: aktiv ? theme.accent : theme.border }]}>
-      <Text style={{ color: aktiv ? '#fff' : theme.text, fontWeight: '600', fontSize: liten ? 13 : 15 }}>{children}</Text>
+    <Pressable
+      onPress={onPress}
+      hitSlop={liten ? { top: 8, bottom: 8, left: 4, right: 4 } : undefined} // liten knapp holder seg kompakt, men trykkflaten blir ca. 44 px
+      style={[styles.chip, { minHeight: liten ? 28 : 44, justifyContent: 'center' }, liten && { paddingVertical: 5, paddingHorizontal: 11 }, { backgroundColor: aktiv ? theme.accent : theme.backgroundElement, borderColor: aktiv ? theme.accent : theme.border }]}>
+      <Text style={{ color: aktiv ? theme.onAccent : theme.text, fontWeight: '600', fontSize: liten ? 13 : 15 }}>{children}</Text>
     </Pressable>
   );
 }
@@ -25,7 +28,7 @@ export function Sammenleggbar({ id, tittel, standardÅpen = true, topp, children
   const [åpen, setÅpen] = useLagret<boolean>(`skiglede.ui.${id}`, standardÅpen);
   return (
     <Kort style={style}>
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded: åpen }} onPress={() => setÅpen(!åpen)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: åpen }} onPress={() => setÅpen(!åpen)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 }}>
         <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800', flex: 1 }}>{tittel}</Text>
         {topp}
         <Text style={{ color: theme.textSecondary, fontSize: 18 }}>{åpen ? '▾' : '▸'}</Text>
@@ -45,7 +48,7 @@ export function Valgboks({ verdi, valg, onVelg, etikett }: { verdi: string; valg
       value: verdi,
       'aria-label': etikett,
       onChange: (e: { target: { value: string } }) => onVelg(e.target.value),
-      style: { fontSize: 14, fontWeight: 600, padding: '6px 10px', borderRadius: 999, border: `1px solid ${theme.border}`, background: theme.backgroundElement, color: theme.text },
+      style: { fontSize: 14, fontWeight: 600, minHeight: 44, padding: '6px 12px', borderRadius: 999, border: `1px solid ${theme.border}`, background: theme.backgroundElement, color: theme.text },
     },
     ...valg.map((v) => createElement('option', { key: v.verdi, value: v.verdi }, v.tekst)),
   );
@@ -58,7 +61,7 @@ export function Nedtrekk({ verdi, valg, onVelg, etikett }: { verdi: string; valg
   const valgt = valg.find((v) => v.verdi === verdi);
   return (
     <>
-      <Pressable accessibilityRole="button" accessibilityLabel={etikett} onPress={() => setÅpen(true)} style={[styles.chip, { backgroundColor: theme.backgroundElement, borderColor: theme.border, flexDirection: 'row', gap: 8, alignItems: 'center' }]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={etikett} onPress={() => setÅpen(true)} style={[styles.chip, { minHeight: 44, backgroundColor: theme.backgroundElement, borderColor: theme.border, flexDirection: 'row', gap: 8, alignItems: 'center' }]}>
         <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>{valgt?.tekst ?? '–'}</Text>
         <Text style={{ color: theme.textSecondary }}>▾</Text>
       </Pressable>

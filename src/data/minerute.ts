@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { Løype } from '@/data/rute';
 import type { Terreng } from '@/engine/terreng';
+import { feilTekst } from '@/data/feil';
 import { neon } from '@/data/neon';
 
 export type MinRute = { id: string; navn: string; lengde_m: number; punkter: Løype['punkter']; start_lat: number; start_lon: number; terreng?: Terreng[] | null; delt?: boolean; user_id?: string };
@@ -13,7 +14,7 @@ export function useMineRuter(innlogget: boolean) {
   const last = useCallback(async () => {
     if (!innlogget) return;
     const { data, error } = await neon().from('bruker_rute').select('id, navn, lengde_m, punkter, start_lat, start_lon, terreng, delt, user_id').order('opprettet', { ascending: false });
-    if (error) setFeil(error.message);
+    if (error) setFeil(feilTekst(error));
     else {
       setFeil('');
       setRuter((data ?? []) as MinRute[]);
@@ -29,19 +30,19 @@ export function useMineRuter(innlogget: boolean) {
     last,
     async lagre(l: Løype & { start_lat: number; start_lon: number }, stil: string, delt = false): Promise<string | null> {
       const { error } = await neon().from('bruker_rute').insert({ navn: l.navn, lengde_m: l.lengde_m, punkter: l.punkter, start_lat: l.start_lat, start_lon: l.start_lon, stil, terreng: l.terreng ?? null, delt });
-      if (error) return error.message;
+      if (error) return feilTekst(error);
       await last();
       return null;
     },
     async delMed(id: string, delt: boolean): Promise<string | null> {
       const { error } = await neon().from('bruker_rute').update({ delt }).eq('id', id);
       await last();
-      return error?.message ?? null;
+      return error ? feilTekst(error) : null;
     },
     async slett(id: string): Promise<string | null> {
       const { error } = await neon().from('bruker_rute').delete().eq('id', id);
       await last();
-      return error?.message ?? null;
+      return error ? feilTekst(error) : null;
     },
   };
 }
@@ -110,7 +111,7 @@ export async function hentRennRute(rennId: string): Promise<(Løype & { start_la
 /** Admin: legger inn et renn med GPX-løype som alle Pro-brukere ser under Renn. Returnerer feilmelding eller null. */
 export async function lagreRenn(r: { id: string; navn: string; omrade: string; dato: string | null; stil: string | null; løype: Løype & { start_lat: number; start_lon: number } }): Promise<string | null> {
   const a = await neon().from('konkurranse').upsert({ id: r.id, navn: r.navn, omrade: r.omrade, dato: r.dato, starttid: '10:00', stil: r.stil, lengde_km: Math.round(r.løype.lengde_m / 100) / 10, testdata: false, oppdatert: new Date().toISOString() }, { onConflict: 'id' });
-  if (a.error) return a.error.message;
+  if (a.error) return feilTekst(a.error);
   const b = await neon().from('renn_rute').upsert({ renn_id: r.id, lengde_m: r.løype.lengde_m, punkter: r.løype.punkter, terreng: r.løype.terreng ?? null, start_lat: r.løype.start_lat, start_lon: r.løype.start_lon, oppdatert: new Date().toISOString() }, { onConflict: 'renn_id' });
-  return b.error ? b.error.message : null;
+  return b.error ? feilTekst(b.error) : null;
 }

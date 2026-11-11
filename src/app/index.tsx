@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -24,7 +24,7 @@ import { usePremium } from '@/data/premium';
 import { osloDato, osloTs, timerI } from '@/data/tid';
 import { Loggkort } from '@/components/ski/loggkort';
 import { NØKKEL_BRUK_LAGER, NØKKEL_LAGER, NØKKEL_SKIPARK, NØKKEL_VALGTE, NØKKEL_VISNING, TOM_LISTE, useLagret, useStedData, type Ski } from '@/data/lagring';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { skrivFraKonto } from '@/data/lagring';
 import { SWIX, SYSTEMER, merkeAv, innkjøpsforslag, soneFor, soneVurdering, analyserSnø, produkt, byggMedLager, glideSystemFraLager, lagSeksjoner, forenklet, byggAlternativer, lagreSmøring, planTur, snøMedUnderlag, turMedUnderlag, medUnderlag, INGEN_UNDERLAG, type Underlag, vurderPåfylling, type SnøStatus, type Stabel, type Stil, type Vær } from '@/engine';
 
@@ -86,6 +86,12 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
 }
 
 /** Løypesiden: med ferske værdata vises hele siden. Uten (nytt område, eller værjobben har stoppet) vises løypa uten smøreråd, med beskjed om hvorfor. */
+/** Samme «Legg til egen tur»-kort som under kartet, for løypevelgeren inne i en løype. */
+function EgenTurKort({ område, onVelg }: { område: Område; onVelg: (id: string) => void }) {
+  const egne = useEgneRuterIOmråde(område);
+  return <EgneRuter mine={egne.mine} bruker={egne.bruker} område={område} onVelg={onVelg} />;
+}
+
 function Detalj(props: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
   const status = useVærstatus(props.område);
   if (!status.fersk) return <DetaljUtenVær {...props} status={status} />;
@@ -127,11 +133,12 @@ function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: {
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
         </Pressable>
         <Loypevelger løyper={liste.filter((l) => !l.variantAv)} valgt={gruppe} onVelg={onVelg} />
+        <EgenTurKort område={område} onVelg={onVelg} />
         {varianter.length > 1 && (
           <View style={styles.rad}>
             {varianter.map((v) => (
               <Chip key={v.id} aktiv={v.id === løype.id} onPress={() => onVelg(v.id)}>
-                {`${v.type === 'retur' ? 'Tur-retur' : 'Sløyfe'} · ${(v.lengde_m / 1000).toFixed(1)} km`}
+                {`${v.type === 'retur' ? 'Tur-retur' : 'Sløyfe'} · ${(v.lengde_m / 1000).toFixed(1).replace('.', ',')} km`}
               </Chip>
             ))}
           </View>
@@ -143,7 +150,7 @@ function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: {
         <Kort>
           <Text style={[styles.h2, { color: theme.text }]}>{løype.navn}</Text>
           <View style={styles.rad}>
-            <Tall verdi={`${km.toFixed(1)} km`} tekst={løype.type === 'retur' ? 'tur-retur' : løype.type === 'sloyfe' ? 'sløyfe' : 'lengde'} />
+            <Tall verdi={`${km.toFixed(1).replace('.', ',')} km`} tekst={løype.type === 'retur' ? 'tur-retur' : løype.type === 'sloyfe' ? 'sløyfe' : 'lengde'} />
             <Tall verdi={`${Math.round(Math.min(...hs))}–${Math.round(Math.max(...hs))}`} tekst="moh" />
             <Tall verdi={`${Math.round(opp)} m`} tekst="stigning" />
           </View>
@@ -178,7 +185,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const modus: Modus = modusValgt ?? (standardModus === 'Trening' ? 'Trening' : 'Tur');
   // Starttid: i dag er standard én time frem (aldri før nå), andre dager 10:00. Valget huskes ikke mellom besøk, for «nå» endrer seg.
   const [startValgt, setStartValgt] = useState<number | null>(null);
-  const [debug, setDebug] = useState(false);
+  const [visNB, setVisNB] = useState(false); // «Vis hvorfor» under NB-boksen for vanskelig føre
   const [dagDato, setDagDato] = useLagret<string>('skiglede.dag', '');
   const [nå, setNå] = useState(() => Date.now());
   useEffect(() => { const id = setInterval(() => setNå(Date.now()), 60_000); return () => clearInterval(id); }, []);
@@ -326,11 +333,12 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
         </Pressable>
         <Loypevelger løyper={LØYPER.filter((l) => !l.variantAv)} valgt={gruppe} onVelg={onVelg} />
+        <EgenTurKort område={område} onVelg={onVelg} />
         {varianter.length > 1 && (
           <View style={styles.rad}>
             {varianter.map((v) => (
               <Chip key={v.id} aktiv={v.id === valgtLøype.id} onPress={() => onVelg(v.id)}>
-                {`${v.type === 'retur' ? 'Tur-retur' : 'Sløyfe'} · ${(v.lengde_m / 1000).toFixed(1)} km`}
+                {`${v.type === 'retur' ? 'Tur-retur' : 'Sløyfe'} · ${(v.lengde_m / 1000).toFixed(1).replace('.', ',')} km`}
               </Chip>
             ))}
           </View>
@@ -343,7 +351,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
             <View style={styles.rad}>
               {premium && mulige.map((x) => (
                 <Chip key={x.id} aktiv={ekstraIds.includes(x.id)} onPress={() => setEkstraIds(ekstraIds.includes(x.id) ? ekstraIds.filter((v) => v !== x.id) : [...ekstraIds, x.id])}>
-                  {`${ekstraIds.includes(x.id) ? '✓ ' : '+ '}${x.navn} · ${(x.lengde_m / 1000).toFixed(1)} km`}
+                  {`${ekstraIds.includes(x.id) ? '✓ ' : '+ '}${x.navn} · ${(x.lengde_m / 1000).toFixed(1).replace('.', ',')} km`}
                 </Chip>
               ))}
             </View>
@@ -367,7 +375,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           <Valgboks etikett="Starttidspunkt for turen" verdi={String(startTime)} valg={startTider.map((h) => ({ verdi: String(h), tekst: `🕒 ${klokke(h)}` }))} onVelg={(v) => setStartTime(Number(v))} />
         </View>
         <ThemedText type="small" themeColor="textSecondary">
-          Ca. {Math.floor(minutter / 60)} t {minutter % 60} min · {tid(r.tur.startTs)}–{tid(r.tur.sluttTs)} · {Math.round(r.tur.skyggeAndel * 100)} % av løypa i terrengskygge
+          Ca. {minutter >= 60 ? `${Math.floor(minutter / 60)} t ${minutter % 60} min` : `${minutter} min`} · {tid(r.tur.startTs)}–{tid(r.tur.sluttTs)}{r.tur.skyggeAndel >= 0.01 ? ` · ${Math.round(r.tur.skyggeAndel * 100)} % av løypa i terrengskygge` : ''}
         </ThemedText>
         {ingenPrognose ? (
           <View style={[styles.advarsel, { borderColor: '#C0392B' }]}>
@@ -385,8 +393,8 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
             </View>
           </View>
           <Pressable onPress={() => premium && setBrukLager(!brukLager)} style={styles.rad} accessibilityRole="checkbox" accessibilityState={{ checked: brukLager }}>
-            <View style={{ width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: theme.border, backgroundColor: brukLager ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-              {brukLager ? <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✓</Text> : null}
+            <View style={{ width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: theme.textSecondary, backgroundColor: brukLager ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+              {brukLager ? <Text style={{ color: theme.onAccent, fontWeight: '800', fontSize: 14 }}>✓</Text> : null}
             </View>
             <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>Bruk min smøring</Text>
             <ThemedText type="small" themeColor="textSecondary" style={{ flexShrink: 1 }}>
@@ -407,7 +415,11 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           {vis.vanskeligFøre?.length ? (
             <View style={[styles.advarsel, { borderColor: '#C0392B' }]}>
               <ThemedText type="smallBold">⚠ {vis.vanskeligFøre[0]}</ThemedText>
-              {vis.vanskeligFøre.slice(1).map((t, i) => <ThemedText key={i} type="small">{t}</ThemedText>)}
+              {!enkel && vis.vanskeligFøre.length > 1 ? (
+                visNB
+                  ? <>{vis.vanskeligFøre.slice(1).map((t, i) => <ThemedText key={i} type="small">{t}</ThemedText>)}<Pressable accessibilityRole="button" onPress={() => setVisNB(false)}><ThemedText type="smallBold" themeColor="textSecondary">Skjul</ThemedText></Pressable></>
+                  : <Pressable accessibilityRole="button" onPress={() => setVisNB(true)} style={{ paddingVertical: 8 }}><ThemedText type="smallBold" themeColor="textSecondary">Vis hvorfor ▸</ThemedText></Pressable>
+              ) : null}
             </View>
           ) : null}
           {brukLager && vis.lagerPasserIkke && felleRubbSki.length ? (
@@ -417,10 +429,15 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
             </View>
           ) : null}
           <GliderBoks lag={glidesone} />
-          <ThemedText type="small" themeColor="textSecondary">{vis.lag.filter((l) => !erGlidesone(l)).length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Øverst = siste lag. Bygg nedenfra og opp.' : 'Ingen smøring på festesonen.'}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">{vis.lag.filter((l) => !erGlidesone(l)).length > 1 || vis.type === 'hardvoks' || vis.type === 'klister' ? 'Smør i rekkefølgen 1, 2, 3 … Nederst er første lag, øverst er siste.' : 'Ingen smøring på festesonen.'}</ThemedText>
           <View style={{ gap: 6 }}>
             {stabelVisning.map((l, i) => (
               <View key={i} style={[styles.lag, { backgroundColor: produktFarge(l.produkt) }]}>
+                {stabelVisning.length > 1 ? (
+                  <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: tekstPå(produktFarge(l.produkt)), alignItems: 'center', justifyContent: 'center' }}>
+                    <Text accessibilityLabel={`Lag ${stabelVisning.length - i}`} style={{ color: tekstPå(produktFarge(l.produkt)), fontWeight: '800', fontSize: 15 }}>{stabelVisning.length - i}</Text>
+                  </View>
+                ) : null}
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.lagProdukt, { color: tekstPå(produktFarge(l.produkt)) }]}>{l.produkt}<Text style={{ fontWeight: '500', fontSize: 14 }}>  {produkt(l.produkt)?.farge}</Text></Text>
                   <Text style={[styles.lagRolle, { color: tekstPå(produktFarge(l.produkt)), opacity: 0.85 }]}>{l.rolle}{l.merknad ? ` · ${l.merknad}` : ''}</Text>
@@ -457,10 +474,12 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
         <View style={styles.rad}>
           <Chip aktiv={false} onPress={henter ? () => {} : () => oppdaterVær(true)}>{henter ? 'Henter …' : '↻ Oppdater vær'}</Chip>
         </View>
+        {r.tur.skyggeAndel >= 0.01 ? (
         <ThemedText type="small" themeColor="textSecondary">
-          {Math.round(r.tur.skyggeAndel * 100)} % av løypa ({(r.tur.skyggeAndel * km).toFixed(1)} km) ligger i terrengskygge når du går den.
-          {r.tur.skyggeIgnorert ? ' Under 10 % av løypa, så skyggen er ikke regnet med i smøringen.' : r.tur.skyggeAndel >= 0.1 ? ' Skyggen er regnet med: kaldeste del er ' + r.tur.tMin.toFixed(1) + ' °C og varmeste ' + r.tur.tMaks.toFixed(1) + ' °C (5./95. persentil). Vurder selv om du vil smøre for sola eller skyggen.' : ''}
-        </ThemedText>
+            {Math.round(r.tur.skyggeAndel * 100)} % av løypa ({(r.tur.skyggeAndel * km).toFixed(1).replace('.', ',')} km) ligger i terrengskygge når du går den.
+            {r.tur.skyggeIgnorert ? ' Under 10 % av løypa, så skyggen er ikke regnet med i smøringen.' : r.tur.skyggeAndel >= 0.1 ? ' Skyggen er regnet med: kaldeste del er ' + r.tur.tMin.toFixed(1).replace('.', ',') + ' °C og varmeste ' + r.tur.tMaks.toFixed(1).replace('.', ',') + ' °C (5./95. persentil). Vurder selv om du vil smøre for sola eller skyggen.' : ''}
+          </ThemedText>
+        ) : null}
         {!ingenPrognose && !lasterPrognose && r.alternativer.map((a) => {
           const festeLag = a.stabel.lag.filter((l) => !erGlidesone(l));
           const ingenSmøring = festeLag.length > 0 && festeLag.every((l) => l.antall === 'Ingen smøring');
@@ -495,7 +514,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
         <Kort>
           <Text style={[styles.h2, { color: theme.text }]}>{løype.navn}</Text>
           <View style={styles.rad}>
-            <Tall verdi={`${km.toFixed(1)} km`} tekst={løype.type === 'retur' ? 'tur-retur' : løype.type === 'sloyfe' ? 'sløyfe' : 'lengde'} />
+            <Tall verdi={`${km.toFixed(1).replace('.', ',')} km`} tekst={løype.type === 'retur' ? 'tur-retur' : løype.type === 'sloyfe' ? 'sløyfe' : 'lengde'} />
             <Tall verdi={`${Math.round(r.lav)}–${Math.round(r.høy)}`} tekst="moh" />
             <Tall verdi={`${Math.round(r.opp)} m`} tekst="stigning" />
           </View>
@@ -534,7 +553,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
                       </Text>
                     </View>
                     <View style={[styles.merke, { backgroundColor: lagret ? theme.accent : advar ? '#F6DFB4' : theme.accentSoft }]}>
-                      <Text style={{ color: lagret ? '#fff' : advar ? '#6B4A0B' : theme.accent, fontWeight: '700', fontSize: 13 }}>{lagret ? '✓ Lagret' : vurdering ? vurdering.tittel : st.egnet === false ? 'Passer ikke' : '–'}</Text>
+                      <Text style={{ color: lagret ? theme.onAccent : advar ? '#6B4A0B' : theme.accent, fontWeight: '700', fontSize: 13 }}>{lagret ? '✓ Lagret' : vurdering ? vurdering.tittel : st.egnet === false ? 'Passer ikke' : '–'}</Text>
                     </View>
                     <Text style={{ color: theme.textSecondary, fontSize: 16 }}>{åpen ? '▴' : '▾'}</Text>
                   </Pressable>
@@ -593,7 +612,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           <View style={styles.rad}>
             <Tall verdi={r.snø.type === 'ny' ? 'Nysnø' : 'Omdannet'} tekst="snøtype" />
             <Tall verdi={`${Math.round(r.snø.skarphet)}`} tekst="skarphet (0–100)" />
-            <Tall verdi={`${r.tur.tMin.toFixed(1)} / ${r.tur.tMaks.toFixed(1)} °C`} tekst="kaldest / varmest" />
+            <Tall verdi={`${r.tur.tMin.toFixed(1).replace('.', ',')} / ${r.tur.tMaks.toFixed(1).replace('.', ',')} °C`} tekst="kaldest / varmest" />
           </View>
         </Sammenleggbar>
 
@@ -612,47 +631,6 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
           ) : null}
           <Temperaturoversikt tMin={r.tur.tMin} tMaks={r.tur.tMaks} brukt={vis.lag.map((l) => l.produkt)} sys={sys} visning={oversiktVisning} lager={lager} kjøp={kjøp} />
         </Sammenleggbar>
-
-        {/* Feilsøking */}
-        <Pressable onPress={() => setDebug(!debug)} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
-          <Text style={{ color: theme.text, fontWeight: '600' }}>{debug ? 'Skjul feilsøking' : 'Vis feilsøking'}</Text>
-        </Pressable>
-        {debug && (
-          <Kort style={{ gap: Spacing.two }}>
-            <Text style={[styles.h3, { color: theme.text }]}>Hvorfor denne stabelen</Text>
-            {[...r.snø.forklaring, ...r.stabel.begrunnelse, ...(r.stabel.alternativ?.begrunnelse ?? [])].map((t, i) => (
-              <ThemedText key={i} type="small">• {t}</ThemedText>
-            ))}
-            <Text style={[styles.h3, { color: theme.text, marginTop: Spacing.two }]}>Døgn (UTC): mild dag og kald natt</Text>
-            {r.snø.dager.map((d) => (
-              <View key={d.dato} style={styles.tabellRad}>
-                <ThemedText type="small" style={{ width: 90 }}>{d.dato.slice(5)}</ThemedText>
-                <ThemedText type="small" style={{ width: 80 }}>maks {d.maks.toFixed(1)}</ThemedText>
-                <ThemedText type="small" style={{ width: 90 }}>natt {d.natt === null ? '–' : d.natt.toFixed(1)}</ThemedText>
-                <ThemedText type="small">syklus {d.syklus.toFixed(2)}</ThemedText>
-              </View>
-            ))}
-            <Text style={[styles.h3, { color: theme.text, marginTop: Spacing.two }]}>Seksjoner</Text>
-            <View style={styles.tabellRad}>
-              {['km', 'moh', 'luft', 'effektiv', 'sol W', 'skog'].map((h) => (
-                <ThemedText key={h} type="smallBold" themeColor="textSecondary" style={styles.celle}>{h}</ThemedText>
-              ))}
-            </View>
-            {r.seksjoner.map((s, i) => {
-              const v = r.tur.seksjoner[i];
-              return (
-                <View key={s.seq} style={styles.tabellRad}>
-                  <ThemedText type="small" style={styles.celle}>{(s.startM / 1000).toFixed(1)}</ThemedText>
-                  <ThemedText type="small" style={styles.celle}>{Math.round(s.hMid)}</ThemedText>
-                  <ThemedText type="small" style={styles.celle}>{v.tLuft.toFixed(1)}</ThemedText>
-                  <ThemedText type="small" style={[styles.celle, { fontWeight: '700' }]}>{v.tEff.toFixed(1)}</ThemedText>
-                  <ThemedText type="small" style={styles.celle}>{Math.round(v.sw)}</ThemedText>
-                  <ThemedText type="small" style={styles.celle}>{Math.round(s.skog * 100)} %</ThemedText>
-                </View>
-              );
-            })}
-          </Kort>
-        )}
       </View>
     </ScrollView>
   );
@@ -671,8 +649,8 @@ function Oversikt({ område, liste, feil, prøvIgjen, onVelg, onVelgNabo, egne }
         <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : liste === null ? (feil ? 'Fikk ikke tak i løypene. Sjekk nettforbindelsen og prøv igjen.' : 'Henter løypene …') : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
         {feil && liste === null ? <View style={styles.rad}><Chip aktiv={false} onPress={prøvIgjen}>↻ Prøv igjen</Chip></View> : null}
         <Oversiktskart key={område.id} løyper={LØYPER.map((l) => ({ id: l.id, navn: l.navn, punkter: l.oversikt }))} naboer={naboer} onBoks={setBoks} onVelgNabo={onVelgNabo} visning={område.visning} onVelg={onVelg} />
-        <EgneRuter mine={egne.mine} bruker={egne.bruker} område={område} onVelg={onVelg} />
         <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
+        <EgneRuter mine={egne.mine} bruker={egne.bruker} område={område} onVelg={onVelg} />
         <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0) og © OpenStreetMap-bidragsytere (ODbL).</ThemedText>
       </View>
     </ScrollView>
@@ -681,7 +659,22 @@ function Oversikt({ område, liste, feil, prøvIgjen, onVelg, onVelgNabo, egne }
 
 export default function Hjem() {
   const [område, settOmråde] = useOmråde();
-  const [valgt, setValgt] = useLagret<string | null>(`skiglede.loype.${område.id}`, null);
+  const [valgt, setValgtLagret] = useLagret<string | null>(`skiglede.loype.${område.id}`, null);
+  // Valgt løype ligger i lagret tilstand (huskes til neste besøk). For at tilbake-knappen (nettleser og Android) skal gå fra løypa til «Alle løyper»
+  // i stedet for ut av appen, legges et historikkpunkt (?v=1) når en løype åpnes; går brukeren tilbake, nullstilles valget.
+  const router = useRouter();
+  const { v: åpenSide } = useLocalSearchParams<{ v?: string }>();
+  const pushet = useRef(false);
+  const setValgt = (id: string | null) => {
+    if (id && !pushet.current) { pushet.current = true; router.push({ pathname: '/', params: { v: '1' } }); }
+    if (!id && pushet.current) { router.back(); return; } // effekten under nullstiller valget når historikkpunktet er borte
+    setValgtLagret(id);
+  };
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- brukeren gikk tilbake: tilbake til oversikten
+    if (pushet.current && !åpenSide) { pushet.current = false; setValgtLagret(null); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [åpenSide]);
   const { liste: baseListe, feil, prøvIgjen } = useLøypeliste(område.id);
   const egne = useEgneRuterIOmråde(område);
   // Egne GPX-ruter (og delte fra kjente utfartssteder) legges inn i samme liste som områdets løyper.

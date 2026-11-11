@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Platform } from 'react-native';
 
 import { erBrukerdata, lesLokal, påSkriv, skrivFraKonto } from '@/data/lagring';
+import { feilTekst } from '@/data/feil';
 import { neon } from '@/data/neon';
 
 type Bruker = { id: string; epost: string; navn: string };
@@ -33,12 +34,6 @@ const LOKAL_NØKLER = () => {
   } catch {
     return [];
   }
-};
-
-/** Norsk feilmelding: nettfeil fra nettleseren («Failed to fetch») vises ikke rått. */
-const feilTekst = (e: unknown): string => {
-  const m = String((e as Error)?.message ?? e);
-  return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'Fikk ikke kontakt med innloggingen. Sjekk nettforbindelsen.' : m;
 };
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
@@ -165,7 +160,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     }
     const tilbake = typeof window !== 'undefined' ? window.location.origin + (process.env.EXPO_BASE_URL ?? '') + '/' : undefined;
     const { error } = await neon().auth.signIn.social({ provider: 'google', callbackURL: tilbake });
-    if (error) setFeil(error.message ?? 'Innlogging feilet');
+    if (error) setFeil(feilTekst(error));
   }, [hent]);
 
   const loggUt = useCallback(async () => {
@@ -184,7 +179,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     if (!bruker) return;
     const ny = !premium;
     const { error } = await neon().from('profil').upsert({ premium: ny, ...(ny ? {} : { pro: false }), oppdatert: new Date().toISOString() }, { onConflict: 'user_id' });
-    if (error) setFeil(error.message);
+    if (error) setFeil(feilTekst(error));
     else {
       setPremium(ny);
       if (!ny) setPro(false);
@@ -196,7 +191,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     const ny = !(premium && proFlagg);
     // Pro bygger på premium: slås pro på, slås premium på samtidig.
     const { error } = await neon().from('profil').upsert({ pro: ny, ...(ny ? { premium: true } : {}), oppdatert: new Date().toISOString() }, { onConflict: 'user_id' });
-    if (error) setFeil(error.message);
+    if (error) setFeil(feilTekst(error));
     else {
       setPro(ny);
       if (ny) setPremium(true);

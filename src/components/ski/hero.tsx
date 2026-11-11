@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   tittel: { color: '#FFFFFF', fontSize: 44, fontWeight: '800', letterSpacing: -1 },
   under: { color: '#BFDDF7', fontSize: 17, marginTop: 4 },
   meny: { flexDirection: 'row', gap: 6, marginTop: 14 },
-  menyKnapp: { paddingVertical: 7, paddingHorizontal: 8, borderRadius: 999, flexGrow: 1, flexShrink: 1, alignItems: 'center' },
+  menyKnapp: { minHeight: 44, paddingHorizontal: 8, borderRadius: 999, flexGrow: 1, flexShrink: 1, alignItems: 'center', justifyContent: 'center' },
   flak: { position: 'absolute', color: 'rgba(255,255,255,0.35)' },
   drift: { position: 'absolute', borderRadius: 999 },
 });

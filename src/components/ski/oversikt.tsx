@@ -21,11 +21,11 @@ function Rad({ p, tMin, tMaks, brukt }: { p: Produkt; tMin: number; tMaks: numbe
   const bredde = Math.max(hi - lo, 1.2);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 30 }}>
-      <View style={{ width: 118 }}>
+      <View style={{ width: 150 }}>
         <Text style={{ color: theme.text, fontWeight: brukt ? '800' : '600', fontSize: 14 }}>
           {brukt ? '● ' : ''}{p.navn}
         </Text>
-        <Text style={{ color: theme.textSecondary, fontSize: 11, lineHeight: 13 }} numberOfLines={1}>{p.farge}</Text>
+        <Text style={{ color: theme.textSecondary, fontSize: 11, lineHeight: 13 }} numberOfLines={1}>{`${p.farge} · ${lo === hi ? lo : `${lo}…${hi}`} °C`}</Text>
       </View>
       <View style={{ flex: 1, height: 26, justifyContent: 'center' }}>
         <View style={{ position: 'absolute', left: pct(tMin), width: `${((tMaks - tMin) / (MAX - MIN)) * 100}%`, top: 0, bottom: 0, backgroundColor: theme.accentSoft, borderRadius: 4, opacity: 0.8 }} />
@@ -43,7 +43,7 @@ function Rad({ p, tMin, tMaks, brukt }: { p: Produkt; tMin: number; tMaks: numbe
             alignItems: 'center',
             overflow: 'hidden',
           }}>
-          <Text style={{ color: tekstPå(p.hex), fontSize: 10, fontWeight: '700' }} numberOfLines={1}>{lo === hi ? `${lo}` : `${lo}…${hi}`}</Text>
+          
         </View>
       </View>
     </View>
@@ -78,7 +78,7 @@ export function Temperaturoversikt({ tMin, tMaks, brukt, sys, visning = 'alle', 
   return (
     <View style={{ gap: 6 }}>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <View style={{ width: 118 }} />
+        <View style={{ width: 150 }} />
         <View style={{ flex: 1, height: 16 }}>
           {ticks.map((t) => (
             <Text key={t} style={{ position: 'absolute', left: pct(t), marginLeft: -10, width: 20, textAlign: 'center', color: t === 0 ? theme.text : theme.textSecondary, fontSize: 11, fontWeight: t === 0 ? '800' : '500' }}>{t}</Text>
@@ -102,7 +102,7 @@ export function Temperaturoversikt({ tMin, tMaks, brukt, sys, visning = 'alle', 
         </View>
       ) : null}
       <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 8 }}>
-        Området i °C slik {sys.navn} oppgir det. Det lyseblå feltet er turens snøtemperatur ({tMin.toFixed(1)} til {tMaks.toFixed(1)} °C), og ● markerer produkter i smøringen din. Fargene er tilnærminger til etikettfarger. Binder og baseklister uten temperaturområde vises som en strek ved 0. Kilde: {sys.kilde}
+        Området i °C slik {sys.navn} oppgir det. Det lyseblå feltet er turens snøtemperatur ({tMin.toFixed(1).replace('.', ',')} til {tMaks.toFixed(1).replace('.', ',')} °C), og ● markerer produkter i smøringen din. Fargene er tilnærminger til etikettfarger. Binder og baseklister uten temperaturområde vises som en strek ved 0. Kilde: {sys.kilde}
       </ThemedText>
     </View>
   );

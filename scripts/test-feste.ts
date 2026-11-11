@@ -15,7 +15,7 @@ const tur = planTur({ seksjoner: sek, timer: dag, startTs: Date.parse('2026-11-0
 // flatt/stigning = varmt (−3), utforkjøring = kaldt (−9): festet skal regnes ut fra de varme
 tur.seksjoner.forEach((s, i) => { s.tEff = i < 10 ? -3 : -9; });
 const st = byggStabel(tur, snø, sek);
-ok(st.begrunnelse[0].includes('bare der du trenger feste') && st.begrunnelse[0].includes('varm -3.0'), 'feste regnes bare fra flatt og stigning (varm = −3,0 selv om halve løypa er −9)');
+ok(st.begrunnelse[0].includes('bare der du trenger feste') && st.begrunnelse[0].includes('varm -3,0'), 'feste regnes bare fra flatt og stigning (varm = −3,0 selv om halve løypa er −9)');
 ok(sek.slice(10).every((s) => s.stigning < FESTE_MIN_STIGNING) && sek.slice(0, 10).every((s) => s.stigning >= FESTE_MIN_STIGNING), 'nedoverbakke ligger utenfor festet, stigning inni');
 
 // svak utforbakke (−0,3° ≈ −0,5 %) er IKKE feste (man staker), mens flatt (0°) og svak stigning (0,3°) er det
@@ -23,7 +23,7 @@ const svak = mk([...Array(10).fill(0), ...Array(5).fill(0.3), ...Array(5).fill(-
 const tur2 = planTur({ seksjoner: svak, timer: dag, startTs: Date.parse('2026-11-02T09:00:00Z'), tempoKmt: 7, refH: 800 });
 tur2.seksjoner.forEach((s, i) => { s.tEff = i < 15 ? -3 : -9; });
 const st2 = byggStabel(tur2, snø, svak);
-ok(st2.begrunnelse[0].includes('75 % av løypa') && st2.begrunnelse[0].includes('varm -3.0'), 'flatt og svak stigning teller (75 %), svak utforbakke utelates');
+ok(st2.begrunnelse[0].includes('75 % av løypa') && st2.begrunnelse[0].includes('varm -3,0'), 'flatt og svak stigning teller (75 %), svak utforbakke utelates');
 // nesten bare nedoverbakke (under 20 % feste): hele løypa brukes
 const ned = mk([...Array(2).fill(0.5), ...Array(18).fill(-0.5)]);
 const tur2b = planTur({ seksjoner: ned, timer: dag, startTs: Date.parse('2026-11-02T09:00:00Z'), tempoKmt: 7, refH: 800 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { feilTekst } from '@/data/feil';
 import { neon } from '@/data/neon';
 
 /** Vurdering av feste: −2 veldig bakglatt (for kald smøring) … 0 god … +2 mye klabb (for varm, eller klister på tørr snø). */
@@ -40,7 +41,7 @@ export type NyLogg = Omit<Logg, 'id' | 'tid'>;
 
 export async function lagreLogg(rad: NyLogg): Promise<string | null> {
   const { error } = await neon().from('smoring_logg').insert(rad);
-  return error ? error.message ?? 'Kunne ikke lagre' : null;
+  return error ? feilTekst(error) : null;
 }
 
 export function useLoggliste(på: boolean) {
@@ -48,14 +49,14 @@ export function useLoggliste(på: boolean) {
   const [feil, setFeil] = useState('');
   const last = useCallback(async () => {
     const { data, error } = await neon().from('smoring_logg').select('*').order('tid', { ascending: false }).limit(200);
-    if (error) setFeil(error.message ?? 'Kunne ikke hente loggen');
+    if (error) setFeil(feilTekst(error));
     else { setFeil(''); setListe((data ?? []) as Logg[]); }
   }, []);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- henter loggen fra databasen når den slås på
   useEffect(() => { if (på) void last(); }, [på, last]);
   const slett = useCallback(async (id: string) => {
     const { error } = await neon().from('smoring_logg').delete().eq('id', id);
-    if (error) setFeil(`Kunne ikke slette: ${error.message}`);
+    if (error) setFeil(`Kunne ikke slette: ${feilTekst(error)}`);
     void last();
   }, [last]);
   return { liste, feil, last, slett };

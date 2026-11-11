@@ -24,7 +24,7 @@ export function Loypevelger({ løyper, valgt, onVelg, maksListe = 8 }: { løyper
         <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: l.farge }} />
         <Text style={{ flex: 1, color: theme.text, fontSize: 16, fontWeight: aktiv ? '800' : '600' }} numberOfLines={1}>{l.navn}</Text>
         {l.type ? <Text style={{ color: theme.textSecondary, fontSize: 13 }}>{typeNavn[l.type]}</Text> : null}
-        <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', minWidth: 64, textAlign: 'right' }}>{(l.lengde_m / 1000).toFixed(1)} km</Text>
+        <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', minWidth: 64, textAlign: 'right' }}>{(l.lengde_m / 1000).toFixed(1).replace('.', ',')} km</Text>
       </Pressable>
     );
   };
@@ -47,7 +47,7 @@ export function Loypevelger({ løyper, valgt, onVelg, maksListe = 8 }: { løyper
       <Pressable onPress={() => setÅpen(!åpen)} style={[ramme, { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, gap: 10 }]}>
         {nå ? <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: nå.farge }} /> : null}
         <Text style={{ flex: 1, color: theme.text, fontSize: 16, fontWeight: '700' }} numberOfLines={1}>
-          {nå ? `${nå.navn} · ${(nå.lengde_m / 1000).toFixed(1)} km` : `Velg løype (${løyper.length})`}
+          {nå ? `${nå.navn} · ${(nå.lengde_m / 1000).toFixed(1).replace('.', ',')} km` : `Velg løype (${løyper.length})`}
         </Text>
         <Text style={{ color: theme.textSecondary, fontSize: 16 }}>{åpen ? '▲' : '▼'}</Text>
       </Pressable>
