@@ -656,10 +656,6 @@ function Oversikt({ område, liste, feil, prøvIgjen, onVelg, onVelgNabo, egne }
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>
       <Hero />
       <View style={styles.innhold}>
-        <Kort>
-          <ThemedText type="smallBold">Laget til eget bruk, delt for testing</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">Skiglede er et hobbyprosjekt som jeg bruker selv og deler åpent en periode. Innlogging med Google fungerer, og når du er logget inn kan du lagre skiene og smøringen din på kontoen. Rådene er veiledende, og du må selv vurdere føret. Snødata er en modell og viser ikke kunstsnø.</ThemedText>
-        </Kort>
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>LØYPER {område.navn.toUpperCase()}</ThemedText>
         <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : liste === null ? (feil ? 'Fikk ikke tak i løypene. Sjekk nettforbindelsen og prøv igjen.' : 'Henter løypene …') : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
         {feil && liste === null ? <View style={styles.rad}><Chip aktiv={false} onPress={prøvIgjen}>↻ Prøv igjen</Chip></View> : null}
