@@ -206,3 +206,11 @@ Kilder som er sjekket mot dette (10. nov 2026): langrenn.com (rubbeski/zeroski: 
 - **Glider ved hull i lageret:** nærmeste glider til snøtemperaturen (kaldeste ved likhet), med advarsel hvis ingen dekker temperaturen.
 - **Prognose som ikke rekker hele turen:** advarsel, og resten regnes på siste kjente time.
 - **Skjema:** `db/schema.sql` er lest ut fra den levende databasen 11. nov 2026.
+
+## Snødybde og skiføre (seNorge)
+
+Kilde: seNorge snømodell (NVE og Meteorologisk institutt), 1 km-rutenett, daglig, via MET THREDDS (`senorge/seNorge_snow/sd` og `/ski`). Værjobben (`scripts/oppdater_snoe.py`, samme workflow som været) leser hele landet i ett kall og lagrer verdien i cellen der hver løype starter, tre siste døgn, i `public.snoe`.
+- `klasse` er NVEs skiføre-klasse: 0 ingen snø, 1 lite/begrenset, 2 våt snø, 3 tørr snø. `dybde_cm` er modellert snødybde.
+- Det er modell, ikke måling (Tryvannshøgda: modell 14 cm mot Yr-stasjonen 37 cm 13. nov). Brukes til å se om og hvor det er snø, ikke til eksakte centimeter. Modellen kjenner ikke kunstsnø.
+- App: løypelista viser «● 14 cm · lite snø» per løype, områdevelgeren viser snø per område og kan vise bare steder med snø (mest først). Klasse 0 gir en advarsel over smørerådet med knapp for «Løypa har kunstsnø» (som justerer smøringen); klasse 1 gir en kort «lite snø»-melding. Smørerådet selv blir stående, siden modellen ikke ser kunstsnø.
+- Ikke gjort: sammenligning av våt/tørr-klassen mot motorens egen snøtype. Den gir ikke ny informasjon utover tine/frys-regnskapet motoren allerede har, og kunne bare gi motstridende meldinger.

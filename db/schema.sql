@@ -29,6 +29,12 @@ CREATE TABLE vaer (
   timer jsonb NOT NULL,                      -- rader: [ts, temp_c, nedbor_mm, rh, vind_ms, sw_j_m2]
   oppdatert timestamptz NOT NULL DEFAULT now());
 
+-- Snødybde og skiføre per løype fra seNorge (NVE/MET, 1 km-rutenett, daglig), skrevet av scripts/oppdater_snoe.py. Tre siste døgn.
+-- klasse: 0 ingen snø, 1 lite/begrenset, 2 våt snø, 3 tørr snø. Verdien er cellen der løypa starter (modell, ikke måling).
+CREATE TABLE snoe (
+  omrade text NOT NULL, loype_id text NOT NULL, dato date NOT NULL, dybde_cm real, klasse smallint,
+  oppdatert timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (omrade, loype_id, dato));
+
 -- ============ Brukerdata (bare eieren, via RLS) ============
 
 CREATE TABLE profil (
@@ -93,6 +99,8 @@ CREATE TABLE weather_hours (
 CREATE POLICY omrade_les ON omrade FOR SELECT TO anonymous, authenticated USING (true);
 CREATE POLICY loype_les ON loype FOR SELECT TO anonymous, authenticated USING (true);
 CREATE POLICY vaer_les ON vaer FOR SELECT TO anonymous, authenticated USING (true);
+CREATE POLICY snoe_les ON snoe FOR SELECT TO anonymous, authenticated USING (true);
+CREATE POLICY snoe_skriv ON snoe FOR ALL TO vaer_skriver USING (true) WITH CHECK (true);
 CREATE POLICY konkurranse_les ON konkurranse FOR SELECT TO anonymous, authenticated USING (true);
 
 -- Værjobben (vaer_skriver) skriver områder, løyper, vær og rutevær

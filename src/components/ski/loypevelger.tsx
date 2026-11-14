@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
+import { KLASSE_FARGE, snøTekst, type Snø } from '@/data/snoe';
 import { løypeFarge } from './loypefarger';
 
-export type ValgLøype = { id: string; navn: string; lengde_m: number; type?: 'retur' | 'sloyfe' };
+export type ValgLøype = { id: string; navn: string; lengde_m: number; type?: 'retur' | 'sloyfe'; snø?: Snø | null };
 
 const typeNavn = { retur: 'tur-retur', sloyfe: 'sløyfe' } as const;
 
@@ -23,6 +24,7 @@ export function Loypevelger({ løyper, valgt, onVelg, maksListe = 8 }: { løyper
         style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: aktiv ? theme.backgroundSelected : 'transparent' }}>
         <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: l.farge }} />
         <Text style={{ flex: 1, color: theme.text, fontSize: 16, fontWeight: aktiv ? '800' : '600' }} numberOfLines={1}>{l.navn}</Text>
+        {l.snø && l.snø.klasse !== null ? <Text accessibilityLabel={`Snø: ${snøTekst(l.snø)}`} style={{ color: KLASSE_FARGE[l.snø.klasse], fontSize: 12, fontWeight: '800' }}>{`● ${snøTekst(l.snø)}`}</Text> : null}
         {l.type ? <Text style={{ color: theme.textSecondary, fontSize: 13 }}>{typeNavn[l.type]}</Text> : null}
         <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', minWidth: 64, textAlign: 'right' }}>{(l.lengde_m / 1000).toFixed(1).replace('.', ',')} km</Text>
       </Pressable>

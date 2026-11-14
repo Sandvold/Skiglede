@@ -13,6 +13,7 @@ import { løypeFeilFor, useLøyper, useLøypeliste, type LøypeInfo } from '@/da
 import { EgneRuter } from '@/components/ski/egne-ruter';
 import { useEgneRuterIOmråde } from '@/data/egneruter';
 import { Loypevelger } from '@/components/ski/loypevelger';
+import { useSnø, type Snø, type SnøData } from '@/data/snoe';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -86,6 +87,8 @@ function Tall({ verdi, tekst }: { verdi: string; tekst: string }) {
 }
 
 /** Løypesiden: med ferske værdata vises hele siden. Uten (nytt område, eller værjobben har stoppet) vises løypa uten smøreråd, med beskjed om hvorfor. */
+const medSnø = <T extends { id: string }>(ls: T[], område: string, snø: SnøData | null) => ls.map((l) => ({ ...l, snø: (snø?.perLøype.get(`${område}/${l.id}`) ?? null) as Snø | null }));
+
 function Detalj(props: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
   const status = useVærstatus(props.område);
   if (!status.fersk) return <DetaljUtenVær {...props} status={status} />;
@@ -94,6 +97,7 @@ function Detalj(props: { løype: Løype; liste: LøypeInfo[]; område: Område; 
 
 /** Løypeinfo som ikke avhenger av vær: kart, lengde, høyde og profil. Smøreråd vises først når været er ferskt (maks 4 døgn gammelt), så ingen får råd bygget på gamle data. */
 function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void; status: Værstatus }) {
+  const snø = useSnø();
   const theme = useTheme();
   const gruppe = løype.variantAv ?? løype.id;
   const varianter = liste.filter((l) => l.id === gruppe || l.variantAv === gruppe);
@@ -126,7 +130,7 @@ function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: {
         <Pressable onPress={onTilbake} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
         </Pressable>
-        <Loypevelger løyper={liste.filter((l) => !l.variantAv)} valgt={gruppe} onVelg={onVelg} />
+        <Loypevelger løyper={medSnø(liste.filter((l) => !l.variantAv), område.id, snø)} valgt={gruppe} onVelg={onVelg} />
         {varianter.length > 1 && (
           <View style={styles.rad}>
             {varianter.map((v) => (
@@ -156,6 +160,7 @@ function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: {
 }
 
 function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake }: { løype: Løype; liste: LøypeInfo[]; område: Område; onVelg: (id: string) => void; onTilbake: () => void }) {
+  const snø = useSnø();
   const theme = useTheme();
   const LØYPER = liste;
   const værdata = useVær(område);
@@ -209,6 +214,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
   const [underlagLagret, setUnderlagLagret] = useLagret<{ dato: string; u: Underlag } | null>(`skiglede.underlag.${valgtLøype.id}`, null);
   const underlag: Underlag = underlagLagret && underlagLagret.dato === osloDato(0) ? underlagLagret.u : INGEN_UNDERLAG;
   const setUnderlag = (u: Underlag) => setUnderlagLagret({ dato: osloDato(0), u });
+  const snøHer = snø?.perLøype.get(`${område.id}/${valgtLøype.id}`) ?? null;
   const [skiparkLagret, setSkipark] = useStedData<Ski[]>(NØKKEL_SKIPARK, TOM_LISTE);
   const skipark = premium ? skiparkLagret : (TOM_LISTE as Ski[]);
   const [varsel, setVarsel] = useState<Varsel | null>(null);
@@ -325,7 +331,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
         <Pressable onPress={onTilbake} style={[styles.chip, { alignSelf: 'flex-start', backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Alle løyper</Text>
         </Pressable>
-        <Loypevelger løyper={LØYPER.filter((l) => !l.variantAv)} valgt={gruppe} onVelg={onVelg} />
+        <Loypevelger løyper={medSnø(LØYPER.filter((l) => !l.variantAv), område.id, snø)} valgt={gruppe} onVelg={onVelg} />
         {varianter.length > 1 && (
           <View style={styles.rad}>
             {varianter.map((v) => (
@@ -459,6 +465,17 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               ? 'Henter prognose fra Yr …'
               : 'Ingen prognose tilgjengelig.'}
         </ThemedText>
+        {snøHer && snøHer.klasse === 0 && !underlag.kunstsnø.på ? (
+          <View style={[styles.advarsel, { borderColor: '#E3A64A' }]}>
+            <ThemedText type="smallBold">❄ Ingen naturlig snø i løypa ifølge seNorge ({snøHer.dybde !== null ? `${Math.round(snøHer.dybde)} cm` : '0 cm'}). Rådene under forutsetter snødekke.</ThemedText>
+            <ThemedText type="small">Mange steder har kunstsnø, som modellen ikke vet om. Har løypa kunstsnø, så kryss av her, så justeres smøringen for den.</ThemedText>
+            <View style={styles.rad}>
+              <Chip aktiv={false} onPress={() => setUnderlag({ ...underlag, kunstsnø: { ...underlag.kunstsnø, på: true } })}>Løypa har kunstsnø</Chip>
+            </View>
+          </View>
+        ) : snøHer && snøHer.klasse === 1 && !underlag.kunstsnø.på ? (
+          <ThemedText type="small">❄ Lite snø i løypa ifølge seNorge ({snøHer.dybde !== null ? `${Math.round(snøHer.dybde)} cm` : 'tynt dekke'}). Sjekk at det er skiføre før du smører.</ThemedText>
+        ) : null}
         {prognoseKort ? <ThemedText type="small">⚠ Prognosen rekker ikke til turen er ferdig. Siste timer er regnet med siste kjente vær, så smøringen er mer usikker.</ThemedText> : null}
         {varselFeil && harPrognose ? <ThemedText type="small">⚠ Fikk ikke hentet ny prognose. Viser den sist lagrede.</ThemedText> : null}
         {prognoseGammel ? <ThemedText type="small">⚠ Prognosen er {Math.round(prognoseAlderT)} timer gammel. Trykk «Oppdater vær» før du smører.</ThemedText> : null}
@@ -629,6 +646,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
 }
 
 function Oversikt({ område, liste, feil, prøvIgjen, onVelg, onVelgNabo, egne }: { område: Område; liste: LøypeInfo[] | null; feil: boolean; prøvIgjen: () => void; onVelg: (id: string) => void; onVelgNabo: (omrade: string, id: string) => void; egne: ReturnType<typeof useEgneRuterIOmråde> }) {
+  const snø = useSnø();
   const theme = useTheme();
   const [boks, setBoks] = useState<KartBoks | null>(null);
   const naboer = useNaboløyper(område, useOmråder(), boks);
@@ -641,7 +659,7 @@ function Oversikt({ område, liste, feil, prøvIgjen, onVelg, onVelgNabo, egne }
         <ThemedText themeColor="textSecondary">{LØYPER.length ? 'Trykk på en løype i kartet, eller velg fra lista.' : liste === null ? (feil ? 'Fikk ikke tak i løypene. Sjekk nettforbindelsen og prøv igjen.' : 'Henter løypene …') : 'Løypene for dette området er ikke lagt inn ennå. Kartet viser området.'}</ThemedText>
         {feil && liste === null ? <View style={styles.rad}><Chip aktiv={false} onPress={prøvIgjen}>↻ Prøv igjen</Chip></View> : null}
         <Oversiktskart key={område.id} løyper={LØYPER.map((l) => ({ id: l.id, navn: l.navn, punkter: l.oversikt }))} naboer={naboer} onBoks={setBoks} onVelgNabo={onVelgNabo} visning={område.visning} onVelg={onVelg} />
-        <Loypevelger løyper={LØYPER} valgt={null} onVelg={onVelg} />
+        <Loypevelger løyper={medSnø(LØYPER, område.id, snø)} valgt={null} onVelg={onVelg} />
         <EgneRuter mine={egne.mine} bruker={egne.bruker} område={område} onVelg={onVelg} />
         <ThemedText type="small" themeColor="textSecondary">Løypedata: Turrutebasen og Kartverket (CC BY 4.0) og © OpenStreetMap-bidragsytere (ODbL).</ThemedText>
       </View>

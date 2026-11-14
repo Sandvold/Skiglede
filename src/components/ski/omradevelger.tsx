@@ -3,6 +3,7 @@ import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-nativ
 
 import { avstandKm, avstandTil, prøvOmråderIgjen, sorterOmråder, useFavoritter, useOmråde, useOmråder, useOmrådeFeil } from '@/data/omrader';
 import { usePosisjonNå } from '@/data/posisjon';
+import { KLASSE_FARGE, useSnø } from '@/data/snoe';
 
 type Sted = { navn: string; type: string; kommune: string; lat: number; lon: number };
 
@@ -56,6 +57,8 @@ export function Områdevelger() {
   const [åpen, setÅpen] = useState(false);
   const [søk, setSøk] = useState('');
   const [sted, setSted] = useState<Sted | null>(null);
+  const snø = useSnø();
+  const [kunSnø, setKunSnø] = useState(false);
   const stedsforslag = useStedssøk(sted ? '' : søk);
   // Valgt sted: områdene sorteres etter avstand til stedet (ikke posisjonen din)
   // Søker du, brukes valgt sted, ellers første stedstreff, som sentrum: områdene fra databasen kommer først, navnetreff øverst, så nærmest.
@@ -65,8 +68,10 @@ export function Områdevelger() {
   const dist = (o: (typeof liste)[number]) => avstandKm(sentrum!, { lat: o.visning.lat, lon: o.visning.lon });
   const sortert = (aktivt ? [...liste].sort((x, y) => (sted ? 0 : Number(y.navn.toLowerCase().includes(q)) - Number(x.navn.toLowerCase().includes(q))) || dist(x) - dist(y)) : sorterOmråder(liste, pos, fav))
     .filter((o) => aktivt || !q || o.navn.toLowerCase().includes(q));
+  const harSnø = (o: (typeof liste)[number]) => (snø?.perOmråde.get(o.id)?.klasse ?? 0) >= 1;
+  const sortertSnø = kunSnø && snø ? sortert.filter(harSnø).sort((x, y) => (snø.perOmråde.get(y.id)?.dybde ?? 0) - (snø.perOmråde.get(x.id)?.dybde ?? 0)) : sortert;
   const MAKS_VIST = 25; // favoritter og nærmeste først; resten via søk, så listen er rask også med hundrevis av områder
-  const vist = aktivt ? sortert.slice(0, 8) : q ? sortert : sortert.slice(0, MAKS_VIST);
+  const vist = kunSnø && snø ? sortertSnø.slice(0, MAKS_VIST) : aktivt ? sortert.slice(0, 8) : q ? sortert : sortert.slice(0, MAKS_VIST);
   const km = (o: (typeof liste)[number]) => {
     const d = aktivt ? dist(o) : avstandTil(o, pos);
     return d === null ? '' : d < 1 ? ' · under 1 km' : ` · ${Math.round(d)} km`;
@@ -105,10 +110,17 @@ export function Områdevelger() {
             <Text style={{ color: '#12386B', fontWeight: '700', fontSize: 15 }}>{`📍 Nærmeste: ${nærmeste.navn}`}</Text>
             <Text style={{ color: '#55708F', fontSize: 12 }}>{pos ? 'Følger posisjonen din' : 'Tillat posisjon i nettleseren for å finne nærmeste'}</Text>
           </Pressable>}
+          {snø ? (
+            <Pressable accessibilityRole="switch" accessibilityState={{ checked: kunSnø }} onPress={() => setKunSnø(!kunSnø)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14 }}>
+              <Text style={{ color: kunSnø ? '#1F6FEB' : '#12386B', fontWeight: '800', fontSize: 14 }}>{kunSnø ? '✓ Bare steder med snø nå (mest snø først)' : '❄ Vis bare steder med snø nå'}</Text>
+            </Pressable>
+          ) : null}
+          {kunSnø && snø && !vist.length ? <Text style={{ color: '#55708F', fontSize: 13, paddingHorizontal: 14, paddingVertical: 8 }}>Ingen steder med snø i modellen akkurat nå.</Text> : null}
           {vist.map((o) => (
             <View key={o.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: !automatisk && o.id === område.id ? '#E8F1FB' : 'transparent' }}>
               <Pressable accessibilityRole="radio" accessibilityState={{ selected: !automatisk && o.id === område.id }} onPress={() => { setOmråde(o.id); setÅpen(false); setSted(null); }} style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 14 }}>
                 <Text style={{ color: '#12386B', fontWeight: '700', fontSize: 15 }}>{`${o.navn}${km(o)}`}</Text>
+                {snø?.perOmråde.get(o.id)?.klasse != null ? <Text style={{ color: KLASSE_FARGE[snø.perOmråde.get(o.id)!.klasse!], fontSize: 12, fontWeight: '800' }}>{`● ${(snø.perOmråde.get(o.id)!.dybde ?? 0) >= 1 ? `${Math.round(snø.perOmråde.get(o.id)!.dybde!)} cm` : 'ingen snø'}`}</Text> : null}
               </Pressable>
               <Pressable accessibilityRole="button" accessibilityLabel={fav.includes(o.id) ? `Fjern ${o.navn} fra favoritter` : `Gjør ${o.navn} til favoritt`} onPress={() => bytt(o.id)} style={{ paddingVertical: 10, paddingHorizontal: 14 }}>
                 <Text style={{ color: fav.includes(o.id) ? '#E0A100' : '#9FB3CC', fontSize: 20 }}>{fav.includes(o.id) ? '★' : '☆'}</Text>
@@ -128,7 +140,7 @@ export function Områdevelger() {
               ))}
             </View>
           ) : null}
-          {!aktivt && vist.length < sortert.length ? <Text style={{ color: '#55708F', fontSize: 12, paddingHorizontal: 14, paddingVertical: 8 }}>{`Viser ${vist.length} av ${sortert.length}. Søk for å finne flere.`}</Text> : null}
+          {!aktivt && vist.length < sortertSnø.length ? <Text style={{ color: '#55708F', fontSize: 12, paddingHorizontal: 14, paddingVertical: 8 }}>{`Viser ${vist.length} av ${sortertSnø.length}. Søk for å finne flere.`}</Text> : null}
         </View>
       ) : null}
     </View>
