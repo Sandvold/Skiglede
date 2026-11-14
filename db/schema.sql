@@ -35,6 +35,11 @@ CREATE TABLE snoe (
   omrade text NOT NULL, loype_id text NOT NULL, dato date NOT NULL, dybde_cm real, klasse smallint,
   oppdatert timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (omrade, loype_id, dato));
 
+-- Anonym sidetelling (bare web): antall visninger per side per døgn. Ingen ID eller persondata. Skrives bare via funksjonen tell_side()
+-- (security definer, kjent liste over sider); tabellen har RLS uten policyer, så bare eieren leser den (Neon-konsollen).
+CREATE TABLE sidetelling (dag date NOT NULL, side text NOT NULL, antall integer NOT NULL DEFAULT 0, PRIMARY KEY (dag, side));
+-- CREATE FUNCTION public.tell_side(p_side text) ... execute for anonymous, authenticated. Se src/data/telling.ts.
+
 -- ============ Brukerdata (bare eieren, via RLS) ============
 
 CREATE TABLE profil (

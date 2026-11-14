@@ -1,10 +1,13 @@
-import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Slot, ThemeProvider, usePathname } from 'expo-router';
+import { tellSide } from '@/data/telling';
 import { PremiumProvider } from '@/data/premium';
 import { useEffect } from 'react';
 import { Platform, ScrollView, Text, Pressable, useColorScheme } from 'react-native';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const sti = usePathname();
+  useEffect(() => { tellSide(sti.replace(/\/+$/, '') || '/'); }, [sti]);
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <PremiumProvider>

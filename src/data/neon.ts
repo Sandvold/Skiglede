@@ -73,3 +73,9 @@ export async function lesAnonymt<T = unknown>(spørring: string, steg?: { t: str
   sett('json');
   return JSON.parse(tekst) as T[];
 }
+
+/** Kaller en databasefunksjon (rpc) anonymt. Brukes til sidetellingen; feil ignoreres av kalleren. */
+export async function rpcAnonymt(funksjon: string, args: Record<string, unknown>): Promise<void> {
+  const token = await anonymToken();
+  await fetchFrist(`${DATA_API_URL}/rpc/${funksjon}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(args) });
+}

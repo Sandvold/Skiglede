@@ -13,6 +13,7 @@ import { løypeFeilFor, useLøyper, useLøypeliste, type LøypeInfo } from '@/da
 import { EgneRuter } from '@/components/ski/egne-ruter';
 import { useEgneRuterIOmråde } from '@/data/egneruter';
 import { Loypevelger } from '@/components/ski/loypevelger';
+import { tellSide } from '@/data/telling';
 import { useSnø, type Snø, type SnøData } from '@/data/snoe';
 import { Oversiktskart } from '@/components/ski/oversiktskart';
 import { MaxContentWidth, Spacing, tempFarge } from '@/constants/theme';
@@ -676,6 +677,7 @@ export default function Hjem() {
   const { v: åpenSide } = useLocalSearchParams<{ v?: string }>();
   const pushet = useRef(false);
   const setValgt = (id: string | null) => {
+    if (id) tellSide('lopye');
     if (id && !pushet.current) { pushet.current = true; router.push({ pathname: '/', params: { v: '1' } }); }
     if (!id && pushet.current) { router.back(); return; } // effekten under nullstiller valget når historikkpunktet er borte
     setValgtLagret(id);
