@@ -269,7 +269,7 @@ export function useVærstatus(o: Område): Værstatus {
   }, [o.id, data, versjon]);
 }
 
-/** Værhistorikk for området: ferdig innebygd kopi først, byttes mot siste fra databasen (oppdateres hver fjerde time uten nytt bygg). */
+/** Værhistorikk for området: ferdig innebygd kopi først, byttes mot siste fra databasen (oppdateres hver sjette time uten nytt bygg). */
 export function useVær(o: Område): Værdata {
   return useVærMedVersjon(o)[0];
 }
@@ -297,7 +297,7 @@ async function hentVærFraDb(o: Område): Promise<void> {
   varsleVær();
 }
 
-/** «Oppdater vær»: hent værhistorikken på nytt (databasen oppdateres hver fjerde time). Viste data står urørt til nye er hentet. */
+/** «Oppdater vær»: hent værhistorikken på nytt (databasen oppdateres hver sjette time). Viste data står urørt til nye er hentet. */
 export const oppdaterHistorikk = (o: Område) => hentVærFraDb(o);
 
 function useVærMedVersjon(o: Område): [Værdata, number] {

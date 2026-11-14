@@ -22,7 +22,7 @@ CREATE TABLE loype (
   oppdatert timestamptz NOT NULL DEFAULT now(), innhold_hash text,
   PRIMARY KEY (omrade, id));
 
--- Værhistorikk per område: opptil 14 døgn fra MET Nordic, oppdatert hver fjerde time av værjobben (scripts/oppdater_vaer.py).
+-- Værhistorikk per område: opptil 14 døgn fra MET Nordic, oppdatert hver sjette time av værjobben (scripts/oppdater_vaer.py).
 -- referansehoyde_m er høyden til MET-cellen (dit temperaturene hører hjemme), ikke løypenes snitthøyde.
 CREATE TABLE vaer (
   omrade text PRIMARY KEY, referansehoyde_m real NOT NULL, celle integer[] NOT NULL, kolonner text[] NOT NULL,

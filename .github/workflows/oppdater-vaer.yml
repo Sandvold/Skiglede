@@ -1,11 +1,11 @@
 name: Oppdater værhistorikk
 
-# Henter siste 14 døgn fra MET Nordic Analysis hver fjerde time (minutt 17 UTC) for alle områder i tabellen `omrade` i Neon,
+# Henter siste 14 døgn fra MET Nordic Analysis hver sjette time (minutt 17 UTC) for alle områder i tabellen `omrade` i Neon,
 # og laster det opp til tabellen `vaer`. Bare nye timer hentes fra MET. Appen leser fra databasen, så ingenting committes og Netlify bygger ikke på nytt.
 # Nytt område: legg en rad i `omrade` (se docs/regelspesifikasjon.md). Krever hemmeligheten DATABASE_URL (rollen vaer_skriver).
 on:
   schedule:
-    - cron: '17 */4 * * *'
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 
 permissions:

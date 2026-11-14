@@ -122,7 +122,7 @@ function DetaljUtenVær({ løype, liste, område, onVelg, onTilbake, status }: {
     : nettFeil
       ? 'Sjekk nettforbindelsen og prøv igjen. Løypa kan du se på i mellomtiden.'
       : dager === null
-      ? `${område.navn} er nytt, og værjobben har ikke samlet data her ennå. Den kjører hver 4. time, så smøretips kommer automatisk. Løypa er klar til å se på i mellomtiden.`
+      ? `${område.navn} er nytt, og værjobben har ikke samlet data her ennå. Den kjører hver 6. time, så smøretips kommer automatisk. Løypa er klar til å se på i mellomtiden.`
       : `Siste oppdatering er for gammel til at vi vil gi smøreråd (grensen er ${VÆR_FERSK_DØGN} døgn). Det kan bety at værtjenesten har stoppet. Tipsene kommer tilbake når nye data er hentet.`;
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={{ alignItems: 'center', paddingBottom: Spacing.six }}>

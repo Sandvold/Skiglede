@@ -273,7 +273,7 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
         ))}
       </View>
       <Chip aktiv={del} onPress={() => setDel(!del)}>{del ? '✓ Del med andre Pro-brukere' : 'Del med andre Pro-brukere (av)'}</Chip>
-      <ThemedText type="small" themeColor="textSecondary">Delte ruter kan alle Pro-brukere se, inkludert startpunktet. Del ikke ruter som starter ved hjemmet ditt. Delte ruter får værhistorikk lagret fra opplastingen (opptil 90 døgn, oppdatert hver fjerde time); først etter første oppdatering brukes den, til da brukes 14 døgn.</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">Delte ruter kan alle Pro-brukere se, inkludert startpunktet. Del ikke ruter som starter ved hjemmet ditt. Delte ruter får værhistorikk lagret fra opplastingen (opptil 90 døgn, oppdatert hver sjette time); først etter første oppdatering brukes den, til da brukes 14 døgn.</ThemedText>
       {(() => {
         const v = mine.ruter.find((x) => x.id === valgt);
         if (!v || (bruker && v.user_id && v.user_id !== bruker.id)) return null;

@@ -95,7 +95,7 @@ Testes med `scripts/test-lager-skipark.ts`.
 - `snø.ts` vind: ved maks 1–2 °C og snittvind ≥ 5 m/s (kl. 08–16) regnes dagen ikke som tinedag; dempingen er lineær fra 3 til 5 m/s og forsvinner mellom 2 og 4 °C [Bruker, terskler Forslag].
 - `tur.ts`: seksjoner à ca. 250 m, tid per seksjon fra tempo, temperatur justert 0,6 °C/100 m mot cellehøyden, sol-tillegg opptil +2 °C per 500 W/m² dempet av skog. Terreng (implementert): `scripts/hent_terreng.py` henter hellingsretning, helning og horisont i 16 retninger (ut til 3 km) hvert 250. m fra Kartverkets høydedata (dtm1) og lagrer det som `terreng` i trails.json. `terreng.ts` regner solhøyde og -retning (`sol.ts`); er sola lavere enn horisonten i solretningen, blir direkte sol (70 % av innstrålingen) blokkert; ellers skaleres den med cos(innfallsvinkel)/sin(solhøyde), maks 2. Skog demper i tillegg: 75 % ved solhøyde ≤10° ned til 45 % ved ≥40° (lineært; ca. 70 % i november, ca. 55 % i mars) [Forslag]. Høydedata er terreng uten trær og uten skyer i regnestykket (innstrålingen kommer fra MET, eller anslås fra skydekke).
 - `sol.ts`: solposisjon og innstråling fra skydekke (Haurwitz + Kasten–Czeplak) for Yr-prognosen, som mangler stråling.
-- Værhistorikk oppdateres hver 4. time (cron `17 */4 * * *`) av GitHub Actions (`.github/workflows/oppdater-vaer.yml`, `hent_vaer.py --json`).
+- Værhistorikk oppdateres hver 6. time (cron `17 */6 * * *`) av GitHub Actions (`.github/workflows/oppdater-vaer.yml`, `hent_vaer.py --json`).
 - `stabel.ts`: hardvoks (binder → base → dagens voks → dekke) eller klister (baseklister → isklister → mellomlag → dagens klister). Klister når snøen er omdannet og skarphet ≥ 50 eller varmest ≥ +0,5 °C.
 - Turdagen bruker observert vær 2. november som stand-in for prognose til Yr er koblet på.
 
@@ -170,7 +170,7 @@ Ikke gjort ennå (funn fra researchen): gammel-snø-område for flere Swix-produ
 
 ## Områder, løyper og værhistorikk i Neon
 - Områdene ligger i tabellen `omrade` (id, navn, lat/lon for værpunktet, kartutsnitt `vis_*`, snøtemperatur `vinter_*`, `ref_hoyde_m`, `loypefil`, `vaer`, `rekkefolge`). Appen leser den ved start; de tre første områdene ligger også innebygd som reserve.
-- **Nytt område:** sett inn en rad i `omrade` (loypefil = filnavnet i `src/data/`, f.eks. `trails-geilo.json`), legg løypefilen i `src/data/`, og push. GitHub laster løypene opp (`last_opp_loyper.py`) og værjobben henter været for området (`oppdater_vaer.py`, hver fjerde time). Ingen Netlify-bygg og ingen kodeendring.
+- **Nytt område:** sett inn en rad i `omrade` (loypefil = filnavnet i `src/data/`, f.eks. `trails-geilo.json`), legg løypefilen i `src/data/`, og push. GitHub laster løypene opp (`last_opp_loyper.py`) og værjobben henter været for området (`oppdater_vaer.py`, hver sjette time). Ingen Netlify-bygg og ingen kodeendring.
 - **Nye løyper:** endre løypefilen og push. Løypene hentes bare når de blir sett på (`loype`: lett liste + full løype).
 - Prognosen (Yr) hentes direkte fra MET (`api.met.no`, locationforecast) av appen (`src/data/varsel.ts`) med lat/lon/høyde fra området. `netlify/functions/varsel.mjs` er ikke lenger i bruk.
 
