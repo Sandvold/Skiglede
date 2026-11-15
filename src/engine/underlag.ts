@@ -103,6 +103,8 @@ export function medUnderlag(stabel: Stabel, u: Underlag, tur: Tur): Stabel {
     if (klassisk) advarsler.push('Hard saltet løype: staking får fordel over diagonalgang med festesmøring (NSF). Test festet på et prøvestykke før start, og smør ikke tykkere enn nødvendig.');
     tillegg.push('Saltet snø er kald, hard og slipende, med en tynn saltlakefilm på sålen (Swix: salt gir tykkere smørefilm): velg en hard, slitesterk glider (kald) og ikke gå varmere. Medium til grov rille leder bort laken og hindrer sug.');
     advarsler.push('Smør etter snøtemperaturen, ikke lufta: smører du etter lufta, kladder og iser festet. Be om å få teste ski på prøveområdet.');
+    // [Gemini-research, ikke verifisert mot kilde; tidsrommet er ikke oppgitt her med vilje] Salt virker ikke varig: det tynnes ut av smeltevann, sol og trafikk. Gjelder mest renn med sen start.
+    advarsler.push('Salt holder løypa fast og tørr bare en stund: det vaskes ut av smeltevann, sol og trafikk. Går du lenge etter salting (typisk sen rennstart), kan løypa være blitt våt og grov med mye fritt vann. Spør arrangøren når det ble saltet, og vurder da vått klister (f.eks. KN44/KX75) og grovere struktur.');
     partielt(s, 'Salt');
   }
   const lag = stabel.lag.map((l) => (erGlid(l) && tillegg.length ? { ...l, merknad: [l.merknad, ...tillegg].filter(Boolean).join(' ') } : l));

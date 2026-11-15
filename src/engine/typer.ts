@@ -5,6 +5,7 @@ export type Vær = {
   rh: number; // 0-1
   vind: number; // m/s
   sw: number; // J/m² per time (kortbølget innstråling)
+  sky?: number; // skydekke 0–1. Bare Yr-prognosen har det (historikken mangler); brukes til utstråling om natta
 };
 
 /** [lon, lat, høyde m, avstand m, skog 0/1] */

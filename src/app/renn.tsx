@@ -358,7 +358,7 @@ function RennMedOmråde({ renn, område, egenLøype, løypeStatus }: { renn: Ren
     const sisteTs = alle[alle.length - 1].ts;
     const dekket = ønsket + 6 * 3600_000 <= sisteTs;
     const startTs = dekket ? ønsket : sisteTs - 8 * 3600_000;
-    const rå = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO_RENN[stil], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted });
+    const rå = planTur({ seksjoner, timer: alle.filter((t) => t.ts >= startTs - 3 * 3600_000), startTs, tempoKmt: TEMPO_RENN[stil], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted, snøType: analyserSnø(alle, startTs, null).type });
     // Man salter ikke kald løype: salt-valget finnes bare når snøen blir 0 °C eller varmere, og slås ellers av.
     const saltMulig = rå.tMaksRå >= 0;
     const underlag = saltMulig || !underlagValgt.salt.på ? underlagValgt : { ...underlagValgt, salt: { ...underlagValgt.salt, på: false } };

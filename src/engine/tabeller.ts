@@ -86,7 +86,8 @@ const T = (navn: string, farge: string, hex: string, omr: [number, number], linj
 const R = (navn: string, farge: string, hex: string, omr: [number, number], linje: Produkt['linje'], merknad?: string, rolle?: 'binder'): Produkt => ({ merke: 'rode', navn, farge, hex, omr, linje, merknad, rolle });
 const S = (navn: string, farge: string, hex: string, omr: [number, number], linje: Produkt['linje'], merknad?: string, rolle?: 'binder'): Produkt => ({ merke: 'skigo', navn, farge, hex, omr, linje, merknad, rolle });
 
-// Toko Nordic (toko.ch). Hardvoks X-Cold −30…−12, blå −30…−7, rød −10…−2, gul −2…0. Klister blå −30…−7, rød −8…−1, gul −2…0.
+// Toko Nordic (toko.ch). Hardvoks X-Cold −30…−12, blå −30…−7, rød −10…−2, gul −2…0 (snøtemperatur; lufttemperatur for rød er 0…−10). Klister blå −30…−7, rød −8…−1, gul −2…0.
+// Tokos farger følger ikke Swix': rød er den universelle mellomvoksen (nysnø, gammel og kunstsnø), og dekker det Swix kaller blå extra og lyse fiolett. Kontrollert mot forhandlere 15. nov 2026.
 export const TOKO_HARDVOKS: Produkt[] = [
   T('Toko X-Cold', 'GripWax X-Cold', '#9FD0F0', [-30, -12], 'V'),
   T('Toko Blå', 'GripWax blå', '#2F6FD0', [-30, -7], 'V'),
@@ -111,7 +112,7 @@ export const TOKO_GLIDER: Produkt[] = [
 // Rode (skiwax.ca, produktsider R-serien). P-serien er hardvoks, K-serien klister, R-serien fluorfri glider.
 export const RODE_HARDVOKS: Produkt[] = [
   R('Rode P20', 'Grønn (P20)', '#3DA35D', [-15, -4], 'V'),
-  R('Rode P36', 'Blå Special Multigrade (P36)', '#2F6FD0', [-12, -3], 'V'),
+  R('Rode P36', 'Blå Special Multigrade (P36)', '#2F6FD0', [-12, -3], 'V', 'Rode oppgir to områder: Nord-Europa −12…−5, Mellom-Europa −7…−3. Området her er det samlede (butikkens tall)'),
   R('Rode P28', 'Blå Super Weiss (P28)', '#8FC8F0', [-7, -1], 'V'),
   R('Rode P40', 'Viola (P40)', '#8A4FC0', [-4, 0], 'V'),
   R('Rode P50', 'Rossa (P50)', '#D6403A', [0, 3], 'V'),
@@ -119,9 +120,18 @@ export const RODE_HARDVOKS: Produkt[] = [
 export const RODE_ANDRE: Produkt[] = [
   R('Rode P32', 'Blå Super (P32)', '#3A7FDB', [-10, -1], 'V'),
   R('Rode P38', 'Blå Super Extra (P38)', '#1F4FB5', [-10, -1], 'V'),
-  R('Rode P46', 'Viola Special Multigrade (P46)', '#9B63CF', [-5, 0], 'V'),
+  R('Rode P46', 'Viola Special Multigrade (P46)', '#9B63CF', [-5, 0], 'V', 'Rode oppgir to områder: Nord-Europa −5…−3, Mellom-Europa −2…0. Området her er det samlede (butikkens tall)'),
   R('Rode K46', 'Rossa Special klister (K46)', '#A81C1C', [0, 3], 'K'),
+  // Lagt til 15. nov 2026 fra skiwax.ca produktsider (temperaturområdene er butikkens og Rodes anbefaling, ikke kontrollert mot etikett)
+  R('Rode P15', 'Grønn Special (P15)', '#2E8B57', [-30, -10], 'V'),
+  R('Rode P10', 'Alaska (P10)', '#CFE8F7', [-30, -15], 'V', 'Aller kaldeste hardvoks'),
+  R('Rode P30', 'Blå I (P30)', '#4A8FE0', [-6, -2], 'V'),
+  R('Rode P34', 'Blå II (P34)', '#2F6FD0', [-8, -2], 'V'),
+  R('Rode P42', 'Viola Extra (P42)', '#8A4FC0', [-3, 1], 'V', 'Rode: Mellom-Europa 0…+1. Mellomting før klister rundt null'),
+  R('Rode P52', 'Rot Extra (P52)', '#C8453A', [0, 2], 'V'),
+  R('Rode P60', 'Gul (P60)', '#F2CF3A', [1, 4], 'V', 'Varmeste hardvoks fra Rode'),
 ];
+export const RODE_BINDER = R('Rode P70', 'Svart base (P70)', '#2B2B2B', [0, 0], 'V', 'Grunnvoks/binder, alle temperaturer', 'binder');
 export const RODE_KLISTER: Produkt[] = [
   R('Rode K20', 'Blå klister (K20)', '#2F6FD0', [-7, -3], 'K'),
   R('Rode K36', 'Violet Special klister (K36)', '#7A3FB0', [-5, -1], 'K'),
@@ -221,11 +231,11 @@ export const TOKO: Smøresystem = {
   hardvoks: TOKO_HARDVOKS, klister: TOKO_KLISTER, glider: TOKO_GLIDER,
   binder: { mild: TOKO_BINDER, skarp: TOKO_BINDER },
   baseKlister: TOKO_BASEKLISTER, isKlister: TOKO_KLISTER[0],
-  blåExtra: [TOKO_HARDVOKS[1]],
+  blåExtra: [TOKO_HARDVOKS[2]], // Toko Rød (−2…−10) tilsvarer Swix' blå extra i området; Toko Blå (−7…−30) er mye kaldere. Fargene er ikke de samme som hos Swix [Bruker]
   universalVarm: TOKO_UNIVERSAL, universalKald: TOKO_UNIVERSAL,
   utenMellomlag: [],
   ising: 'Minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
-  kilde: 'toko.ch og forhandlere, hentet 3. nov 2026. Ikke kontrollert mot etikett.',
+  kilde: 'toko.ch og forhandlere (bl.a. skiwax.ca, jans.com, ekkip-sports.com), hentet 3. nov og kontrollert 15. nov 2026. Ikke kontrollert mot etikett.',
   oversikt: [
     { tittel: 'Hardvoks (GripWax)', liste: [...TOKO_HARDVOKS, TOKO_BINDER] },
     { tittel: 'Klister', liste: [...TOKO_KLISTER, TOKO_BASEKLISTER, TOKO_UNIVERSAL] },
@@ -236,14 +246,15 @@ export const TOKO: Smøresystem = {
 export const RODE: Smøresystem = {
   id: 'rode', navn: 'Rode',
   hardvoks: RODE_HARDVOKS, klister: RODE_KLISTER, glider: RODE_GLIDER,
+  binder: { mild: RODE_BINDER, skarp: RODE_BINDER },
   baseKlister: RODE_BASEKLISTER,
   blåExtra: [RODE_ANDRE.find((p) => p.navn === 'Rode P38')!, RODE_HARDVOKS[1]],
   universalVarm: RODE_UNIVERSAL, universalKald: RODE_UNIVERSAL,
   utenMellomlag: [],
   ising: 'Minst tre tynne lag hardvoks over klisteren, litt hardere enn temperaturen tilsier.',
-  kilde: 'skiwax.ca (Rode-oversikt og produktsider), hentet 3. nov 2026. Ikke kontrollert mot etikett.',
+  kilde: 'skiwax.ca (Rode-oversikt og produktsider), hentet 3. nov og kontrollert 15. nov 2026. Ikke kontrollert mot etikett.',
   oversikt: [
-    { tittel: 'Hardvoks (P-serien)', liste: [...RODE_HARDVOKS, ...RODE_ANDRE.filter((p) => p.linje === 'V')] },
+    { tittel: 'Hardvoks (P-serien)', liste: [...RODE_HARDVOKS, ...RODE_ANDRE.filter((p) => p.linje === 'V'), RODE_BINDER] },
     { tittel: 'Klister (K-serien)', liste: [...RODE_KLISTER, ...RODE_ANDRE.filter((p) => p.linje === 'K'), RODE_BASEKLISTER, RODE_UNIVERSAL] },
     { tittel: 'Glidevoks R-serien (fluorfri)', liste: RODE_GLIDER },
   ],

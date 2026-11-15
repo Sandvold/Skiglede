@@ -255,7 +255,7 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
     const sisteHist = TIMER[TIMER.length - 1].ts;
     const alle = varsel ? [...TIMER, ...varsel.timer.filter((t) => t.ts > sisteHist)] : TIMER;
     const snø = snøMedUnderlag(analyserSnø(alle, startTs, snøStatus), underlag);
-    const turFor = (s: 'klassisk' | 'skoyting') => turMedUnderlag(planTur({ seksjoner, timer: vindu(alle, startTs), startTs, tempoKmt: TEMPO[s][modus], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted }), underlag);
+    const turFor = (s: 'klassisk' | 'skoyting') => turMedUnderlag(planTur({ seksjoner, timer: vindu(alle, startTs), startTs, tempoKmt: TEMPO[s][modus], refH: værdata.referansehoyde_m, terreng: løype.terreng, sted: område.sted, snøType: snø.type }), underlag);
     const turK = turFor('klassisk');
     const turS = stil === 'skoyting' ? turFor('skoyting') : null;
     const tur = turS ?? turK;

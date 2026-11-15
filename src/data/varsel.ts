@@ -15,7 +15,7 @@ const tilVarsel = (d: Rå, område: Område, fraCache: boolean): Varsel => {
     fraCache,
     timer: d.timer.map(([t, temp, nedbor, rh, vind, sky]) => {
       const ts = Date.parse(t);
-      return { ts, temp, nedbor, rh, vind, sw: innstråling(ts, sky, sted.lat, sted.lon) };
+      return { ts, temp, nedbor, rh, vind, sw: innstråling(ts, sky, sted.lat, sted.lon), sky: Math.min(1, Math.max(0, sky / 100)) };
     }),
   };
 };

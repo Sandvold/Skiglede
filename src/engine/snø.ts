@@ -10,7 +10,8 @@ export const SNØ = {
   solFull: 600, // W/m² der solskorpa er full
   minSmelt: 0.25, // en dag teller som ekte tine/frys-syklus for «omdannet» bare med minst så mye smelting; svake dager (litt over 0 med vind) bidrar bare til skarphetsindeksen
   solVekt: 0.7, // solskorpe er tynnere (1–2 mm) enn en ordentlig tine/frys-skorpe
-  solMinTemp: -3, // solskorpe dannes ned til ca. −3 °C lufttemperatur
+  solMinTemp: -3, // solskorpe dannes ned til ca. −3 °C lufttemperatur på snø som ikke er omdannet fra før
+  solMinTempOmdannet: -5, // på snø som allerede er omdannet (lav albedo 0,45–0,7, så 200 W/m² absorbert krever ca. 400–600 W/m² innstråling) kan skorpe dannes ned til ca. −5 °C [Forslag]. Støtte: laboratorieforsøk i kaldt vindtunnel (Hokkaido) ved ca. −5 ± 4 °C med ≥ 200 W/m² absorbert; avalanche.org: sol-skorpe kan dannes under null. Ikke målt mot ski-føre
   solVindFra: 6, // m/s der vind begynner å kjøle bort solvarmen
   solVindBredde: 4,
   frostFull: 6, // natt på -6 °C eller kaldere gir full skarphet
@@ -22,7 +23,7 @@ export const SNØ = {
   minSum: 0.8, // uvektet tine/frys-sum under dette er ikke nok til å kalle snøen omdannet: én svak mild dag er ikke omdanning, men to moderate eller én sterk er det [Forslag]
   tørrRh: 0.75, // [Bruker] vindkjøling (fordampning) gjelder bare i tørr luft: full ved relativ fuktighet ≤ 0,75 [Forslag]
   fuktigRh: 0.9, // ved ≥ 0,9 gir vinden ingen kjøling (kilder: vind øker smeltingen i fuktig luft over 0 °C)
-  vindMåneder: [11, 12, 1, 2], // [Bruker] bare tidlig i sesongen (f.eks. vinterferien uke 7–8); utover våren sterkere sol og mer fuktig luft
+  vindMåneder: [11, 12, 1, 2, 3], // [Bruker] «inntil mars»: tørr vind ved 1–2 °C gir lite smelting til og med mars; i april tar sola over (soleddet overstyrer uansett på solrike dager)
   vindStille: 3, // under dette (m/s, snitt kl. 08-16 UTC) har vinden ingen effekt på smelting
   vindIngenSmelting: 5, // ved dette og over er det nesten ingen smelting når det bare er svakt over null
   vindMaksT: 4, // over denne maks-temperaturen (°C) tiner det uansett, så vinden dempes ikke
@@ -35,6 +36,12 @@ export const SNØ = {
  * er den fortsatt omdannet selv om beviset (tine/frys, regn) er eldre enn værvinduet [Bruker]. Bare ny snø nullstiller, alder gjør det ikke.
  */
 export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | null): SnøAnalyse {
+  const a = analyserSnøMed(timer, nå, forrige, SNØ.solMinTemp);
+  // Er snøen allerede omdannet (av andre tegn), er albedoen lav og solskorpa kan dannes ved kaldere luft. Utvidelsen kan bare gi mer smelting, så snøen forblir omdannet.
+  return a.type === 'omdannet' && SNØ.solMinTempOmdannet < SNØ.solMinTemp ? analyserSnøMed(timer, nå, forrige, SNØ.solMinTempOmdannet) : a;
+}
+
+function analyserSnøMed(timer: Vær[], nå: number, forrige: SnøStatus | null | undefined, solMinTemp: number): SnøAnalyse {
   const h = timer.filter((x) => x.ts <= nå && x.ts > nå - SNØ.dager * DAG);
   const dagNr = (ts: number) => Math.floor(ts / DAG);
   const siste = dagNr(nå);
@@ -68,7 +75,7 @@ export function analyserSnø(timer: Vær[], nå: number, forrige?: SnøStatus | 
       const tempSmelt = clamp(maks / SNØ.tempFull, 0, 1) * f;
       // 2) Sol: solskorpe kan dannes også ved minusgrader når sola varmer overflaten (innstråling over ca. 200 W/m², Cambridge/J. Glaciology «Energy balance and formation of sun crust»), men sterk vind kjøler den bort.
       const solW = solMaks / 3600;
-      const solSmelt = maks >= SNØ.solMinTemp ? SNØ.solVekt * clamp((solW - SNØ.solFra) / (SNØ.solFull - SNØ.solFra), 0, 1) * (1 - clamp((vind - SNØ.solVindFra) / SNØ.solVindBredde, 0, 1)) : 0;
+      const solSmelt = maks >= solMinTemp ? SNØ.solVekt * clamp((solW - SNØ.solFra) / (SNØ.solFull - SNØ.solFra), 0, 1) * (1 - clamp((vind - SNØ.solVindFra) / SNØ.solVindBredde, 0, 1)) : 0;
       const smelt = Math.max(tempSmelt, solSmelt);
       smeltDag = smelt;
       syklus = clamp(-nattMin / SNØ.frostFull, 0, 1) * (0.7 + 0.3 * clamp(solMaks / 800_000, 0, 1)) * smelt;
