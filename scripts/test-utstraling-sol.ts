@@ -82,7 +82,7 @@ ok(!medUnderlag(st, INGEN_UNDERLAG, tur).advarsler.some((x) => x.includes('vaske
 
 // --- merketabeller
 for (const n of ['Rode P10', 'Rode P15', 'Rode P30', 'Rode P34', 'Rode P42', 'Rode P52', 'Rode P60', 'Rode P70']) ok(!!produkt(n), `${n} finnes`);
-ok(produkt('Rode P42')!.omr[0] === -3 && produkt('Rode P42')!.omr[1] === 1, 'Rode P42 −3…+1');
+ok(produkt('Rode P42')!.omr[0] === -3 && produkt('Rode P42')!.omr[1] === 0, 'Rode P42 −3…0 (Nord-Europa)');
 ok(produkt('Rode P70')!.rolle === 'binder' && RODE.binder?.mild.navn === 'Rode P70', 'Rode har binder P70');
 ok(SYSTEMER.toko.blåExtra?.[0].navn === 'Toko Rød', 'Toko: mellomlaget er Toko Rød, ikke Toko Blå');
 // Hele stabelen for hvert merke skal fortsatt bygges for et par temperaturer uten å kræsje, og Toko Gul får Toko Rød under seg

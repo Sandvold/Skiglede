@@ -111,23 +111,23 @@ export const TOKO_GLIDER: Produkt[] = [
 
 // Rode (skiwax.ca, produktsider R-serien). P-serien er hardvoks, K-serien klister, R-serien fluorfri glider.
 export const RODE_HARDVOKS: Produkt[] = [
-  R('Rode P20', 'Grønn (P20)', '#3DA35D', [-15, -4], 'V'),
-  R('Rode P36', 'Blå Special Multigrade (P36)', '#2F6FD0', [-12, -3], 'V', 'Rode oppgir to områder: Nord-Europa −12…−5, Mellom-Europa −7…−3. Området her er det samlede (butikkens tall)'),
+  R('Rode P20', 'Grønn (P20)', '#3DA35D', [-15, -7], 'V', 'Nord-Europa-område (Rode). Mellom-Europa −10…−4'),
+  R('Rode P36', 'Blå Special Multigrade (P36)', '#2F6FD0', [-12, -5], 'V', 'Nord-Europa-område (Rode). Mellom-Europa −7…−3'),
   R('Rode P28', 'Blå Super Weiss (P28)', '#8FC8F0', [-7, -1], 'V'),
-  R('Rode P40', 'Viola (P40)', '#8A4FC0', [-4, 0], 'V'),
+  R('Rode P40', 'Viola (P40)', '#8A4FC0', [-4, -2], 'V', 'Nord-Europa-område (Rode). Mellom-Europa rundt 0'),
   R('Rode P50', 'Rossa (P50)', '#D6403A', [0, 3], 'V'),
 ];
 export const RODE_ANDRE: Produkt[] = [
-  R('Rode P32', 'Blå Super (P32)', '#3A7FDB', [-10, -1], 'V'),
-  R('Rode P38', 'Blå Super Extra (P38)', '#1F4FB5', [-10, -1], 'V'),
-  R('Rode P46', 'Viola Special Multigrade (P46)', '#9B63CF', [-5, 0], 'V', 'Rode oppgir to områder: Nord-Europa −5…−3, Mellom-Europa −2…0. Området her er det samlede (butikkens tall)'),
+  R('Rode P32', 'Blå Super (P32)', '#3A7FDB', [-10, -3], 'V', 'Nord-Europa-område (Rode). Mellom-Europa −3…−1'),
+  R('Rode P38', 'Blå Super Extra (P38)', '#1F4FB5', [-10, -3], 'V', 'Nord-Europa-område (Rode). Mellom-Europa −5…−1'),
+  R('Rode P46', 'Viola Special Multigrade (P46)', '#9B63CF', [-5, -3], 'V', 'Nord-Europa-område (Rode). Mellom-Europa −2…0'),
   R('Rode K46', 'Rossa Special klister (K46)', '#A81C1C', [0, 3], 'K'),
   // Lagt til 15. nov 2026 fra skiwax.ca produktsider (temperaturområdene er butikkens og Rodes anbefaling, ikke kontrollert mot etikett)
   R('Rode P15', 'Grønn Special (P15)', '#2E8B57', [-30, -10], 'V'),
   R('Rode P10', 'Alaska (P10)', '#CFE8F7', [-30, -15], 'V', 'Aller kaldeste hardvoks'),
   R('Rode P30', 'Blå I (P30)', '#4A8FE0', [-6, -2], 'V'),
   R('Rode P34', 'Blå II (P34)', '#2F6FD0', [-8, -2], 'V'),
-  R('Rode P42', 'Viola Extra (P42)', '#8A4FC0', [-3, 1], 'V', 'Rode: Mellom-Europa 0…+1. Mellomting før klister rundt null'),
+  R('Rode P42', 'Viola Extra (P42)', '#8A4FC0', [-3, 0], 'V', 'Nord-Europa-område (Rode). Mellom-Europa 0…+1. Mellomting før klister rundt null'),
   R('Rode P52', 'Rot Extra (P52)', '#C8453A', [0, 2], 'V'),
   R('Rode P60', 'Gul (P60)', '#F2CF3A', [1, 4], 'V', 'Varmeste hardvoks fra Rode'),
 ];
