@@ -13,6 +13,12 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {}
+    },
+    "ios-simulator": {
+      "ios": {
+        "simulator": true
       }
     }
   }

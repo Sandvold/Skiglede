@@ -8,7 +8,9 @@
     "scheme": "skiglede",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "no.sandvold.skiglede",
+      "icon": "./assets/images/icon.png",
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
