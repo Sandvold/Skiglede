@@ -42,8 +42,9 @@ CREATE TABLE sidetelling (dag date NOT NULL, side text NOT NULL, antall integer 
 
 -- ============ Brukerdata (bare eieren, via RLS) ============
 
+-- Premium er foreløpig gratis for alle innloggede (default true). Sett DEFAULT false og betaling når det skal bli betalt.
 CREATE TABLE profil (
-  user_id text PRIMARY KEY DEFAULT auth.user_id(), premium boolean NOT NULL DEFAULT false, pro boolean NOT NULL DEFAULT false,
+  user_id text PRIMARY KEY DEFAULT auth.user_id(), premium boolean NOT NULL DEFAULT true, pro boolean NOT NULL DEFAULT false,
   opprettet timestamptz NOT NULL DEFAULT now(), oppdatert timestamptz NOT NULL DEFAULT now());
 
 -- Synk av lager, skipark, valgte ski, steder m.m. for premium (nøkler `skiglede.*`, se src/data/lagring.ts)
