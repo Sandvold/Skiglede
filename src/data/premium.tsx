@@ -17,6 +17,8 @@ type Tilstand = {
   feil: string;
   loggInnMedGoogle: () => Promise<void>;
   loggUt: () => Promise<void>;
+  /** Sletter kontoen og alle data på serveren for godt, og logger ut. Returnerer feiltekst eller null. */
+  slettKonto: () => Promise<string | null>;
   /** Midlertidig bryter mellom premium og vanlig (ingen ekte betaling ennå). */
   byttPremium: () => Promise<void>;
   /** Midlertidig bryter for pro (kun for premium, ingen betaling ennå). */
@@ -175,6 +177,21 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     setPro(false);
   }, []);
 
+  const slettKonto = useCallback(async (): Promise<string | null> => {
+    const { error } = await neon().rpc('slett_min_konto');
+    if (error) return feilTekst(error);
+    try {
+      await neon().auth.signOut();
+    } catch {
+      // kontoen er allerede borte, økta er ugyldig uansett
+    }
+    synket.current = false;
+    setBruker(null);
+    setPremium(false);
+    setPro(false);
+    return null;
+  }, []);
+
   const byttPremium = useCallback(async () => {
     if (!bruker) return;
     const ny = !premium;
@@ -200,7 +217,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   const pro = premium && proFlagg;
 
-  const verdi = useMemo(() => ({ klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, byttPremium, byttPro }), [klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, byttPremium, byttPro]);
+  const verdi = useMemo(() => ({ klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, slettKonto, byttPremium, byttPro }), [klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, slettKonto, byttPremium, byttPro]);
   return <Ctx.Provider value={verdi}>{children}</Ctx.Provider>;
 }
 

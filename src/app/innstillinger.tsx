@@ -111,7 +111,9 @@ function PrivateRuter() {
 
 function Konto() {
   const theme = useTheme();
-  const { klar, bruker, premium, pro, feil, loggInnMedGoogle, loggUt, byttPremium, byttPro } = usePremium();
+  const { klar, bruker, premium, pro, feil, loggInnMedGoogle, loggUt, slettKonto, byttPremium, byttPro } = usePremium();
+  const [bekreftSlett, setBekreftSlett] = useState(false);
+  const [slettFeil, setSlettFeil] = useState('');
   if (!klar) return null;
   return (
     <Kort>
@@ -132,6 +134,20 @@ function Konto() {
           <View style={{ flexDirection: 'row' }}>
             <Chip aktiv={false} onPress={loggUt}>Logg ut</Chip>
           </View>
+          {bekreftSlett ? (
+            <>
+              <ThemedText type="small">Slette kontoen for godt? Lager, ski, steder, logg og egne ruter slettes fra serveren og kan ikke hentes tilbake. Data på denne enheten blir liggende.</ThemedText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <Chip aktiv onPress={async () => { const f = await slettKonto(); if (f) setSlettFeil(`Kunne ikke slette kontoen: ${f}`); else setBekreftSlett(false); }}>Ja, slett kontoen</Chip>
+                <Chip aktiv={false} onPress={() => { setSlettFeil(''); setBekreftSlett(false); }}>Avbryt</Chip>
+              </View>
+            </>
+          ) : (
+            <View style={{ flexDirection: 'row' }}>
+              <Chip aktiv={false} onPress={() => setBekreftSlett(true)}>Slett konto og data</Chip>
+            </View>
+          )}
+          {slettFeil ? <ThemedText type="small" style={{ color: theme.accent }}>{slettFeil}</ThemedText> : null}
         </>
       )}
       {feil ? <ThemedText type="small" style={{ color: theme.accent }}>{feil}</ThemedText> : null}
