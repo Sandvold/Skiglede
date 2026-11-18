@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Løype } from '@/data/rute';
 import type { Terreng } from '@/engine/terreng';
 import { feilTekst } from '@/data/feil';
-import { neon } from '@/data/neon';
+import { lesAnonymt, neon } from '@/data/neon';
+import { avstandKm, type Område } from '@/data/omrader';
 
 export type MinRute = { id: string; navn: string; lengde_m: number; punkter: Løype['punkter']; start_lat: number; start_lon: number; terreng?: Terreng[] | null; delt?: boolean; user_id?: string };
 
@@ -76,6 +77,33 @@ export async function hentRutevær(lat: number, lon: number): Promise<{ referans
     timer.push([`${h.time[i]}:00Z`, t, h.precipitation[i] ?? 0, (h.relative_humidity_2m[i] ?? 0) / 100, h.wind_speed_10m[i] ?? 0, (h.shortwave_radiation[i] ?? 0) * 3600]);
   }
   return { referansehoyde_m: j.elevation ?? 0, timer };
+}
+
+/** Grenser for å bruke et områdes værhistorikk i stedet for Open-Meteo. Målt mellom nabo-områder (nov 2026): innen ca. 5 km og 150 m høydeforskjell avviker timestemperaturen typisk 0,3–0,9 °C etter høydekorreksjon; nedbør avviker mer (14-døgnssum ±20–40 %). Større avstand eller høydeforskjell gir tydelig dårligere treff. */
+export const NÆRVÆR_MAKS_KM = 5;
+export const NÆRVÆR_MAKS_HØYDE_M = 150;
+
+/**
+ * Værhistorikk fra nærmeste område med ferske data (MET Nordic via vår egen jobb), hvis det ligger nær nok ruta. Ingen kall til tredjepart.
+ * Returnerer null når ingen område passer, så kalleren kan bruke reservekilden. `kilde` sier hvilket område og hvor langt unna.
+ */
+export async function hentNærVær(lat: number, lon: number, startHøyde: number, områder: Område[]): Promise<{ referansehoyde_m: number; timer: (string | number)[][]; kilde: string } | null> {
+  const kandidater = områder
+    .map((o) => ({ o, km: avstandKm({ lat, lon }, o.sted) }))
+    .filter((k) => k.km <= NÆRVÆR_MAKS_KM)
+    .sort((a, b) => a.km - b.km);
+  for (const { o, km } of kandidater) {
+    try {
+      const rad = (await lesAnonymt<{ referansehoyde_m: number; timer: (string | number)[][]; oppdatert: string }>(`vaer?select=referansehoyde_m,timer,oppdatert&omrade=eq.${encodeURIComponent(o.id)}`))[0];
+      if (!rad?.timer || rad.timer.length < 14 * 24 * 0.9) continue;
+      if (Date.now() - Date.parse(rad.oppdatert) > 4 * 86400_000) continue; // gammel historikk brukes ikke
+      if (Math.abs(rad.referansehoyde_m - startHøyde) > NÆRVÆR_MAKS_HØYDE_M) continue;
+      return { referansehoyde_m: rad.referansehoyde_m, timer: rad.timer, kilde: `${o.navn} (${km.toFixed(1)} km unna)` };
+    } catch {
+      // prøv neste område eller reservekilden
+    }
+  }
+  return null;
 }
 
 /** Lagret værhistorikk for en delt rute (MET Nordic Analysis, oppdatert hver sjette time fra opplasting), eller null hvis den ikke finnes ennå. */

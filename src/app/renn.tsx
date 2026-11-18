@@ -20,7 +20,7 @@ import { NØKKEL_SKIPARK, NØKKEL_VALGTE, TOM_LISTE, useStedData, type Ski } fro
 import { StedVelger } from '@/components/ski/sted';
 import * as DocumentPicker from 'expo-document-picker';
 import { byggFraGpx, lesGpx, terrengFor } from '@/data/gpx';
-import { hentLagretRutevær, hentRennRute, hentRutevær, lagreRenn, useAdminStatus, useMineRuter, type MinRute } from '@/data/minerute';
+import { hentLagretRutevær, hentNærVær, hentRennRute, hentRutevær, lagreRenn, useAdminStatus, useMineRuter, type MinRute } from '@/data/minerute';
 import { useLagret } from '@/data/lagring';
 import { usePremium } from '@/data/premium';
 import { hentVarsel, lesVarselCache, type Varsel } from '@/data/varsel';
@@ -300,11 +300,17 @@ function EgenRute({ mine, valgt, velg, modus }: { mine: ReturnType<typeof useMin
 
 /** Råd for en egen rute: været hentes for rutens start, resten regnes som for andre renn. */
 function EgenRuteDetalj({ rute }: { rute: MinRute }) {
-  const [vær, setVær] = useState<{ referansehoyde_m: number; timer: (string | number)[][] } | null>(null);
+  const [vær, setVær] = useState<{ referansehoyde_m: number; timer: (string | number)[][]; kilde?: string } | null>(null);
   const [feil, setFeil] = useState('');
+  const områder = useOmråder();
   useEffect(() => {
-    (rute.delt ? hentLagretRutevær(rute.id) : Promise.resolve(null)).catch(() => null).then((l) => l ?? hentRutevær(rute.start_lat, rute.start_lon)).then(setVær).catch((e) => setFeil(feilTekst(e)));
-  }, [rute.id]);
+    // Rekkefølge: lagret historikk for delt rute, så nærmeste område (egen jobb, ingen tredjepart), og til slutt Open-Meteo.
+    (rute.delt ? hentLagretRutevær(rute.id) : Promise.resolve(null)).catch(() => null)
+      .then((l) => l ?? hentNærVær(rute.start_lat, rute.start_lon, Math.round(rute.punkter[0][2]), områder).catch(() => null))
+      .then((l) => l ?? hentRutevær(rute.start_lat, rute.start_lon))
+      .then(setVær).catch((e) => setFeil(feilTekst(e)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rute.id, områder.length]);
   if (feil) return <Kort><ThemedText>Fikk ikke hentet været for ruten: {feil}</ThemedText></Kort>;
   if (!vær) return <Kort><ThemedText themeColor="textSecondary">Henter været for ruten …</ThemedText></Kort>;
   const løype: Løype = { id: rute.id, navn: rute.navn, lengde_m: rute.lengde_m, punkter: rute.punkter, terreng: rute.terreng ?? undefined };
@@ -313,7 +319,12 @@ function EgenRuteDetalj({ rute }: { rute: MinRute }) {
     visning: { lon: rute.start_lon, lat: rute.start_lat, z: 12 }, vær, vinter: [-18, 1],
   };
   const renn: Renn = { id: `egen-${rute.id}`, navn: rute.navn, omrade: område.id, dato: null, starttid: '10:00', stil: null, lengde_km: rute.lengde_m / 1000, loype_id: null, testdata: false, merknad: null };
-  return <RennMedOmråde renn={renn} område={område} egenLøype={løype} />;
+  return (
+    <>
+      <ThemedText type="small" themeColor="textSecondary">{vær.kilde ? `Været er hentet fra ${vær.kilde} (Data from MET Norway).` : 'Været for ruten er hentet for startpunktet (Open-Meteo, basert på data fra MET Norway).'}</ThemedText>
+      <RennMedOmråde renn={renn} område={område} egenLøype={løype} />
+    </>
+  );
 }
 
 /** Glideren på festeoppsettet (glidesonen), eller dagens glider i skøyting. */
