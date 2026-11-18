@@ -18,13 +18,13 @@ concurrency:
 jobs:
   vaer:
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # normalt ca. 6 min; stopp heller enn å blokkere neste kjøring i timevis hvis MET henger
+    timeout-minutes: 60  # normalt ca. 6 min; stopp heller enn å blokkere neste kjøring i timevis hvis MET henger
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install numpy pyproj psycopg2-binary netCDF4
+      - run: pip install numpy pyproj psycopg2-binary netCDF4 eccodes
       - name: Oppdater værhistorikk
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

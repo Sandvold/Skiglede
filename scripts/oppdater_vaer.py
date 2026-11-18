@@ -18,8 +18,30 @@ TIMEOUT_S = 240  # normalt tar ett område sekunder; hang MET, tar vi det neste 
 KILDE = "met"  # MET Nordic via OPeNDAP (gratis; data samles fra nå, se --vekst i hent_vaer.py) eller "openmeteo" (ett kall for hele vinduet; kommersiell bruk krever abonnement)
 
 
+# Renn utenfor MET Nordic (nord for 54 °N) samles fra DWD ICON-D2 fra nå av (se hent_vaer_icon.py). Bare steder som er lagt inn her eller i `omrade` samler.
+# Marcialonga (Moena, 1200 moh) samler siden november 2026; andre renn begynner å samle når de legges inn.
+UTENLANDSRENN = [("marcialonga", 46.37, 11.66, 1200)]
+NORDEN_FRA_BREDDE = 54.0
+
+
+def hent_icon(lat, lon, ref, dager, fil, navn):
+    try:
+        res = subprocess.run([sys.executable, "-I", os.path.join(HER, "hent_vaer_icon.py"), "--lat", str(lat), "--lon", str(lon), "--days", str(dager),
+                              "--ref-hoyde", str(ref), "--tidligere", fil, "--json", fil], timeout=TIMEOUT_S * 3)
+    except subprocess.TimeoutExpired:
+        print(f"{navn}: tidsavbrudd (ICON-D2), hopper over", file=sys.stderr)
+        return None
+    if res.returncode != 0:
+        print(f"{navn}: henting feilet (ICON-D2), hopper over", file=sys.stderr)
+        return None
+    d = json.load(open(fil))
+    return d if d.get("timer") else None
+
+
 def hent(lat, lon, ref, dager, fil, navn):
     """Henter værhistorikk for ett punkt. Open-Meteo: ett kall, og referansehøyden er modellens høyde (temperaturene gjelder den). MET: som før via hent_vaer.py."""
+    if lat < NORDEN_FRA_BREDDE:
+        return hent_icon(lat, lon, ref, dager, fil, navn)
     if KILDE == "openmeteo":
         try:
             d = vaer_openmeteo.hent(lat, lon, dager)
@@ -116,6 +138,8 @@ def main():
     cur = con.cursor()
     cur.execute("select id, lat, lon, ref_hoyde_m from public.omrade where vaer order by rekkefolge, id")
     rader = cur.fetchall()
+    ider = {r[0] for r in rader}
+    rader += [r for r in UTENLANDSRENN if r[0] not in ider]
     cur.execute("select id, lat, lon, ref_hoyde_m, opprettet from public.delte_ruter_for_vaer()")
     ruter = cur.fetchall()
     con.close()
