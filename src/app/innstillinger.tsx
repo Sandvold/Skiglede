@@ -10,6 +10,7 @@ import { skrivFraKonto, useLagret } from '@/data/lagring';
 import { EgneRuter } from '@/components/ski/egne-ruter';
 import { useOmråde } from '@/data/omrader';
 import { useMineRuter, type MinRute } from '@/data/minerute';
+import { APPLE_INNLOGGING } from '@/data/neon';
 import { usePremium } from '@/data/premium';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -57,7 +58,7 @@ function Tempo() {
 
 function PrivateRuter() {
   const theme = useTheme();
-  const { klar, bruker, loggInnMedGoogle } = usePremium();
+  const { klar, bruker, loggInnMedGoogle, loggInnMedApple } = usePremium();
   const mine = useMineRuter(!!bruker);
   const [bekreft, setBekreft] = useState<string | null>(null);
   const [status, setStatus] = useState('');
@@ -92,6 +93,7 @@ function PrivateRuter() {
         <>
           <ThemedText type="small" themeColor="textSecondary">Logg inn for å se og slette egne GPX-ruter.</ThemedText>
           <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
+          {APPLE_INNLOGGING ? <Chip aktiv onPress={loggInnMedApple}>Logg inn med Apple</Chip> : null}
         </>
       ) : mineEgne.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary">Du har ingen egne ruter. Legg til fra forsiden («Legg til egen tur»).</ThemedText>
@@ -111,7 +113,7 @@ function PrivateRuter() {
 
 function Konto() {
   const theme = useTheme();
-  const { klar, bruker, premium, pro, feil, loggInnMedGoogle, loggUt, slettKonto, byttPremium, byttPro } = usePremium();
+  const { klar, bruker, premium, pro, feil, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro } = usePremium();
   const [bekreftSlett, setBekreftSlett] = useState(false);
   const [slettFeil, setSlettFeil] = useState('');
   if (!klar) return null;
@@ -122,6 +124,7 @@ function Konto() {
         <>
           <ThemedText type="small" themeColor="textSecondary">Logg inn for å lagre lager og ski på kontoen, og for å laste opp egne ruter.</ThemedText>
           <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
+          {APPLE_INNLOGGING ? <Chip aktiv onPress={loggInnMedApple}>Logg inn med Apple</Chip> : null}
         </>
       ) : (
         <>

@@ -21,6 +21,9 @@ export function neonAnonym() {
 }
 
 /** Data-API-adressen (samme avledning som biblioteket gjør). */
+/** Settes til true først når Apple-leverandøren er lagt inn i Neon Auth (Services ID, .p8-nøkkel, Team ID, Key ID). Uten den feiler Apple-innlogging. */
+export const APPLE_INNLOGGING = false;
+
 export const DATA_API_URL = (() => {
   const m = /^(https?:\/\/)([^./]+)\.(.+?)(\/[^?#]*)?$/.exec(NEON_URL);
   return m ? `${m[1]}${m[2]}.apirest.${m[3]}${(m[4] ?? '').replace(/\/+$/, '')}/rest/v1` : NEON_URL;

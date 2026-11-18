@@ -64,13 +64,13 @@ async function jwt(): Promise<string> {
   return t;
 }
 
-export async function loggInnNativt(): Promise<string | void> {
+export async function loggInnNativt(leverandør: 'google' | 'apple' = 'google'): Promise<string | void> {
   try {
     WebBrowser.dismissBrowser();
   } catch {
     // ingen åpen nettleser
   }
-  const start = await auth('/sign-in/social', { method: 'POST', body: JSON.stringify({ provider: 'google', callbackURL: TILBAKE_SIDE, disableRedirect: true }) }, 'start');
+  const start = await auth('/sign-in/social', { method: 'POST', body: JSON.stringify({ provider: leverandør, callbackURL: TILBAKE_SIDE, disableRedirect: true }) }, 'start');
   if (!start?.url) throw new Error('[start] fikk ingen innloggingsadresse');
   const r = await WebBrowser.openAuthSessionAsync(start.url, APP_TILBAKE);
   if (r.type !== 'success') return `Innloggingen ble ikke fullført (${r.type}).`;

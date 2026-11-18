@@ -3,12 +3,13 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Chip, Kort } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
+import { APPLE_INNLOGGING } from '@/data/neon';
 import { usePremium } from '@/data/premium';
 import { useTheme } from '@/hooks/use-theme';
 
 /** Øverst til høyre: «Logg inn» og tannhjul når du er utlogget; ellers e-post og tannhjul. Premium/pro-brytere og «Logg ut» ligger i Innstillinger. */
 export function KontoHøyre() {
-  const { klar, bruker, feil, pågår, loggInnMedGoogle } = usePremium();
+  const { klar, bruker, feil, pågår, loggInnMedGoogle, loggInnMedApple } = usePremium();
   const router = useRouter();
   if (!klar) return null;
   const tilInnstillinger = () => router.push('/innstillinger');
@@ -47,7 +48,7 @@ export function KontoHøyre() {
 /** Viser innholdet bare for premium; ellers en forklaring med innlogging og bryter. */
 export function PremiumLås({ tittel, children }: { tittel: string; children: React.ReactNode }) {
   const theme = useTheme();
-  const { klar, bruker, premium, feil, loggInnMedGoogle, byttPremium } = usePremium();
+  const { klar, bruker, premium, feil, loggInnMedGoogle, loggInnMedApple, byttPremium } = usePremium();
   if (premium) return <>{children}</>;
   return (
     <Kort>
@@ -58,7 +59,10 @@ export function PremiumLås({ tittel, children }: { tittel: string; children: Re
       {!klar ? null : bruker ? (
         <Chip aktiv onPress={byttPremium}>Slå på premium (test, ingen betaling)</Chip>
       ) : (
-        <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
+        <>
+          <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
+          {APPLE_INNLOGGING ? <Chip aktiv onPress={loggInnMedApple}>Logg inn med Apple</Chip> : null}
+        </>
       )}
       {feil ? <ThemedText type="small" style={{ color: theme.accent }}>{feil}</ThemedText> : null}
     </Kort>
@@ -70,7 +74,7 @@ export const LåsKort = Kort;
 /** Viser innholdet bare for pro (konkurranse); ellers forklaring og bryter. Pro bygger på premium. */
 export function ProLås({ tittel, children }: { tittel: string; children: React.ReactNode }) {
   const theme = useTheme();
-  const { klar, bruker, pro, feil, loggInnMedGoogle, byttPro } = usePremium();
+  const { klar, bruker, pro, feil, loggInnMedGoogle, loggInnMedApple, byttPro } = usePremium();
   if (pro) return <>{children}</>;
   return (
     <Kort>
@@ -79,7 +83,10 @@ export function ProLås({ tittel, children }: { tittel: string; children: React.
         Pro er konkurransesmøring: velg et renn og få råd for hele løypa, med slipestruktur (rilljern), glidelag og festesmøring. Rådene er utgangspunkt for testing på rennmorgenen.
       </ThemedText>
       {!klar ? null : !bruker ? (
-        <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
+        <>
+          <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
+          {APPLE_INNLOGGING ? <Chip aktiv onPress={loggInnMedApple}>Logg inn med Apple</Chip> : null}
+        </>
       ) : (
         <Chip aktiv onPress={byttPro}>Slå på pro (test, ingen betaling)</Chip>
       )}

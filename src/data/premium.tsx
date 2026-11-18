@@ -16,6 +16,7 @@ type Tilstand = {
   pro: boolean;
   feil: string;
   loggInnMedGoogle: () => Promise<void>;
+  loggInnMedApple: () => Promise<void>;
   loggUt: () => Promise<void>;
   /** Sletter kontoen og alle data på serveren for godt, og logger ut. Returnerer feiltekst eller null. */
   slettKonto: () => Promise<string | null>;
@@ -145,12 +146,12 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     };
   }, [bruker, premium]);
 
-  const loggInnMedGoogle = useCallback(async () => {
+  const loggInnMed = useCallback(async (leverandør: 'google' | 'apple') => {
     setFeil('');
     if (Platform.OS !== 'web') {
       try {
         setPågår(true);
-        const melding = await require('@/data/native-konto').loggInnNativt();
+        const melding = await require('@/data/native-konto').loggInnNativt(leverandør);
         if (melding) setFeil(melding);
         await hent();
       } catch (e) {
@@ -161,9 +162,12 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       return;
     }
     const tilbake = typeof window !== 'undefined' ? window.location.origin + (process.env.EXPO_BASE_URL ?? '') + '/' : undefined;
-    const { error } = await neon().auth.signIn.social({ provider: 'google', callbackURL: tilbake });
+    const { error } = await neon().auth.signIn.social({ provider: leverandør, callbackURL: tilbake });
     if (error) setFeil(feilTekst(error));
   }, [hent]);
+
+  const loggInnMedGoogle = useCallback(() => loggInnMed('google'), [loggInnMed]);
+  const loggInnMedApple = useCallback(() => loggInnMed('apple'), [loggInnMed]);
 
   const loggUt = useCallback(async () => {
     try {
@@ -217,7 +221,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   const pro = premium && proFlagg;
 
-  const verdi = useMemo(() => ({ klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, slettKonto, byttPremium, byttPro }), [klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggUt, slettKonto, byttPremium, byttPro]);
+  const verdi = useMemo(() => ({ klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro }), [klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro]);
   return <Ctx.Provider value={verdi}>{children}</Ctx.Provider>;
 }
 
