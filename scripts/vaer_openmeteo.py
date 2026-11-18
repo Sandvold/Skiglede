@@ -14,7 +14,9 @@ UA = "Skiglede/1.0 (kontakt: sandvold40@gmail.com)"
 
 def hent(lat, lon, dager=14, forsøk=6):
     q = {"latitude": f"{lat:.4f}", "longitude": f"{lon:.4f}", "hourly": "temperature_2m,precipitation,relative_humidity_2m,wind_speed_10m,shortwave_radiation",
-         "past_days": min(92, max(1, dager)), "forecast_days": 1, "models": "metno_nordic", "wind_speed_unit": "ms", "timezone": "UTC"}
+         "past_days": min(92, max(1, dager)), "forecast_days": 1, "wind_speed_unit": "ms", "timezone": "UTC"}
+    if lat >= 54 and 2 <= lon <= 34:  # MET Nordic dekker bare Norden; utenfor lar vi Open-Meteo velge beste modell (ICON/ECMWF/AROME)
+        q["models"] = "metno_nordic"
     if os.environ.get("OPEN_METEO_API_KEY"):
         q["apikey"] = os.environ["OPEN_METEO_API_KEY"]
     url = f"{URL}?{urllib.parse.urlencode(q)}"
