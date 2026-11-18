@@ -39,9 +39,9 @@ export function Hero() {
       ))}
       <View style={styles.innhold}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <View style={{ flex: 1, flexShrink: 1 }}>
+          <View style={{ flexShrink: 0 }}>
             <Pressable accessibilityRole="link" accessibilityLabel="Til forsiden" hitSlop={10} onPress={() => router.navigate('/')} style={{ zIndex: 5 }}>
-              <Text style={styles.tittel}>Skiglede</Text>
+              <Text style={styles.tittel} numberOfLines={1}>Skiglede</Text>
             </Pressable>
           </View>
           <KontoHøyre />

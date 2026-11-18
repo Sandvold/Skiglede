@@ -32,10 +32,10 @@ export function KontoHøyre() {
     );
   }
   return (
-    <View style={{ alignItems: 'flex-end', gap: 6, marginTop: 8, flexShrink: 1, maxWidth: 220 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: 220 }}>
-        <Pressable accessibilityRole="link" accessibilityLabel="Innstillinger" onPress={tilInnstillinger} style={{ flexShrink: 1 }}>
-          <Text numberOfLines={1} style={{ color: '#BFDDF7', fontSize: 13 }}>{bruker.epost}</Text>
+    <View style={{ alignItems: 'flex-end', gap: 6, marginTop: 8, flexShrink: 1, minWidth: 0, maxWidth: 220 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 }}>
+        <Pressable accessibilityRole="link" accessibilityLabel="Innstillinger" onPress={tilInnstillinger} style={{ flexShrink: 1, minWidth: 0 }}>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#BFDDF7', fontSize: 13 }}>{bruker.epost}</Text>
         </Pressable>
         {tannhjul}
       </View>
