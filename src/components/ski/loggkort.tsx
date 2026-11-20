@@ -9,11 +9,11 @@ import { GLID_VALG, GREP_VALG, lagreLogg, type NyLogg } from '@/data/logg';
 import { usePremium } from '@/data/premium';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Premium: noter hvordan smøringen gikk. Lagrer også det modellen mente, så vi kan sammenligne modell og utfall senere. */
+/** Alle innloggede: noter hvordan smøringen gikk. Lagrer også det modellen mente, så vi kan sammenligne modell og utfall senere. */
 export function Loggkort({ grunnlag }: { grunnlag: Omit<NyLogg, 'grep' | 'glid' | 'snotemp_malt' | 'lufttemp_malt' | 'kommentar'> }) {
   const theme = useTheme();
   const router = useRouter();
-  const { premium } = usePremium();
+  const { bruker } = usePremium();
   const skøyting = grunnlag.stil === 'skoyting'; // skøyting har ikke feste: bare glid vurderes
   const [grep, setGrep] = useState<number | null>(null);
   const [glid, setGlid] = useState<number | null>(null);
@@ -22,11 +22,11 @@ export function Loggkort({ grunnlag }: { grunnlag: Omit<NyLogg, 'grep' | 'glid' 
   const [kommentar, setKommentar] = useState('');
   const [status, setStatus] = useState<'' | 'lagrer' | 'lagret' | string>('');
 
-  if (!premium) {
+  if (!bruker) {
     return (
       <Kort>
         <Text style={{ color: theme.text, fontWeight: '800', fontSize: 18 }}>Smøreloggen</Text>
-        <ThemedText themeColor="textSecondary">🔒 Premium: noter hvordan smøringen gikk (bakglatt, god, klabete), med kommentar. Det hjelper oss å tilpasse rådene.</ThemedText>
+        <ThemedText themeColor="textSecondary">Logg inn for å notere hvordan smøringen gikk (bakglatt, god, klabete), med kommentar. Det hjelper oss å tilpasse rådene.</ThemedText>
       </Kort>
     );
   }

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { PremiumLås } from '@/components/ski/konto';
 import { Hero } from '@/components/ski/hero';
 import { Chip, Kort } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
@@ -24,9 +23,7 @@ export default function LoggSide() {
         <Pressable onPress={() => router.back()} style={{ alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.backgroundElement }}>
           <Text style={{ color: theme.text, fontWeight: '700' }}>← Tilbake</Text>
         </Pressable>
-        <PremiumLås tittel="Smøreloggen">
-          <Innhold />
-        </PremiumLås>
+        <Innhold />
       </View>
     </ScrollView>
   );
@@ -34,8 +31,9 @@ export default function LoggSide() {
 
 function Innhold() {
   const theme = useTheme();
-  const { premium } = usePremium();
-  const { liste, feil, slett } = useLoggliste(premium);
+  const { klar, bruker, loggInnMedGoogle } = usePremium();
+  const { liste, feil, slett } = useLoggliste(!!bruker);
+  if (klar && !bruker) return <Kort><ThemedText themeColor="textSecondary">Logg inn for å se smøreloggen din.</ThemedText><Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip></Kort>;
   if (feil) return <Kort><ThemedText>{feil}</ThemedText></Kort>;
   if (!liste) return <ThemedText themeColor="textSecondary">Henter loggen …</ThemedText>;
   if (!liste.length) return <Kort><ThemedText themeColor="textSecondary">Ingen loggføringer ennå. Logg smøringen fra løypesiden.</ThemedText></Kort>;
