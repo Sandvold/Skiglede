@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 
 import { erBrukerdata, lesLokal, påSkriv, skrivFraKonto } from '@/data/lagring';
 import { feilTekst } from '@/data/feil';
-import { neon } from '@/data/neon';
+import { kjøpLoggInn, kjøpLoggUt } from '@/data/kjop';
+import { lesAnonymt, neon } from '@/data/neon';
 
 type Bruker = { id: string; epost: string; navn: string };
 type Tilstand = {
@@ -14,6 +15,10 @@ type Tilstand = {
   premium: boolean;
   /** Pro (konkurranse) bygger på premium. */
   pro: boolean;
+  /** true når Pro/Premium bare kan fås ved kjøp (serveren låser da bryterne). */
+  betalingPå: boolean;
+  /** Leser profilen på nytt (etter kjøp). */
+  oppdater: () => Promise<void>;
   feil: string;
   loggInnMedGoogle: () => Promise<void>;
   loggInnMedApple: () => Promise<void>;
@@ -44,12 +49,16 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [bruker, setBruker] = useState<Bruker | null>(null);
   const [premium, setPremium] = useState(false);
   const [proFlagg, setPro] = useState(false);
+  const [betalingPå, setBetalingPå] = useState(false);
   const [feil, setFeil] = useState('');
   const [pågår, setPågår] = useState(false);
   const synket = useRef(false);
 
   const hent = useCallback(async () => {
     try {
+      lesAnonymt<{ verdi: string }>('app_config?select=verdi&nokkel=eq.betaling_pa')
+        .then((r) => setBetalingPå(r[0]?.verdi === 'true'))
+        .catch(() => {});
       const { data } = await neon().auth.getSession();
       const u = data?.user;
       if (!u) {
@@ -69,6 +78,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       }
       setPremium(!!rad.premium);
       setPro(!!rad.pro);
+      kjøpLoggInn(u.id).catch(() => {}); // RevenueCat-feil skal ikke stoppe kontoen
     } catch (e) {
       setFeil(feilTekst(e));
     } finally {
@@ -176,6 +186,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       setFeil(`Utlogging: ${feilTekst(e)}`);
     }
     synket.current = false;
+    kjøpLoggUt();
     setBruker(null);
     setPremium(false);
     setPro(false);
@@ -190,6 +201,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       // kontoen er allerede borte, økta er ugyldig uansett
     }
     synket.current = false;
+    kjøpLoggUt();
     setBruker(null);
     setPremium(false);
     setPro(false);
@@ -219,9 +231,9 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     }
   }, [bruker, premium, proFlagg]);
 
-  const pro = premium && proFlagg;
+  const pro = proFlagg;
 
-  const verdi = useMemo(() => ({ klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro }), [klar, bruker, premium, pro, feil, pågår, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro]);
+  const verdi = useMemo(() => ({ klar, bruker, premium, pro, betalingPå, oppdater: hent, feil, pågår, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro }), [klar, bruker, premium, pro, betalingPå, hent, feil, pågår, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro]);
   return <Ctx.Provider value={verdi}>{children}</Ctx.Provider>;
 }
 

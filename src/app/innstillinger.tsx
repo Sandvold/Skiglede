@@ -7,6 +7,7 @@ import { Chip, Kort } from '@/components/ski/ui';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { skrivFraKonto, useLagret } from '@/data/lagring';
+import { Abonnement } from '@/components/ski/abonnement';
 import { EgneRuter } from '@/components/ski/egne-ruter';
 import { useOmråde } from '@/data/omrader';
 import { useMineRuter, type MinRute } from '@/data/minerute';
@@ -113,7 +114,7 @@ function PrivateRuter() {
 
 function Konto() {
   const theme = useTheme();
-  const { klar, bruker, premium, pro, feil, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro } = usePremium();
+  const { klar, bruker, premium, pro, betalingPå, feil, loggInnMedGoogle, loggInnMedApple, loggUt, slettKonto, byttPremium, byttPro } = usePremium();
   const [bekreftSlett, setBekreftSlett] = useState(false);
   const [slettFeil, setSlettFeil] = useState('');
   if (!klar) return null;
@@ -129,11 +130,17 @@ function Konto() {
       ) : (
         <>
           <ThemedText type="small" themeColor="textSecondary">{`Logget inn som ${bruker.epost}`}</ThemedText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            <Chip aktiv={premium} onPress={byttPremium}>{premium ? '✓ Premium' : 'Premium (av)'}</Chip>
-            <Chip aktiv={pro} onPress={byttPro}>{pro ? '✓ Pro' : 'Pro (av)'}</Chip>
-          </View>
-          <ThemedText type="small" themeColor="textSecondary">Premium og pro er prøvebrytere uten betaling, så alle kan teste funksjonene.</ThemedText>
+          {betalingPå ? (
+            <Abonnement />
+          ) : (
+            <>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <Chip aktiv={premium} onPress={byttPremium}>{premium ? '✓ Premium' : 'Premium (av)'}</Chip>
+                <Chip aktiv={pro} onPress={byttPro}>{pro ? '✓ Pro' : 'Pro (av)'}</Chip>
+              </View>
+              <ThemedText type="small" themeColor="textSecondary">Premium og pro er prøvebrytere uten betaling, så alle kan teste funksjonene.</ThemedText>
+            </>
+          )}
           <View style={{ flexDirection: 'row' }}>
             <Chip aktiv={false} onPress={loggUt}>Logg ut</Chip>
           </View>
