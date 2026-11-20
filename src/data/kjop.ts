@@ -5,7 +5,7 @@
 import { Platform } from 'react-native';
 
 /** Offentlig SDK-nøkkel fra RevenueCat (Project → API keys → Google Play). Tom = kjøp er ikke koblet til ennå. */
-export const RC_ANDROID_KEY = '';
+export const RC_ANDROID_KEY = 'goog_vsFogJuiFtTJRRYAjMskvmGnVee'; // offentlig SDK-nøkkel (kan ligge i appen)
 export const RC_IOS_KEY = '';
 
 export type Pakke = { id: string; nivå: 'pro' | 'premium'; tittel: string; pris: string };
