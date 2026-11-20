@@ -14,11 +14,20 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "ios": {}
+      "ios": {
+        "autoIncrement": true
+      }
     },
     "ios-simulator": {
       "ios": {
         "simulator": true
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6837495352"
       }
     }
   }
