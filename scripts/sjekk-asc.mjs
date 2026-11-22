@@ -23,9 +23,10 @@ const data = b64({ alg: 'ES256', kid: keyId, typ: 'JWT' }) + '.' + b64({ iss: is
 const sig = createSign('SHA256').update(data).sign({ key: readFileSync(sti, 'utf8'), dsaEncoding: 'ieee-p1363' }).toString('base64url');
 
 const r = await fetch('https://api.appstoreconnect.apple.com/v1/apps/6837495352', { headers: { Authorization: `Bearer ${data}.${sig}` } });
-if (r.ok) { console.log('OK: Apple godtar nøkkelen og ser appen Skiglede.'); process.exit(0); }
+if (r.ok) { console.log('OK: Apple godtar nøkkelen og ser appen Skiglede.'); } else {
 const dato = r.headers.get('date');
 console.error(`Apple svarte ${r.status}. ` + (await r.text()).slice(0, 300));
 if (r.status === 401) console.error('Sjekk: Key ID og Issuer ID (øverst på siden Team Keys), at filen er den nøkkelen, og at PC-klokken stemmer (Apple-tid: ' + dato + ').');
 if (r.status === 403) console.error('Nøkkelen er gyldig, men mangler rettigheter. Lag en ny Team Key med rollen Admin.');
-process.exit(1);
+process.exitCode = 1;
+}
