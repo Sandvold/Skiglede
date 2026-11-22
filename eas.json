@@ -27,7 +27,10 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "6837495352"
+        "ascAppId": "6837495352",
+        "ascApiKeyPath": "C:\\Users\\krist\\Downloads\\AuthKey_Z23J4V7RFV.p8",
+        "ascApiKeyIssuerId": "c6267f3a-8a40-44e6-bf5e-7255d770f4eb",
+        "ascApiKeyId": "Z23J4V7RFV"
       }
     },
     "testflight": {
