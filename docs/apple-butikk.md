@@ -5,8 +5,8 @@
 - Undertittel (maks 30 tegn): Smøring for langrenn
 - Kategori: Sport (sekundær: Vær)
 - Aldersgrense: 4+ (ingen innhold som krever høyere)
-- Support-URL: https://sandvold.github.io/Skiglede/personvern.html
-- Personvern-URL: https://sandvold.github.io/Skiglede/personvern.html
+- Support-URL: https://sandvold.github.io/Skiglede/app/personvern.html
+- Personvern-URL: https://sandvold.github.io/Skiglede/app/personvern.html
 - Copyright: 2026 Kristoffer Sandvold
 - Pris: gratis, med abonnement i appen
 - Eksportregler: ingen egen kryptering (ITSAppUsesNonExemptEncryption = false er satt)
@@ -27,7 +27,7 @@ Velg løype eller sted, så regner appen ut snøtemperatur, snøtype og føre fr
 Skiglede er gratis å prøve. Premium og Pro er årlige abonnement med automatisk fornyelse. Betalingen belastes Apple-kontoen din ved kjøp, og abonnementet fornyes hvert år med mindre du sier det opp minst 24 timer før perioden er over. Du styrer og sier opp under Innstillinger → Apple-ID → Abonnementer.
 
 Vilkår: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
-Personvern: https://sandvold.github.io/Skiglede/personvern.html
+Personvern: https://sandvold.github.io/Skiglede/app/personvern.html
 
 ## Description (English)
 Skiglede tells you what to wax your skis with, based on the weather and snow where you ski.
@@ -45,7 +45,7 @@ Pick a trail or place and the app works out snow temperature, snow type and cond
 Skiglede is free to try. Premium and Pro are yearly subscriptions with automatic renewal. Payment is charged to your Apple Account at purchase, and the subscription renews every year unless cancelled at least 24 hours before the period ends. Manage or cancel in Settings → Apple Account → Subscriptions.
 
 Terms: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
-Privacy: https://sandvold.github.io/Skiglede/personvern.html
+Privacy: https://sandvold.github.io/Skiglede/app/personvern.html
 
 ## Nøkkelord (maks 100 tegn)
 smøring,ski,langrenn,skismøring,glider,klister,hardvoks,løyper,Nordmarka,snø,skøyting,Hovden
