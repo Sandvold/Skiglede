@@ -11,7 +11,7 @@
       "bundleIdentifier": "no.sandvold.skiglede",
       "icon": "./assets/images/icon.png",
       "supportsTablet": true,
-      "buildNumber": "5",
+      "buildNumber": "6",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
