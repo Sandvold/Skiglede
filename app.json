@@ -25,7 +25,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "no.sandvold.skiglede",
-      "versionCode": 3
+      "versionCode": 4
     },
     "web": {
       "output": "static",
