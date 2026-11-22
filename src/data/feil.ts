@@ -9,5 +9,5 @@ export function feilTekst(e: unknown): string {
   if (/auth|token|jwt|not logged|unauthori[sz]ed|ikke innlogget|HTTP 40[13]\b/i.test(m)) return 'Du er logget ut. Logg inn igjen.';
   if (/[æøåÆØÅ]/.test(m) || /^(Ruten|Navnet|Du |Kunne ikke|Fikk ikke|Gi ruten)/.test(m)) return m;
   try { console.warn('[feil]', m); } catch { /* ingen konsoll */ }
-  return 'Noe gikk galt. Prøv igjen.';
+  return `Noe gikk galt. Prøv igjen. (${m.slice(0, 140)})`;
 }

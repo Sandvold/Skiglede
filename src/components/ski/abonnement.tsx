@@ -68,7 +68,7 @@ export function Abonnement() {
                   <Chip aktiv onPress={() => !opptatt && trykk(p)}>{`Kjøp ${p.tittel} · ${p.pris}`}</Chip>
                 </View>
               ))}
-          <ThemedText type="small" themeColor="textSecondary">Fornyes automatisk hvert år til du sier opp i Google Play.</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">Fornyes automatisk hvert år til du sier opp i {Platform.OS === 'ios' ? 'App Store' : 'Google Play'}.</ThemedText>
           <View style={{ flexDirection: 'row' }}>
             <Chip aktiv={false} onPress={() => !opptatt && gjen()}>Gjenopprett kjøp</Chip>
           </View>
