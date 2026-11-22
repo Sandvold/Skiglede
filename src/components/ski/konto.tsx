@@ -48,7 +48,8 @@ export function KontoHøyre() {
 /** Viser innholdet bare for premium; ellers en forklaring med innlogging og bryter. */
 export function PremiumLås({ tittel, children }: { tittel: string; children: React.ReactNode }) {
   const theme = useTheme();
-  const { klar, bruker, premium, feil, loggInnMedGoogle, loggInnMedApple, byttPremium } = usePremium();
+  const { klar, bruker, premium, betalingPå, feil, loggInnMedGoogle, loggInnMedApple, byttPremium } = usePremium();
+  const router = useRouter();
   if (premium) return <>{children}</>;
   return (
     <Kort>
@@ -57,7 +58,11 @@ export function PremiumLås({ tittel, children }: { tittel: string; children: Re
         Med premium lagrer du smørelager og ski på kontoen din, har flere steder (for eksempel fjellet og hjemme), flytter smøring mellom dem, får forslag til innkjøp, bruker «Bruk min smøring» og utvider løypa.
       </ThemedText>
       {!klar ? null : bruker ? (
-        <Chip aktiv onPress={byttPremium}>Slå på premium (test, ingen betaling)</Chip>
+        betalingPå ? (
+          <Chip aktiv onPress={() => router.push('/innstillinger')}>Se abonnement</Chip>
+        ) : (
+          <Chip aktiv onPress={byttPremium}>Slå på premium (test, ingen betaling)</Chip>
+        )
       ) : (
         <>
           <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
@@ -74,7 +79,8 @@ export const LåsKort = Kort;
 /** Viser innholdet bare for pro (konkurranse); ellers forklaring og bryter. Pro bygger på premium. */
 export function ProLås({ tittel, children }: { tittel: string; children: React.ReactNode }) {
   const theme = useTheme();
-  const { klar, bruker, pro, feil, loggInnMedGoogle, loggInnMedApple, byttPro } = usePremium();
+  const { klar, bruker, pro, betalingPå, feil, loggInnMedGoogle, loggInnMedApple, byttPro } = usePremium();
+  const router = useRouter();
   if (pro) return <>{children}</>;
   return (
     <Kort>
@@ -87,6 +93,8 @@ export function ProLås({ tittel, children }: { tittel: string; children: React.
           <Chip aktiv onPress={loggInnMedGoogle}>Logg inn med Google</Chip>
           {APPLE_INNLOGGING ? <Chip aktiv onPress={loggInnMedApple}>Logg inn med Apple</Chip> : null}
         </>
+      ) : betalingPå ? (
+        <Chip aktiv onPress={() => router.push('/innstillinger')}>Se abonnement</Chip>
       ) : (
         <Chip aktiv onPress={byttPro}>Slå på pro (test, ingen betaling)</Chip>
       )}
