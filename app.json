@@ -58,6 +58,12 @@
         "projectId": "ad252ddc-75b4-439d-a598-19ba845f655d"
       }
     },
-    "owner": "ksandvolds-team"
+    "owner": "ksandvolds-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ad252ddc-75b4-439d-a598-19ba845f655d"
+    }
   }
 }
