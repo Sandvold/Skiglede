@@ -54,6 +54,12 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [pågår, setPågår] = useState(false);
   const synket = useRef(false);
 
+  // Native klient gir feil som { message: 'HTTP 409: {...23505...}' } uten code-felt, nettleserklienten har code.
+  const erDuplikat = (e: unknown) => {
+    const f = e as { code?: string; message?: string };
+    return f?.code === '23505' || /23505|duplicate key|HTTP 409/.test(String(f?.message ?? ''));
+  };
+
   const hent = useCallback(async () => {
     try {
       lesAnonymt<{ verdi: string }>('app_config?select=verdi&nokkel=eq.betaling_pa')
@@ -73,7 +79,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       if (profilFeil) throw profilFeil; // ikke sett premium til av når profilen bare ikke kunne leses
       if (!rad) {
         const { error: nyFeil } = await db.from('profil').insert({});
-        if (nyFeil && (nyFeil as { code?: string }).code !== '23505') throw nyFeil; // 23505: profilen finnes allerede (webhook eller parallelt kall opprettet den)
+        if (nyFeil && !erDuplikat(nyFeil)) throw nyFeil; // 23505: profilen finnes allerede (webhook eller parallelt kall opprettet den)
         const { data: ny } = await db.from('profil').select('premium, pro').maybeSingle();
         rad = ny ?? { premium: false, pro: false };
       }
@@ -206,6 +212,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     setBruker(null);
     setPremium(false);
     setPro(false);
+    setFeil('');
     return null;
   }, []);
 
