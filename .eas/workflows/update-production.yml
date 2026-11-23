@@ -1,0 +1,8 @@
+name: Oppdatering production
+jobs:
+  update:
+    type: update
+    params:
+      channel: production
+      platform: all
+      message: Oppdatering fra arbeidsflyt (production)

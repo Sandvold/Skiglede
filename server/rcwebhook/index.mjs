@@ -50,11 +50,11 @@ export default {
         [bruker, t.has('pro') ? utløp : null, t.has('premium') ? utløp : null, e.type, t.has('pro'), t.has('premium')],
       );
     }
-    // Profilen er det RLS-reglene leser: Premium gir også Pro. Rader finnes bare for brukere som har logget inn.
+    // Profilen er det RLS-reglene leser: Pro (dyreste nivå) inkluderer Premium, ikke omvendt. Rader finnes bare for brukere som har logget inn.
     await SQL(
       `update public.profil p set
-         premium = coalesce(a.premium_utloper > now(), false),
-         pro = coalesce(a.pro_utloper > now(), false) or coalesce(a.premium_utloper > now(), false)
+         premium = coalesce(a.premium_utloper > now(), false) or coalesce(a.pro_utloper > now(), false),
+         pro = coalesce(a.pro_utloper > now(), false)
        from public.abonnement a where a.user_id = p.user_id and p.user_id = $1`,
       [bruker],
     );
