@@ -76,7 +76,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         if (nyFeil) throw nyFeil;
         rad = { premium: false, pro: false };
       }
-      setPremium(!!rad.premium);
+      setPremium(!!rad.premium || !!rad.pro); // Pro inkluderer Premium
       setPro(!!rad.pro);
       kjøpLoggInn(u.id).catch(() => {}); // RevenueCat-feil skal ikke stoppe kontoen
     } catch (e) {
