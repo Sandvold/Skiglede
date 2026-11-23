@@ -344,8 +344,8 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
         )}
 
         {mulige.length > 0 && (
-          <View style={{ gap: Spacing.two }}>
-            <ThemedText type="smallBold" themeColor="textSecondary" style={styles.etikett}>GÅ LENGER: LEGG TIL FRA SAMME START</ThemedText>
+          <Sammenleggbar id="ga-lenger" tittel="Gå lenger: legg til fra samme start" standardÅpen={false} topp={ekstraIds.length > 0 ? <ThemedText type="smallBold" themeColor="textSecondary">{`${ekstraIds.length} valgt`}</ThemedText> : undefined}>
+            <View style={{ gap: Spacing.two }}>
             {!premium && <ThemedText type="small" themeColor="textSecondary">🔒 Premium: legg til flere løyper fra samme start og få smøringen regnet for hele turen. Logg inn og slå på premium øverst.</ThemedText>}
             <View style={styles.rad}>
               {premium && mulige.map((x) => (
@@ -355,7 +355,8 @@ function DetaljMedVær({ løype: valgtLøype, liste, område, onVelg, onTilbake 
               ))}
             </View>
             {ekstraIds.length > 0 && <ThemedText type="small" themeColor="textSecondary">Turen går først {valgtLøype.navn}, så {ekstraIds.map((i) => LØYPER.find((l) => l.id === i)?.navn).join(', ')}, og tilbake til start. Smøringen regnes for hele turen.</ThemedText>}
-          </View>
+            </View>
+          </Sammenleggbar>
         )}
 
         {/* Tur */}
