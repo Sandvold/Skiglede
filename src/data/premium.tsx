@@ -73,8 +73,9 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       if (profilFeil) throw profilFeil; // ikke sett premium til av når profilen bare ikke kunne leses
       if (!rad) {
         const { error: nyFeil } = await db.from('profil').insert({});
-        if (nyFeil) throw nyFeil;
-        rad = { premium: false, pro: false };
+        if (nyFeil && (nyFeil as { code?: string }).code !== '23505') throw nyFeil; // 23505: profilen finnes allerede (webhook eller parallelt kall opprettet den)
+        const { data: ny } = await db.from('profil').select('premium, pro').maybeSingle();
+        rad = ny ?? { premium: false, pro: false };
       }
       setPremium(!!rad.premium || !!rad.pro); // Pro inkluderer Premium
       setPro(!!rad.pro);
